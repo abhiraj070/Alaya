@@ -9,20 +9,12 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from app.db.connect import Base
 from enum import Enum
+from app.db.model.user import User
 
 class Sender(str, Enum):
     LLM = 'LLM'
     USER = 'USER'
 
-
-class User(Base):
-    __tablename__ = 'user'
-    id = Column(Integer, primary_key=True)
-    name = Column(Text, nullable=False)
-    username = Column(Text, nullable=False)
-    password = Column(Text, nullable=False)
-    chats = relationship("Chat", back_populates="user")
-    refreshToken = Column(Text, nullable=False)
 
 
 class Chat(Base):
