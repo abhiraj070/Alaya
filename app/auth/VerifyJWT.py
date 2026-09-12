@@ -1,9 +1,7 @@
 import jwt
 from fastapi import HTTPException, Depends
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette import status
-from app.db.model.user import User
 from app.env_config.settings import get_settings
 from app.db.connect import get_db
 from typing import Annotated

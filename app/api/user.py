@@ -8,10 +8,9 @@ from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
 
-from app.auth.VerifyJWT import VerifyJWT
 from app.db.connect import get_db
 from app.db.model.user import User
-from app.schema.user import RegisterRequest, AuthResponse, LoginRequest
+from app.schema.user import RegisterRequest, AuthResponse, LoginRequest, UserUpdateRequest
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, VerificationError
@@ -63,11 +62,49 @@ async def register(request: RegisterRequest,
     user=User(
        name= request.name,
        username= request.username,
+       password= request.password,
+       refreshToken= "",
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
+
+@router.get("/get_user/{user_id}", response_model=AuthResponse)
+async def get_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
+    stmt= select(User).where(User.id==user_id)
+    user= db.execute(stmt).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user
+
+@router.get("/get_users", response_model=list[AuthResponse])
+async def get_users(db: Annotated[Session, Depends(get_db)]):
+    stmt= select(User)
+    users= db.execute(stmt).scalars().all()
+    return users
+
+@router.put("/update_user/{user_id}", response_model=AuthResponse)
+async def update_user(user_id: int, request: UserUpdateRequest, db: Annotated[Session, Depends(get_db)]):
+    stmt= select(User).where(User.id==user_id)
+    user= db.execute(stmt).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.name= request.name
+    user.username= request.username
+    db.commit()
+    db.refresh(user)
+    return user
+
+@router.delete("/delete_user/{user_id}")
+async def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
+    stmt= select(User).where(User.id==user_id)
+    user= db.execute(stmt).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return {"detail": "User deleted successfully"}
 
 @router.post("/login", response_model= AuthResponse)
 async def login(request: LoginRequest, db: Annotated[Session, Depends(get_db)], response: Response):

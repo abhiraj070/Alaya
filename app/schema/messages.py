@@ -1,0 +1,14 @@
+from pydantic import BaseModel, Field
+
+class MessageResponse(BaseModel):
+    message_content: str
+    chat_id: int
+    message_id: int = Field(validation_alias="id")
+
+class MessageRequest(BaseModel):
+    message_content: str
+    sent_by: str
+    user_id: int
+
+class MessageUpdateRequest(BaseModel):
+    message_content: str
