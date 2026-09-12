@@ -11,8 +11,9 @@ class User(Base):
     name = Column(Text, nullable=False)
     username = Column(Text, nullable=False)
     password = Column(Text, nullable=False)
-    chats = relationship("Chat", back_populates="user")
-    messages = relationship("Message", back_populates="user")
+    chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")
+    knowledge= relationship("Knowledge", back_populates="user")
     refreshToken = Column(Text, nullable=False)
 
 def already_hashed(password: str)->bool:

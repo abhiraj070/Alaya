@@ -143,3 +143,16 @@ async def login(request: LoginRequest, db: Annotated[Session, Depends(get_db)], 
     )
 
     return user
+
+@router.put("/logout/{user_id}")
+async def logout(user_id: int, db: Annotated[Session, Depends(get_db)], response: Response):
+    stmt= select(User).where(User.id==user_id)
+    user= db.execute(stmt).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.refresh_token = ""
+    db.commit()
+    db.refresh(user)
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
+    return {"message": "User logged out"}

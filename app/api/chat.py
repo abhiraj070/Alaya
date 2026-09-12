@@ -2,13 +2,15 @@ from typing import Annotated
 
 from starlette import status
 
+from app.embeddings import get_embedding
+from app.auth.VerifyJWT import VerifyJWT
 from app.db.connect import get_db
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.schema.chat import ChatResponse, ChatRequest, ChatUpdateRequest
-from app.db.model.chat import Chat
+from app.db.model.chat import Chat, Knowledge
 
 router= APIRouter(prefix="/chat", tags=["chat"])
 
@@ -56,3 +58,14 @@ async def delete_chat(chat_id: int, db: Annotated[Session, Depends(get_db)]):
     db.delete(chat)
     db.commit()
     return {"detail": "Chat deleted successfully"}
+
+@router.post("feed_knowledge")
+async def feed_knowledge(user_id: Annotated[int, Depends(VerifyJWT)], text_content: str, db: Annotated[Session, Depends(get_db)]):
+    if text_content is None or text_content == '':
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty")
+    embeddings= await get_embedding(text_content)
+    knowledge= Knowledge(text_content=text_content, user_id=user_id, embeddings=embeddings)
+    db.add(knowledge)
+    db.commit()
+    db.refresh(knowledge)
+    return {"message": "Knowledge fed successfully"}

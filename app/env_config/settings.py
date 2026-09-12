@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     REFRESH_TOKEN_EXPIRE_DAYS: int
     SECRET_KEY: str
+    OPENAI_API_KEY: str
 
 @lru_cache
 def get_settings():

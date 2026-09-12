@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette import status
 
@@ -13,17 +14,18 @@ router = APIRouter(prefix="/messages", tags=["messages"])
 
 @router.post("/new_messages/{chat_id}", response_model=MessageResponse)
 async def store_new_message(chat_id: int, message: MessageRequest, db: Annotated[Session, Depends(get_db)]):
-    message = Message(chat_id=chat_id,
+    db_message = Message(chat_id=chat_id,
                       message_content=message.message_content,
-                      sent_by=message.sent_by,
+                      sent_by="USER",
                       user_id=message.user_id
     )
-    if message is None:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Message was not created" )
-    db.add(message)
-    db.commit()
-    db.refresh(message)
-    return message
+    try:
+        db.commit()
+        db.refresh(db_message)
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Message could not be stored")
+    return db_message
 
 # @router.get("/get_message/{message_id}", response_model=MessageResponse)
 # async def get_message(message_id: int, db: Annotated[Session, Depends(get_db)]):

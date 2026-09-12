@@ -7,7 +7,6 @@ class MessageResponse(BaseModel):
 
 class MessageRequest(BaseModel):
     message_content: str
-    sent_by: str
     user_id: int
 
 class MessageUpdateRequest(BaseModel):

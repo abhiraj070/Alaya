@@ -6,6 +6,7 @@ from sqlalchemy import (
     ForeignKey,
     Enum as SQLEnum, func,
 )
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import relationship
 from app.db.connect import Base
 from enum import Enum
@@ -23,7 +24,7 @@ class Chat(Base):
     chat_title = Column(Text)
     user_id = Column(Integer, ForeignKey('user.id'))
     user= relationship(User, back_populates='chats')
-    messages = relationship("Message", back_populates='chat')
+    messages = relationship("Message", back_populates='chat', cascade="all, delete-orphan")
 
 
 class Message(Base):
@@ -35,4 +36,24 @@ class Message(Base):
     sent_by= Column(SQLEnum(Sender, name='sender'))
     user_id = Column(Integer, ForeignKey('user.id'))
     user= relationship(User, back_populates='messages')
+    embeddings = relationship("Embedding", back_populates='message', cascade="all, delete-orphan")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False )
+
+class Knowledge(Base):
+    __tablename__ = 'knowledge'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    user= relationship(User, back_populates='knowledge')
+    text_content= Column(Text, nullable=False)
+    embeddings = relationship("Embedding", back_populates='knowledge', cascade="all, delete-orphan")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+class Embedding(Base):
+    __tablename__ = 'embeddings'
+    id = Column(Integer, primary_key=True)
+    message_id = Column(Integer, ForeignKey('message.id'))
+    message= relationship(Message, back_populates='embeddings')
+    knowledge_id = Column(Integer, ForeignKey('knowledge.id'))
+    knowledge= relationship(Knowledge, back_populates='embeddings')
+    vector= Column(Vector(1536), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
