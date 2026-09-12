@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int
     SECRET_KEY: str
     OPENAI_API_KEY: str
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
 
 @lru_cache
 def get_settings():

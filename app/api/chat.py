@@ -1,10 +1,11 @@
 from typing import Annotated
 
+from arq.connections import ArqRedis
 from starlette import status
 
-from app.embeddings import get_embedding
 from app.auth.VerifyJWT import VerifyJWT
 from app.db.connect import get_db
+from app.core_tasks.queue import get_queue
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -18,7 +19,9 @@ router= APIRouter(prefix="/chat", tags=["chat"])
 async def create_chat(request: ChatRequest, db: Annotated[Session, Depends(get_db)]):
     chat= Chat(chat_title= "New Chat", user_id= request.user_id)
     if chat is None:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Internal Server Error"
+        )
     db.add(chat)
     db.commit()
     db.refresh(chat)
@@ -39,7 +42,9 @@ async def get_chats(user_id: int, db: Annotated[Session, Depends(get_db)]):
     return chats
 
 @router.put("/update_chat/{chat_id}", response_model=ChatResponse)
-async def update_chat_title(chat_id: int, request: ChatUpdateRequest, db: Annotated[Session, Depends(get_db)]):
+async def update_chat_title(chat_id: int, request: ChatUpdateRequest,
+                            db: Annotated[Session, Depends(get_db)]
+):
     stmt= select(Chat).where(Chat.id==chat_id)
     chat= db.execute(stmt).scalar_one_or_none()
     if chat is None:
@@ -59,13 +64,17 @@ async def delete_chat(chat_id: int, db: Annotated[Session, Depends(get_db)]):
     db.commit()
     return {"detail": "Chat deleted successfully"}
 
-@router.post("feed_knowledge")
-async def feed_knowledge(user_id: Annotated[int, Depends(VerifyJWT)], text_content: str, db: Annotated[Session, Depends(get_db)]):
+@router.post("/feed_knowledge")
+async def feed_knowledge(user_id: Annotated[int, Depends(VerifyJWT)],
+                         text_content: str,
+                         db: Annotated[Session, Depends(get_db)],
+                         queue: Annotated[ArqRedis, Depends(get_queue)]
+):
     if text_content is None or text_content == '':
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty")
-    embeddings= await get_embedding(text_content)
-    knowledge= Knowledge(text_content=text_content, user_id=user_id, embeddings=embeddings)
+    knowledge= Knowledge(text_content=text_content, user_id=user_id)
     db.add(knowledge)
     db.commit()
     db.refresh(knowledge)
+    await queue.enqueue_job("create_knowledge_embedding", knowledge.id)
     return {"message": "Knowledge fed successfully"}
