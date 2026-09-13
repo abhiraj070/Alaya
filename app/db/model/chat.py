@@ -16,6 +16,10 @@ class Sender(str, Enum):
     LLM = 'LLM'
     USER = 'USER'
 
+class EmbeddingKind(str, Enum):
+    MESSAGE = 'message'
+    KNOWLEDGE = 'knowledge'
+
 
 
 class Chat(Base):
@@ -55,5 +59,8 @@ class Embedding(Base):
     message= relationship(Message, back_populates='embeddings')
     knowledge_id = Column(Integer, ForeignKey('knowledge.id'))
     knowledge= relationship(Knowledge, back_populates='embeddings')
+    kind = Column(SQLEnum(EmbeddingKind, name='embedding_kind'), nullable=False)
+    embedded_text = Column(Text, nullable=False)
+    seq = Column(Integer)
     vector= Column(Vector(1536), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

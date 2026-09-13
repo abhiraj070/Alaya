@@ -7,9 +7,15 @@ client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
 MODEL = "text-embedding-3-small"
 
-async def get_embedding(text: str) -> list[float]:
+async def get_embedding(queries: list[str]) -> list[dict]:
     response = await client.embeddings.create(
         model=MODEL,
-        input=text,
+        input=queries,
     )
-    return response.data[0].embedding
+    return [
+        {
+            "subquery": queries[data.index],
+            "vector": data.embedding,
+        }
+        for data in response.data
+    ]
