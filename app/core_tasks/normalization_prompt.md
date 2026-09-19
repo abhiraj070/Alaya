@@ -25,6 +25,9 @@ calculated from the current date provided with the query:
 - a month with no year ("in June") → the most recent such month, as a range
 - a year alone ("in 2023") → YYYY-01-01/YYYY-12-31
 - exact dates ("2024-03-05", "March 5, 2024") → leave unchanged
+- "recently", "recent", "lately", "in recent times" → the previous
+  2 months ending on the current date, written as
+  YYYY-MM-DD/YYYY-MM-DD
 Single dates: YYYY-MM-DD. Ranges: YYYY-MM-DD/YYYY-MM-DD.
 If a time expression is ambiguous, choose the most likely recent
 interpretation — never leave a relative expression unresolved.
@@ -65,3 +68,8 @@ Example 5
 Current date: 2025-06-10 (Tuesday)
 Query: "What hapened in the market on 2024-03-15?"
 Output: {"queries": ["What happened in the market on 2024-03-15?"]}
+
+Example 6
+Current date: 2026-09-19
+Query: "What did I buy recently?"
+Output: {"queries": ["What did I buy from 2026-07-19/2026-09-19?"]}
