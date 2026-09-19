@@ -21,8 +21,8 @@ from app.schema.messages import MessageResponse, MessageRequest, MessageUpdateRe
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 
-normalization_prompt = (Path(__file__).parent.parent / "core_tasks" / "normalization_prompt.md").read_text()
-structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "structure_knowledge_metadata.md").read_text()
+normalization_prompt = (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "normalization_prompt.md").read_text()
+structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "structure_knowledge_metadeta.md").read_text()
 
 def send_prompt_to_normalize(user_query: str) -> str:
     current_date= date.today().isoformat()
