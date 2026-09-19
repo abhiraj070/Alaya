@@ -11,6 +11,7 @@ from sqlalchemy.orm import relationship
 from app.db.connect import Base
 from enum import Enum
 from app.db.model.user import User
+from sqlalchemy.dialects.postgresql import JSONB
 
 class Sender(str, Enum):
     LLM = 'LLM'
@@ -46,6 +47,8 @@ class Message(Base):
 class Knowledge(Base):
     __tablename__ = 'knowledge'
     id = Column(Integer, primary_key=True)
+    knowledge_type= Column(Text, nullable=False)
+    metadata = Column(JSONB, nullable=False)
     user_id = Column(Integer, ForeignKey('user.id'))
     user= relationship(User, back_populates='knowledge')
     text_content= Column(Text, nullable=False)

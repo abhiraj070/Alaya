@@ -5,26 +5,26 @@ from app.db.model.chat import Embedding, EmbeddingKind, Knowledge, Message
 from app.core_tasks.embeddings import get_embedding
 from app.core_tasks.queue import redis_settings
 
-async def create_knowledge_embedding(ctx, knowledge_id: int):
+async def create_knowledge_embedding(ctx, knowledge_ids: list[int]):
     db= SessionLocal()
     try:
-        stmt= select(Knowledge).where(Knowledge.id==knowledge_id)
-        knowledge= db.execute(stmt).scalar_one_or_none()
-        if knowledge is None:
-            return
-        stmt= select(Embedding).where(Embedding.knowledge_id==knowledge_id)
-        embedding= db.execute(stmt).scalar_one_or_none()
-        if embedding is not None:
-            return
-        embeddings= await get_embedding([knowledge.text_content])
-        db_embeddings= Embedding(knowledge_id= knowledge.id,
-                                 kind= EmbeddingKind.KNOWLEDGE,
-                                 embedded_text= knowledge.text_content,
-                                 vector= embeddings[0]["vector"]
-        )
-        db.add(db_embeddings)
+        for knowledge_id in knowledge_ids:
+            stmt= select(Knowledge).where(Knowledge.id==knowledge_id)
+            knowledge= db.execute(stmt).scalar_one_or_none()
+            if knowledge is None:
+                return
+            stmt= select(Embedding).where(Embedding.knowledge_id==knowledge_id)
+            embedding= db.execute(stmt).scalar_one_or_none()
+            if embedding is not None:
+                return
+            embeddings= await get_embedding([knowledge.text_content])
+            db_embeddings= Embedding(knowledge_id= knowledge.id,
+                                     kind= EmbeddingKind.KNOWLEDGE,
+                                     embedded_text= knowledge.text_content,
+                                     vector= embeddings[0]["vector"]
+            )
+            db.add(db_embeddings)
         db.commit()
-        db.refresh(db_embeddings)
     except Exception:
         db.rollback()
         raise
