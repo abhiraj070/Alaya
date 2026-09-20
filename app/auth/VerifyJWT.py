@@ -1,5 +1,5 @@
 import jwt
-from fastapi import HTTPException, Depends
+from fastapi import HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from starlette import status
 from app.env_config.settings import get_settings
@@ -8,16 +8,17 @@ from typing import Annotated
 
 settings = get_settings()
 
-def VerifyJWT(request, db: Annotated[Session, Depends(get_db)]):
-    access_token= request.headers.get('Authorization').split(" ")[1] or request.cookies.get('access_token')
+def VerifyJWT(request: Request, db: Annotated[Session, Depends(get_db)]):
+    authorization= request.headers.get('Authorization')
+    access_token= authorization.split(" ", 1)[1] if authorization and authorization.startswith("Bearer ") else request.cookies.get('access_token')
     if access_token is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing access token")
     try:
         decoded = jwt.decode(access_token, settings.SECRET_KEY, algorithms=["HS256"])
-        user_id= decoded['user_id']
-        type = decoded['type']
+        user_id= decoded.get('user_id')
+        type = decoded.get('type')
         if type == "refresh":
-            raise HTTPException(status_code=status.HTTP_400, detail="Missing access token")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing access token")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     if user_id is None:

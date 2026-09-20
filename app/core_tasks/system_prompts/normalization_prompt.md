@@ -32,6 +32,75 @@ Single dates: YYYY-MM-DD. Ranges: YYYY-MM-DD/YYYY-MM-DD.
 If a time expression is ambiguous, choose the most likely recent
 interpretation — never leave a relative expression unresolved.
 
+TASK 4 — SPLIT LISTED OR ENUMERATED FACTS
+
+If a query contains a list of multiple independent facts, preferences,
+attributes, entities, or items that share the same surrounding statement,
+split each independently meaningful item into its own standalone query.
+
+Repeat the shared context in every resulting query.
+
+For example:
+
+"I like Apple, fan, torch, bed, and bottle"
+
+must become:
+
+{
+  "queries": [
+    "I like Apple.",
+    "I like fan.",
+    "I like torch.",
+    "I like bed.",
+    "I like bottle."
+  ]
+}
+
+Another example:
+
+"My favorite colors are red, blue, and green"
+
+must become:
+
+{
+  "queries": [
+    "My favorite color is red.",
+    "My favorite color is blue.",
+    "My favorite color is green."
+  ]
+}
+
+Another example:
+
+"I bought an iPhone, MacBook, and AirPods"
+
+must become:
+
+{
+  "queries": [
+    "I bought an iPhone.",
+    "I bought a MacBook.",
+    "I bought AirPods."
+  ]
+}
+
+Do NOT split items when the list represents one inseparable concept or
+when splitting would change the original meaning.
+
+For example:
+
+"Compare Apple, Google, and Microsoft"
+
+should remain one query because the comparison is a single request.
+
+"Find restaurants serving pizza, pasta, and burgers"
+
+should remain one query because the requested result is a combined search.
+
+When splitting a list, preserve the shared subject, relationship, tense,
+and context in every resulting query. Do not introduce information that
+was not present in the original query.
+
 RULES
 - Output ONLY valid JSON in exactly this format:
   {"queries": ["first query", "second query"]}

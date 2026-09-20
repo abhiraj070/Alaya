@@ -48,7 +48,7 @@ class Knowledge(Base):
     __tablename__ = 'knowledge'
     id = Column(Integer, primary_key=True)
     knowledge_type= Column(Text, nullable=False)
-    metadata = Column(JSONB, nullable=False)
+    knowledge_metadata = Column("metadata", JSONB, nullable=False)
     user_id = Column(Integer, ForeignKey('user.id'))
     user= relationship(User, back_populates='knowledge')
     text_content= Column(Text, nullable=False)

@@ -5,7 +5,6 @@ from typing import Annotated
 
 from arq import ArqRedis
 from fastapi import APIRouter, Depends, HTTPException
-from openai.types.responses import response
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -15,14 +14,17 @@ from app.auth.VerifyJWT import VerifyJWT
 from app.core_tasks.chat_llm import client, MODEL
 from app.core_tasks.embeddings import get_embedding
 from app.core_tasks.queue import get_queue
+from app.core_tasks.retrieval import retrieve_queries
 from app.db.connect import get_db
 from app.db.model.chat import Message, Embedding, Knowledge
 from app.schema.messages import MessageResponse, MessageRequest, MessageUpdateRequest
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 
-normalization_prompt = (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "normalization_prompt.md").read_text()
+normalization_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "normalization_prompt.md").read_text()
 structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "structure_knowledge_metadeta.md").read_text()
+decision_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "decision.md").read_text()
+sql_retrieval_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "sql_retrieval.md").read_text()
 
 def send_prompt_to_normalize(user_query: str) -> str:
     current_date= date.today().isoformat()
@@ -42,19 +44,46 @@ def send_prompt_to_standardise(user_queries: list[str]) -> str:
         model=MODEL,
         messages=[
             {"role": "system", "content": f"{structure_knowledge}"},
-            {"role": "user", "content": user_queries},
+            {"role": "user", "content": json.dumps(user_queries)},
         ],
         max_tokens=1024,
         temperature=0.7,
     )
     return response.choices[0].message.content
 
+def send_prompt_to_decide(user_queries: list[str]) -> str:
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": f"{decision_prompt}"},
+            {"role": "user", "content": json.dumps(user_queries)},
+        ],
+        max_tokens=1024,
+        temperature=0.7,
+    )
+    return response.choices[0].message.content
+
+def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": f"{sql_retrieval_prompt}"},
+            {"role": "user", "content": json.dumps({"query": user_query, "schema": schema})},
+        ],
+        max_tokens=1024,
+        temperature=0.2,
+    )
+    return json.loads(response.choices[0].message.content)
+
 @router.post("/new_messages/{chat_id}", response_model=MessageResponse)
 async def handle_new_message(chat_id: int,
                             message: MessageRequest,
+                            user_id: Annotated[int, Depends(VerifyJWT)],
                             db: Annotated[Session, Depends(get_db)],
 ):
     # TODO: add chunking for large inputs.
+    # TODO: add the section in res that when is the last time you asked this.
+
     #normalization
     try:
         embeddable_query= send_prompt_to_normalize(message.message_content)
@@ -72,7 +101,7 @@ async def handle_new_message(chat_id: int,
     db_message = Message(chat_id=chat_id,
                       message_content=message.message_content,
                       sent_by="USER",
-                      user_id=message.user_id
+                      user_id=user_id
     )
     db.add(db_message)
     try:
@@ -89,10 +118,23 @@ async def handle_new_message(chat_id: int,
         db.rollback()
         raise HTTPException(status_code=500, detail="Message could not be stored")
 
-    #get relevant response
+    #decide what operations to use
+    try:
+        decision_query= send_prompt_to_decide(embeddable_queries)
+        decisions= json.loads(decision_query)["strategies"]
+    except Exception:
+        raise HTTPException(status_code=502, detail="Error while deciding the operations")
 
+    #search
+    try:
+        search_results= retrieve_queries(db, user_id, embeddable_queries, decisions,
+                                         embeddings, db_message.id, send_prompt_to_plan)
+    except SQLAlchemyError:
+        raise HTTPException(status_code=500, detail="Search could not be completed")
+    except Exception:
+        raise HTTPException(status_code=502, detail="Search plan could not be generated")
 
-
+    db_message.search_results= search_results
     return db_message
 
 # @router.get("/get_message/{message_id}", response_model=MessageResponse)
@@ -165,7 +207,7 @@ async def feed_knowledge(user_id: Annotated[int, Depends(VerifyJWT)],
             knowledge_type= structured_metadata[i]["fact_type"]
         knowledge= Knowledge(text_content=content,
                              user_id=user_id,
-                             metadata= structured_metadata[i],
+                             knowledge_metadata= structured_metadata[i]["metadata"],
                              knowledge_type= knowledge_type
         )
         db.add(knowledge)
