@@ -67,7 +67,7 @@ def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
-            {"role": "system", "content": f"{sql_retrieval_prompt}"},
+            {"role": "system", "content": sql_retrieval_prompt},
             {"role": "user", "content": json.dumps({"query": user_query, "schema": schema})},
         ],
         max_tokens=1024,
@@ -75,7 +75,7 @@ def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
     )
     return json.loads(response.choices[0].message.content)
 
-@router.post("/new_messages/{chat_id}", response_model=MessageResponse)
+@router.post("/new_messages/{chat_id}", response_model=list[dict])
 async def handle_new_message(chat_id: int,
                             message: MessageRequest,
                             user_id: Annotated[int, Depends(VerifyJWT)],
@@ -134,8 +134,7 @@ async def handle_new_message(chat_id: int,
     except Exception:
         raise HTTPException(status_code=502, detail="Search plan could not be generated")
 
-    db_message.search_results= search_results
-    return db_message
+    return search_results
 
 # @router.get("/get_message/{message_id}", response_model=MessageResponse)
 # async def get_message(message_id: int, db: Annotated[Session, Depends(get_db)]):

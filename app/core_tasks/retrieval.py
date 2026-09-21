@@ -1,8 +1,6 @@
 from datetime import date
 from decimal import Decimal
-
 from sqlalchemy import Date, Numeric, cast, func, select
-
 from app.db.model.chat import Embedding, Knowledge, Message
 
 def serialize_knowledge(knowledge: Knowledge) -> dict:
@@ -32,19 +30,14 @@ def get_knowledge_schema(db, user_id: int) -> dict:
             schema["metadata"][key]= value_type
     return schema
 
-def build_semantic_queries(user_id: int, vector: list[float], message_id: int, limit: int = 5):
-    knowledge_distance= Embedding.vector.cosine_distance(vector)
-    message_distance= Embedding.vector.cosine_distance(vector)
-    knowledge_stmt= select(Knowledge, knowledge_distance.label("distance")).join(Embedding).where(
-        Knowledge.user_id==user_id, Embedding.kind=="KNOWLEDGE"
-    ).order_by(knowledge_distance).limit(limit)
-    message_stmt= select(Message, message_distance.label("distance")).join(Embedding).where(
-        Message.user_id==user_id, Message.id!=message_id, Embedding.kind=="MESSAGE"
-    ).order_by(message_distance).limit(limit)
-    return knowledge_stmt, message_stmt
-
 def semantic_search(db, user_id: int, vector: list[float], message_id: int, knowledge_only: bool = False) -> list[dict]:
-    knowledge_stmt, message_stmt= build_semantic_queries(user_id, vector, message_id)
+    distance= Embedding.vector.cosine_distance(vector)
+    knowledge_stmt= select(Knowledge, distance.label("distance")).join(Embedding).where(
+        Knowledge.user_id==user_id, Embedding.kind=="KNOWLEDGE"
+    ).order_by(distance).limit(5)
+    message_stmt= select(Message, distance.label("distance")).join(Embedding).where(
+        Message.user_id==user_id, Message.id!=message_id, Embedding.kind=="MESSAGE"
+    ).order_by(distance).limit(5)
     results= [{"source": "knowledge", "distance": float(distance), "data": serialize_knowledge(item)}
               for item, distance in db.execute(knowledge_stmt).all()]
     if not knowledge_only:
@@ -52,21 +45,15 @@ def semantic_search(db, user_id: int, vector: list[float], message_id: int, know
                        for item, distance in db.execute(message_stmt).all())
     return results
 
-def metadata_field(field: str, schema: dict):
-    expression= func.coalesce(Knowledge.knowledge_metadata[field].astext,
-                              Knowledge.knowledge_metadata["metadata"][field].astext)
-    if schema["metadata"][field]=="number":
-        return cast(expression, Numeric)
-    if schema["metadata"][field]=="date":
-        return cast(expression, Date)
-    return expression
-
 def build_sql_query(user_id: int, plan: dict, schema: dict, knowledge_ids: list[int] = None):
     operation= plan.get("operation", "list")
     if operation not in ["list", "count", "sum", "avg", "min", "max"]:
         raise ValueError("Invalid SQL operation")
     fields= {"knowledge_type": Knowledge.knowledge_type, "created_at": cast(Knowledge.created_at, Date)}
-    fields.update({key: metadata_field(key, schema) for key in schema["metadata"]})
+    for key, value_type in schema["metadata"].items():
+        value= func.coalesce(Knowledge.knowledge_metadata[key].astext,
+                             Knowledge.knowledge_metadata["metadata"][key].astext)
+        fields[key]= cast(value, Numeric) if value_type=="number" else cast(value, Date) if value_type=="date" else value
     field= plan.get("field")
     group_by= plan.get("group_by")
     if field and field not in fields or group_by and group_by not in fields:
@@ -121,7 +108,7 @@ def retrieve_queries(db, user_id: int, queries: list[str], strategies: list[str]
                      embeddings: list[dict], message_id: int, get_plan) -> list[dict]:
     if len(queries)!=len(strategies) or len(queries)!=len(embeddings):
         raise ValueError("Queries, strategies and embeddings must match")
-    schema= get_knowledge_schema(db, user_id)
+    schema= get_knowledge_schema(db, user_id) if any(item in ["sql", "hybrid"] for item in strategies) else None
     results= []
     for i, strategy in enumerate(strategies):
         if strategy=="semantic":
