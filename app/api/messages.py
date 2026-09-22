@@ -1,7 +1,7 @@
 from datetime import date
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from arq import ArqRedis
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette import status
+from starlette.responses import StreamingResponse
 
 from app.auth.VerifyJWT import VerifyJWT
 from app.core_tasks.chat_llm import client, MODEL
@@ -25,6 +26,7 @@ normalization_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_pro
 structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "structure_knowledge_metadeta.md").read_text()
 decision_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "decision.md").read_text()
 sql_retrieval_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "sql_retrieval.md").read_text()
+response_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "response_prompt.md").read_text()
 
 def send_prompt_to_normalize(user_query: str) -> str:
     current_date= date.today().isoformat()
@@ -75,7 +77,24 @@ def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
     )
     return json.loads(response.choices[0].message.content)
 
-@router.post("/new_messages/{chat_id}", response_model=list[dict])
+async def send_prompt_for_response(data: list[dict[str,Any]]):
+    stream =await client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": sql_retrieval_prompt},
+            {"role": "user", "content": json.dumps(data)},
+        ],
+        max_tokens=1024,
+        temperature=0.2,
+        stream=True
+    )
+    async for chunk in stream:
+        content = chunk.choices[0].delta.content
+        if content:
+            yield content
+
+
+@router.post("/new_messages/{chat_id}")
 async def handle_new_message(chat_id: int,
                             message: MessageRequest,
                             user_id: Annotated[int, Depends(VerifyJWT)],
@@ -134,7 +153,11 @@ async def handle_new_message(chat_id: int,
     except Exception:
         raise HTTPException(status_code=502, detail="Search plan could not be generated")
 
-    return search_results
+    #stream final response
+    return StreamingResponse(
+        send_prompt_for_response(search_results),
+        media_type="text/plain"
+    )
 
 # @router.get("/get_message/{message_id}", response_model=MessageResponse)
 # async def get_message(message_id: int, db: Annotated[Session, Depends(get_db)]):

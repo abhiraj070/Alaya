@@ -6,12 +6,12 @@ from app.db.model.chat import Embedding, Knowledge, Message
 def serialize_knowledge(knowledge: Knowledge) -> dict:
     return {"id": knowledge.id, "knowledge_type": knowledge.knowledge_type,
             "metadata": knowledge.knowledge_metadata, "text_content": knowledge.text_content,
-            "created_at": knowledge.created_at.isoformat() if knowledge.created_at else None}
+            "created_at": knowledge.created_at.isoformat() }
 
 def serialize_message(message: Message) -> dict:
     return {"id": message.id, "chat_id": message.chat_id,
             "message_content": message.message_content, "sent_by": message.sent_by,
-            "created_at": message.created_at.isoformat() if message.created_at else None}
+            "created_at": message.created_at.isoformat() }
 
 def get_knowledge_schema(db, user_id: int) -> dict:
     stmt= select(Knowledge.knowledge_type, Knowledge.knowledge_metadata).where(Knowledge.user_id==user_id)
@@ -30,20 +30,30 @@ def get_knowledge_schema(db, user_id: int) -> dict:
             schema["metadata"][key]= value_type
     return schema
 
-def semantic_search(db, user_id: int, vector: list[float], message_id: int, knowledge_only: bool = False) -> list[dict]:
+def semantic_search(db, user_id: int, vector: list[float]) -> list[dict]:
     distance= Embedding.vector.cosine_distance(vector)
     knowledge_stmt= select(Knowledge, distance.label("distance")).join(Embedding).where(
         Knowledge.user_id==user_id, Embedding.kind=="KNOWLEDGE"
     ).order_by(distance).limit(5)
-    message_stmt= select(Message, distance.label("distance")).join(Embedding).where(
-        Message.user_id==user_id, Message.id!=message_id, Embedding.kind=="MESSAGE"
-    ).order_by(distance).limit(5)
     results= [{"source": "knowledge", "distance": float(distance), "data": serialize_knowledge(item)}
               for item, distance in db.execute(knowledge_stmt).all()]
-    if not knowledge_only:
-        results.extend({"source": "message", "distance": float(distance), "data": serialize_message(item)}
-                       for item, distance in db.execute(message_stmt).all())
     return results
+
+def semantic_to_find_similar_question(db, user_id: int, message_id: int, vector: list[float]):
+    distance = Embedding.vector.cosine_distance(vector)
+    message_stmt = select(Message, distance.label("distance")).join(Embedding).where(
+        Message.user_id == user_id, Message.id != message_id, Embedding.kind == "MESSAGE"
+    ).order_by(distance).limit(1)
+
+    result= db.execute(message_stmt).first()
+    if result is None:
+        return []
+    similar_message, distance= result
+
+    results= [{"source": "message", "distance": float(distance), "data": serialize_message(similar_message)}]
+
+    return results
+
 
 def build_sql_query(user_id: int, plan: dict, schema: dict, knowledge_ids: list[int] = None):
     operation= plan.get("operation", "list")
@@ -112,14 +122,15 @@ def retrieve_queries(db, user_id: int, queries: list[str], strategies: list[str]
     results= []
     for i, strategy in enumerate(strategies):
         if strategy=="semantic":
-            data= semantic_search(db, user_id, embeddings[i]["vector"], message_id)
+            data= semantic_search(db, user_id, embeddings[i]["vector"])
         elif strategy=="sql":
             data= sql_search(db, user_id, get_plan(queries[i], schema), schema)
         elif strategy=="hybrid":
-            semantic= semantic_search(db, user_id, embeddings[i]["vector"], message_id, True)
+            semantic= semantic_search(db, user_id, embeddings[i]["vector"])
             knowledge_ids= [item["data"]["id"] for item in semantic]
             data= sql_search(db, user_id, get_plan(queries[i], schema), schema, knowledge_ids)
         else:
             raise ValueError("Invalid retrieval strategy")
-        results.append({"query": queries[i], "strategy": strategy, "results": data})
+        similar_question= semantic_to_find_similar_question(db, user_id, message_id, embeddings[i]["vector"])
+        results.append({"query": queries[i], "strategy": strategy, "results": data, "similar_question": similar_question})
     return results
