@@ -101,8 +101,7 @@ async def handle_new_message(chat_id: int,
                             db: Annotated[Session, Depends(get_db)],
 ):
     # TODO: add chunking for large inputs.
-    # TODO: add the section in res that when is the last time you asked this.
-
+    
     #normalization
     try:
         embeddable_query= send_prompt_to_normalize(message.message_content)
