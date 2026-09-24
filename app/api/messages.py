@@ -217,18 +217,75 @@ async def get_messages(chat_id: int, db: Annotated[Session, Depends(get_db)]):
     messages= db.execute(stmt).scalars().all()
     return messages
 
-@router.put("/update_message/{message_id}", response_model=MessageResponse)
-async def update_message(message_id: int, request: MessageUpdateRequest,
-                         db: Annotated[Session, Depends(get_db)]
+@router.put("/update_message/{chat_id}/{message_id}", response_model=MessageResponse)
+async def update_message(chat_id: int,
+                         message_id: int,
+                         request: MessageUpdateRequest,
+                         db: Annotated[Session, Depends(get_db)],
+                         user_id: Annotated[int, Depends(VerifyJWT)],
 ):
     stmt= select(Message).where(Message.id==message_id)
     message= db.execute(stmt).scalar_one_or_none()
     if message is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
-    message.message_content= request.message_content
+    newMessage= request.message_content
+    db.delete(message)
     db.commit()
-    db.refresh(message)
-    return message
+
+    # normalization
+    try:
+        embeddable_query = send_prompt_to_normalize(newMessage)
+        embeddable_queries = json.loads(embeddable_query)["queries"]
+    except Exception:
+        raise HTTPException(status_code=502, detail="Query normalization failed")
+
+    # embeddings creation
+    try:
+        embeddings = await get_embedding(embeddable_queries)
+    except Exception:
+        raise HTTPException(status_code=502, detail="Embedding generation failed")
+
+    # data getting saved
+    db_message = Message(chat_id=chat_id,
+                         message_content=newMessage,
+                         sent_by="USER",
+                         user_id=user_id
+                         )
+    db.add(db_message)
+    try:
+        db.flush()
+        for embedding in embeddings:
+            db_embeddings = Embedding(message_id=db_message.id,
+                                      vector=embedding["vector"],
+                                      kind="MESSAGE",
+                                      embedded_text=embedding["subquery"]
+                                      )
+            db.add(db_embeddings)
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Message could not be stored")
+
+    # decide what operations to use
+    try:
+        decisions = await decide_retrieval_strategy(embeddable_queries)
+    except Exception:
+        raise HTTPException(status_code=502, detail="Error while deciding the operations")
+
+    # search
+    try:
+        search_results = retrieve_queries(db, user_id, embeddable_queries, decisions,
+                                          embeddings, db_message.id, send_prompt_to_plan)
+    except SQLAlchemyError:
+        raise HTTPException(status_code=500, detail="Search could not be completed")
+    except Exception:
+        raise HTTPException(status_code=502, detail="Search plan could not be generated")
+
+    # stream final response
+    return StreamingResponse(
+        send_prompt_for_response(search_results),
+        media_type="text/plain"
+    )
 
 @router.delete("/delete_message/{message_id}")
 async def delete_message(message_id: int, db: Annotated[Session, Depends(get_db)]):
