@@ -2,7 +2,7 @@ from datetime import date
 import json
 from pathlib import Path
 from typing import Annotated, Any
-
+from typesafe_sdk import AsyncTypeSafeClient, Choice
 from arq import ArqRedis
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -18,13 +18,18 @@ from app.core_tasks.queue import get_queue
 from app.core_tasks.retrieval import retrieve_queries
 from app.db.connect import get_db
 from app.db.model.chat import Message, Embedding, Knowledge
+from app.env_config.settings import get_settings
 from app.schema.messages import MessageResponse, MessageRequest, MessageUpdateRequest
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 
+settings = get_settings()
+
 normalization_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "normalization_prompt.md").read_text()
 structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "structure_knowledge_metadeta.md").read_text()
-decision_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "decision.md").read_text()
+#decision_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "decision.md").read_text()
+criteria= json.loads((Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "criteria_decision.md").read_text())
+instruction= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "instruction_decision.md").read_text()
 sql_retrieval_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "sql_retrieval.md").read_text()
 response_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "response_prompt.md").read_text()
 
@@ -53,17 +58,58 @@ def send_prompt_to_standardise(user_queries: list[str]) -> str:
     )
     return response.choices[0].message.content
 
-def send_prompt_to_decide(user_queries: list[str]) -> str:
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": f"{decision_prompt}"},
-            {"role": "user", "content": json.dumps(user_queries)},
-        ],
-        max_tokens=1024,
-        temperature=0.7,
-    )
-    return response.choices[0].message.content
+# def send_prompt_to_decide(user_queries: list[str]) -> str:
+#     response = client.chat.completions.create(
+#         model=MODEL,
+#         messages=[
+#             {"role": "system", "content": f"{decision_prompt}"},
+#             {"role": "user", "content": json.dumps(user_queries)},
+#         ],
+#         max_tokens=1024,
+#         temperature=0.7,
+#     )
+#     return response.choices[0].message.content
+
+async def decide_retrieval_strategy(user_queries: list[str]) -> list[str]:
+    strategies: list[str] = []
+
+    async with AsyncTypeSafeClient(api_key=settings.TYPESAFE_API_KEY) as jev_client:
+        for query in user_queries:
+            response = await jev_client.system_one(
+                state={"query": query},
+                questions={
+                    "retrieval_strategy": Choice(
+                        instructions=instruction,
+                        criteria=criteria,
+                    )
+                },
+            )
+            strategies.append(
+                response.answers["retrieval_strategy"].choice
+            )
+
+    return strategies
+
+#jev response for reference
+# {
+#   "model": "jev-latest",
+#   "answers": {
+#     "retrieval_strategy": {
+#       "type": "choice",
+#       "choice": "sql",
+#       "probabilities": {
+#         "sql": 0.94,
+#         "semantic": 0.03,
+#         "hybrid": 0.03
+#       },
+#       "confidence": 0.94
+#     }
+#   },
+#   "usage": {
+#     "input_tokens": 312,
+#     "output_tokens": 48
+#   }
+# }
 
 def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
     response = client.chat.completions.create(
@@ -81,7 +127,7 @@ async def send_prompt_for_response(data: list[dict[str,Any]]):
     stream =await client.chat.completions.create(
         model=MODEL,
         messages=[
-            {"role": "system", "content": sql_retrieval_prompt},
+            {"role": "system", "content": response_prompt},
             {"role": "user", "content": json.dumps(data)},
         ],
         max_tokens=1024,
@@ -101,7 +147,7 @@ async def handle_new_message(chat_id: int,
                             db: Annotated[Session, Depends(get_db)],
 ):
     # TODO: add chunking for large inputs.
-    
+
     #normalization
     try:
         embeddable_query= send_prompt_to_normalize(message.message_content)
@@ -138,8 +184,7 @@ async def handle_new_message(chat_id: int,
 
     #decide what operations to use
     try:
-        decision_query= send_prompt_to_decide(embeddable_queries)
-        decisions= json.loads(decision_query)["strategies"]
+        decisions = await decide_retrieval_strategy(embeddable_queries)
     except Exception:
         raise HTTPException(status_code=502, detail="Error while deciding the operations")
 

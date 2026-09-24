@@ -54,6 +54,7 @@ All knowledge and retrieval queries are scoped to the authenticated user.
 | Authentication | JWT (HS256), Argon2 |
 | LLM | OpenAI `gpt-4o-mini` |
 | Embeddings | OpenAI `text-embedding-3-small` |
+| Retrieval classification | JEV through the TypeSafe SDK |
 
 ## Project structure
 
@@ -276,7 +277,6 @@ Deleting a user cascades to chats and messages at the ORM level. Deleting a chat
 - Refresh-token rotation and a refresh endpoint are not implemented; the database refresh-token field is not populated during login.
 - The request schemas contain some fields that are ignored by the handlers (for example, the supplied chat title and message user ID).
 - Knowledge ingestion does not yet chunk large inputs.
-- The final streaming function currently uses the SQL-planning prompt instead of the dedicated response prompt; generated output may therefore be incorrect until this is fixed.
 - There is no automated test suite or containerized full-stack development environment yet.
 
 These constraints make the current code suitable for local development and experimentation, not a production deployment.
@@ -305,4 +305,3 @@ alembic upgrade head
 - Add ingestion chunking, idempotency, and job-status tracking.
 - Add unit/integration tests and Docker Compose for PostgreSQL, Redis, API, and worker.
 - Add structured logging, retries, rate limits, and production deployment configuration.
-
