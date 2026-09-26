@@ -5,6 +5,7 @@ from sqlalchemy import pool
 from app.env_config.settings import get_settings
 from alembic import context
 from app.db.connect import Base
+from app.db.model import chat, user  # noqa: F401
 settings = get_settings()
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
