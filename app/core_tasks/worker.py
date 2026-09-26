@@ -12,11 +12,11 @@ async def create_knowledge_embedding(ctx, knowledge_ids: list[int]):
             stmt= select(Knowledge).where(Knowledge.id==knowledge_id)
             knowledge= db.execute(stmt).scalar_one_or_none()
             if knowledge is None:
-                return
+                continue
             stmt= select(Embedding).where(Embedding.knowledge_id==knowledge_id)
             embedding= db.execute(stmt).scalar_one_or_none()
             if embedding is not None:
-                return
+                continue
             embeddings= await get_embedding([knowledge.text_content])
             db_embeddings= Embedding(knowledge_id= knowledge.id,
                                      kind= EmbeddingKind.KNOWLEDGE,
