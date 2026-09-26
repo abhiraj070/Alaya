@@ -16,6 +16,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, VerificationError
 import jwt
 from app.env_config.settings import get_settings
+from app.auth.VerifyJWT import VerifyJWT
 
 
 router= APIRouter(prefix= "/user", tags= ["user"])
@@ -71,7 +72,10 @@ async def register(request: RegisterRequest,
     return user
 
 @router.get("/get_user/{user_id}", response_model=AuthResponse)
-async def get_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
+async def get_user(user_id: int, db: Annotated[Session, Depends(get_db)],
+                   authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
+    if user_id != authenticated_user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     stmt= select(User).where(User.id==user_id)
     user= db.execute(stmt).scalar_one_or_none()
     if user is None:
@@ -79,13 +83,17 @@ async def get_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
     return user
 
 @router.get("/get_users", response_model=list[AuthResponse])
-async def get_users(db: Annotated[Session, Depends(get_db)]):
-    stmt= select(User)
+async def get_users(db: Annotated[Session, Depends(get_db)],
+                    authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
+    stmt= select(User).where(User.id == authenticated_user_id)
     users= db.execute(stmt).scalars().all()
     return users
 
 @router.put("/update_user/{user_id}", response_model=AuthResponse)
-async def update_user(user_id: int, request: UserUpdateRequest, db: Annotated[Session, Depends(get_db)]):
+async def update_user(user_id: int, request: UserUpdateRequest, db: Annotated[Session, Depends(get_db)],
+                      authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
+    if user_id != authenticated_user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     stmt= select(User).where(User.id==user_id)
     user= db.execute(stmt).scalar_one_or_none()
     if user is None:
@@ -97,7 +105,10 @@ async def update_user(user_id: int, request: UserUpdateRequest, db: Annotated[Se
     return user
 
 @router.delete("/delete_user/{user_id}")
-async def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
+async def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)],
+                      authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
+    if user_id != authenticated_user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     stmt= select(User).where(User.id==user_id)
     user= db.execute(stmt).scalar_one_or_none()
     if user is None:
@@ -145,7 +156,10 @@ async def login(request: LoginRequest, db: Annotated[Session, Depends(get_db)], 
     return user
 
 @router.put("/logout/{user_id}")
-async def logout(user_id: int, db: Annotated[Session, Depends(get_db)], response: Response):
+async def logout(user_id: int, db: Annotated[Session, Depends(get_db)], response: Response,
+                 authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
+    if user_id != authenticated_user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     stmt= select(User).where(User.id==user_id)
     user= db.execute(stmt).scalar_one_or_none()
     if user is None:

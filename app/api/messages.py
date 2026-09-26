@@ -17,7 +17,7 @@ from app.core_tasks.embeddings import get_embedding
 from app.core_tasks.queue import get_queue
 from app.core_tasks.retrieval import retrieve_queries
 from app.db.connect import get_db
-from app.db.model.chat import Message, Embedding, Knowledge
+from app.db.model.chat import Chat, Message, Embedding, Knowledge
 from app.env_config.settings import get_settings
 from app.schema.messages import MessageResponse, MessageRequest, MessageUpdateRequest
 
@@ -123,8 +123,8 @@ def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
     )
     return json.loads(response.choices[0].message.content)
 
-async def send_prompt_for_response(data: list[dict[str,Any]]):
-    stream =await client.chat.completions.create(
+def send_prompt_for_response(data: list[dict[str,Any]]):
+    stream = client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": response_prompt},
@@ -134,7 +134,7 @@ async def send_prompt_for_response(data: list[dict[str,Any]]):
         temperature=0.2,
         stream=True
     )
-    async for chunk in stream:
+    for chunk in stream:
         content = chunk.choices[0].delta.content
         if content:
             yield content
@@ -147,6 +147,12 @@ async def handle_new_message(chat_id: int,
                             db: Annotated[Session, Depends(get_db)],
 ):
     # TODO: add chunking for large inputs.
+
+    chat = db.execute(
+        select(Chat).where(Chat.id == chat_id, Chat.user_id == user_id)
+    ).scalar_one_or_none()
+    if chat is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
 
     #normalization
     try:
@@ -212,7 +218,13 @@ async def handle_new_message(chat_id: int,
 #     return message
 
 @router.get("/get_messages/{chat_id}", response_model=list[MessageResponse])
-async def get_messages(chat_id: int, db: Annotated[Session, Depends(get_db)]):
+async def get_messages(chat_id: int, db: Annotated[Session, Depends(get_db)],
+                       user_id: Annotated[int, Depends(VerifyJWT)]):
+    chat = db.execute(
+        select(Chat).where(Chat.id == chat_id, Chat.user_id == user_id)
+    ).scalar_one_or_none()
+    if chat is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
     stmt= select(Message).where(Message.chat_id==chat_id)
     messages= db.execute(stmt).scalars().all()
     return messages
@@ -224,13 +236,16 @@ async def update_message(chat_id: int,
                          db: Annotated[Session, Depends(get_db)],
                          user_id: Annotated[int, Depends(VerifyJWT)],
 ):
-    stmt= select(Message).where(Message.id==message_id)
+    stmt = select(Message).join(Chat).where(
+        Message.id == message_id,
+        Message.chat_id == chat_id,
+        Message.user_id == user_id,
+        Chat.user_id == user_id,
+    )
     message= db.execute(stmt).scalar_one_or_none()
     if message is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
     newMessage= request.message_content
-    db.delete(message)
-    db.commit()
 
     # normalization
     try:
@@ -246,16 +261,11 @@ async def update_message(chat_id: int,
         raise HTTPException(status_code=502, detail="Embedding generation failed")
 
     # data getting saved
-    db_message = Message(chat_id=chat_id,
-                         message_content=newMessage,
-                         sent_by="USER",
-                         user_id=user_id
-                         )
-    db.add(db_message)
+    message.message_content = newMessage
+    message.embeddings.clear()
     try:
-        db.flush()
         for embedding in embeddings:
-            db_embeddings = Embedding(message_id=db_message.id,
+            db_embeddings = Embedding(message_id=message.id,
                                       vector=embedding["vector"],
                                       kind="MESSAGE",
                                       embedded_text=embedding["subquery"]
@@ -275,7 +285,7 @@ async def update_message(chat_id: int,
     # search
     try:
         search_results = retrieve_queries(db, user_id, embeddable_queries, decisions,
-                                          embeddings, db_message.id, send_prompt_to_plan)
+                                          embeddings, message.id, send_prompt_to_plan)
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Search could not be completed")
     except Exception:
@@ -288,8 +298,13 @@ async def update_message(chat_id: int,
     )
 
 @router.delete("/delete_message/{message_id}")
-async def delete_message(message_id: int, db: Annotated[Session, Depends(get_db)]):
-    stmt= select(Message).where(Message.id==message_id)
+async def delete_message(message_id: int, db: Annotated[Session, Depends(get_db)],
+                         user_id: Annotated[int, Depends(VerifyJWT)]):
+    stmt = select(Message).join(Chat).where(
+        Message.id == message_id,
+        Message.user_id == user_id,
+        Chat.user_id == user_id,
+    )
     message= db.execute(stmt).scalar_one_or_none()
     if message is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")

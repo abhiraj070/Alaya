@@ -4,7 +4,7 @@ Alaya is a personal knowledge and conversational retrieval API. It lets each use
 
 The backend is built with FastAPI, PostgreSQL/pgvector, Redis, ARQ, SQLAlchemy, and OpenAI.
 
-> **Project status:** Alaya is under active development. The core API and retrieval pipeline are present, but the checked-in Alembic revisions are currently empty and some production-hardening work is still outstanding. See [Current limitations](#current-limitations).
+> **Project status:** Alaya is under active development. The core API and retrieval pipeline are present, but some production-hardening work is still outstanding. See [Current limitations](#current-limitations).
 
 ## What Alaya does
 
@@ -128,13 +128,7 @@ createdb alaya
 psql alaya -c 'CREATE EXTENSION IF NOT EXISTS vector;'
 ```
 
-The current Alembic revision files do not create the schema yet. For local development, load all models and create their tables directly:
-
-```bash
-python -c "from app.db.connect import Base, engine; import app.db.model.user, app.db.model.chat; Base.metadata.create_all(engine)"
-```
-
-Once real migrations are added, replace the direct table creation step with:
+Create the application schema with Alembic:
 
 ```bash
 alembic upgrade head
@@ -200,9 +194,9 @@ All routes are mounted under `/api`.
 | Method | Route | Authentication | Purpose |
 | --- | --- | --- | --- |
 | `POST` | `/api/messages/new_messages/{chat_id}` | Required | Store a question, retrieve context, and stream a response |
-| `GET` | `/api/messages/get_messages/{chat_id}` | Not currently required | List messages in a chat |
-| `PUT` | `/api/messages/update_message/{message_id}` | Not currently required | Edit a message |
-| `DELETE` | `/api/messages/delete_message/{message_id}` | Not currently required | Delete a message |
+| `GET` | `/api/messages/get_messages/{chat_id}` | Required | List messages in a chat |
+| `PUT` | `/api/messages/update_message/{chat_id}/{message_id}` | Required | Edit a message |
+| `DELETE` | `/api/messages/delete_message/{message_id}` | Required | Delete a message |
 | `POST` | `/api/messages/feed_knowledge` | Required | Store knowledge and enqueue its embeddings |
 
 Protected routes accept either an `access_token` cookie or this header:
@@ -271,8 +265,6 @@ Deleting a user cascades to chats and messages at the ORM level. Deleting a chat
 
 ## Current limitations
 
-- The two checked-in Alembic revisions contain no schema operations.
-- Several user/chat/message management routes are not protected by JWT authentication or ownership checks.
 - Usernames are not currently declared unique at the database level.
 - Refresh-token rotation and a refresh endpoint are not implemented; the database refresh-token field is not populated during login.
 - The request schemas contain some fields that are ignored by the handlers (for example, the supplied chat title and message user ID).
@@ -298,8 +290,6 @@ alembic upgrade head
 
 ## Roadmap ideas
 
-- Add complete initial migrations, including pgvector extension setup.
-- Enforce authentication and resource ownership on every private route.
 - Implement refresh-token rotation and revocation.
 - Persist assistant responses and complete conversational context handling.
 - Add ingestion chunking, idempotency, and job-status tracking.
