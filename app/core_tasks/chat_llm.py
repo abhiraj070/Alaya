@@ -21,3 +21,4 @@ client = OpenAI(
     base_url=config["base_url"],
 )
 MODEL = config["model"]
+VISION_MODEL = "gpt-5.6-luna"

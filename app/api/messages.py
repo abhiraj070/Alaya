@@ -13,9 +13,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import StreamingResponse
-
 from app.auth.VerifyJWT import VerifyJWT
-from app.core_tasks.chat_llm import client, MODEL
+from app.core_tasks.chat_llm import client, MODEL, VISION_MODEL
 from app.core_tasks.embeddings import get_embedding
 from app.core_tasks.queue import get_queue
 from app.core_tasks.retrieval import retrieve_queries
@@ -37,6 +36,7 @@ criteria= json.loads((Path(__file__).parent.parent / "core_tasks" / "system_prom
 instruction= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "instruction_decision.md").read_text()
 sql_retrieval_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "sql_retrieval.md").read_text()
 response_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "response_prompt.md").read_text()
+image_read_prompt=(Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "read_image.md").read_text()
 
 def send_prompt_to_normalize(user_query: str) -> str:
     current_date= date.today().isoformat()
@@ -57,6 +57,31 @@ def send_prompt_to_standardise(user_queries: list[str]) -> str:
         messages=[
             {"role": "system", "content": f"{structure_knowledge}"},
             {"role": "user", "content": json.dumps(user_queries)},
+        ],
+        max_tokens=1024,
+        temperature=0.7,
+    )
+    return response.choices[0].message.content
+
+def send_prompt_to_read_image(image_url: str) -> str:
+    response = client.chat.completions.create(
+        model=VISION_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": image_read_prompt,
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": image_url,
+                        },
+                    },
+                ],
+            },
         ],
         max_tokens=1024,
         temperature=0.7,
@@ -143,43 +168,6 @@ def send_prompt_for_response(data: list[dict[str,Any]]):
         content = chunk.choices[0].delta.content
         if content:
             yield content
-
-
-@router.post("/file_upload")
-def file_upload(
-    file: Annotated[UploadFile, File(...)],
-    user_id: Annotated[int, Depends(VerifyJWT)],
-):
-    original_filename = Path(file.filename or "upload").name
-    temporary_path = TEMP_IMAGE_DIR / f"{uuid4().hex}{Path(original_filename).suffix}"
-
-    try:
-        TEMP_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
-        with temporary_path.open("wb") as local_file:
-            shutil.copyfileobj(file.file, local_file)
-
-        upload_result = upload_file(temporary_path, original_filename)
-    except OSError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="File could not be stored locally",
-        ) from exc
-    except CloudinaryError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="File upload failed",
-        ) from exc
-    finally:
-        try:
-            temporary_path.unlink(missing_ok=True)
-        except OSError:
-            pass
-
-    return {
-        "url": upload_result["secure_url"],
-        "public_id": upload_result["public_id"],
-        "resource_type": upload_result["resource_type"],
-    }
 
 
 @router.post("/new_messages/{chat_id}")
@@ -396,3 +384,48 @@ async def feed_knowledge(user_id: Annotated[int, Depends(VerifyJWT)],
     db.commit()
     await queue.enqueue_job("create_knowledge_embedding", knowledge_ids)
     return {"message": "Knowledge fed successfully"}
+
+
+@router.post("/file_upload-")
+def file_upload(
+    file: Annotated[UploadFile, File(...)],
+    user_id: Annotated[int, Depends(VerifyJWT)],
+):
+    original_filename = Path(file.filename or "upload").name
+    temporary_path = TEMP_IMAGE_DIR / f"{uuid4().hex}{Path(original_filename).suffix}"
+
+    try:
+        TEMP_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+        with temporary_path.open("wb") as local_file:
+            shutil.copyfileobj(file.file, local_file)
+
+        upload_result = upload_file(temporary_path, original_filename)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="File could not be stored locally",
+        ) from exc
+    except CloudinaryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="File upload failed",
+        ) from exc
+    finally:
+        try:
+            temporary_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    try:
+        image_string= send_prompt_to_read_image(upload_result["secure_url"])
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail= "Error in reading the image")
+
+    try:
+        embeddings= get_embedding(image_string)
+    except Exception:
+        raise HTTPException(status_code=502, detail="Error while creating embeddings")
+
+    knowledge= Knowledge()
+
+    return {"message": "File uploaded successfully"}
