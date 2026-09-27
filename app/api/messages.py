@@ -1,10 +1,13 @@
 from datetime import date
 import json
 from pathlib import Path
+import shutil
 from typing import Annotated, Any
+from uuid import uuid4
 from typesafe_sdk import AsyncTypeSafeClient, Choice
 from arq import ArqRedis
-from fastapi import APIRouter, Depends, HTTPException
+from cloudinary.exceptions import Error as CloudinaryError
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -20,10 +23,12 @@ from app.db.connect import get_db
 from app.db.model.chat import Chat, Message, Embedding, Knowledge
 from app.env_config.settings import get_settings
 from app.schema.messages import MessageResponse, MessageRequest, MessageUpdateRequest
+from app.utility.cloudinary import upload_file
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 
 settings = get_settings()
+TEMP_IMAGE_DIR = Path(__file__).resolve().parents[2] / "temp_img"
 
 normalization_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "normalization_prompt.md").read_text()
 structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "structure_knowledge_metadeta.md").read_text()
@@ -138,6 +143,43 @@ def send_prompt_for_response(data: list[dict[str,Any]]):
         content = chunk.choices[0].delta.content
         if content:
             yield content
+
+
+@router.post("/file_upload")
+def file_upload(
+    file: Annotated[UploadFile, File(...)],
+    user_id: Annotated[int, Depends(VerifyJWT)],
+):
+    original_filename = Path(file.filename or "upload").name
+    temporary_path = TEMP_IMAGE_DIR / f"{uuid4().hex}{Path(original_filename).suffix}"
+
+    try:
+        TEMP_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+        with temporary_path.open("wb") as local_file:
+            shutil.copyfileobj(file.file, local_file)
+
+        upload_result = upload_file(temporary_path, original_filename)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="File could not be stored locally",
+        ) from exc
+    except CloudinaryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="File upload failed",
+        ) from exc
+    finally:
+        try:
+            temporary_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    return {
+        "url": upload_result["secure_url"],
+        "public_id": upload_result["public_id"],
+        "resource_type": upload_result["resource_type"],
+    }
 
 
 @router.post("/new_messages/{chat_id}")

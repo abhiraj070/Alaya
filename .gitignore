@@ -1,5 +1,6 @@
-.venv312
+.venv
 .env
 .neon
 .idea
+temp_img/
 
