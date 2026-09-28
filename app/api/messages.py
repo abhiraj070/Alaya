@@ -1,12 +1,10 @@
 from datetime import date
 import json
-from pathlib import Path
-import shutil
-from typing import Annotated, Any
 from uuid import uuid4
+from pathlib import Path
+from typing import Annotated, Any
 from typesafe_sdk import AsyncTypeSafeClient, Choice
 from arq import ArqRedis
-from cloudinary.exceptions import Error as CloudinaryError
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -19,15 +17,25 @@ from app.core_tasks.embeddings import get_embedding
 from app.core_tasks.queue import get_queue
 from app.core_tasks.retrieval import retrieve_queries
 from app.db.connect import get_db
-from app.db.model.chat import Chat, Message, Embedding, Knowledge
+from app.db.model.chat import Chat, Message, Embedding
 from app.env_config.settings import get_settings
 from app.schema.messages import MessageResponse, MessageRequest, MessageUpdateRequest
-from app.utility.cloudinary import upload_file
+from cloudinary.exceptions import Error as CloudinaryError
+
+from app.utility.cloudinary import delete_file, upload_file
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 
 settings = get_settings()
+
+
 TEMP_IMAGE_DIR = Path(__file__).resolve().parents[2] / "temp_img"
+MAX_IMAGE_SIZE_BYTES = 100 * 1024
+UPLOAD_CHUNK_SIZE_BYTES = 64 * 1024
+SUPPORTED_IMAGE_SIGNATURES = (
+    b"\x89PNG\r\n\x1a\n",
+    b"\xff\xd8\xff",
+)
 
 normalization_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "normalization_prompt.md").read_text()
 structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "structure_knowledge_metadeta.md").read_text()
@@ -87,6 +95,9 @@ def send_prompt_to_read_image(image_url: str) -> str:
         temperature=0.7,
     )
     return response.choices[0].message.content
+
+
+
 
 # def send_prompt_to_decide(user_queries: list[str]) -> str:
 #     response = client.chat.completions.create(
@@ -168,6 +179,15 @@ def send_prompt_for_response(data: list[dict[str,Any]]):
         content = chunk.choices[0].delta.content
         if content:
             yield content
+
+def is_supported_image(file_path: Path) -> bool:
+    with file_path.open("rb") as image_file:
+        header = image_file.read(12)
+
+    return header.startswith(SUPPORTED_IMAGE_SIGNATURES) or (
+        header.startswith(b"RIFF") and header[8:12] == b"WEBP"
+    )
+
 
 
 @router.post("/new_messages/{chat_id}")
@@ -348,48 +368,17 @@ async def delete_message(message_id: int, db: Annotated[Session, Depends(get_db)
 @router.post("/feed_knowledge")
 async def feed_knowledge(user_id: Annotated[int, Depends(VerifyJWT)],
                          text_content: str,
-                         db: Annotated[Session, Depends(get_db)],
                          queue: Annotated[ArqRedis, Depends(get_queue)]
 ):
-
-    if text_content is None or text_content == '':
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty")
-
-    #normalise
-    try:
-        embeddable_query= send_prompt_to_normalize(text_content)
-        embeddable_queries= json.loads(embeddable_query)["queries"]
-    except Exception:
-        raise HTTPException(status_code=502, detail="Query normalization failed")
-
-    #structured metadata
-    structured_metadata= json.loads(
-        send_prompt_to_standardise(embeddable_queries)
-    )
-
-    #store metadata
-    knowledge_ids= []
-    for i, content in enumerate(embeddable_queries):
-        knowledge_type= None
-        if structured_metadata[i] is not None:
-            knowledge_type= structured_metadata[i]["fact_type"]
-        knowledge= Knowledge(text_content=content,
-                             user_id=user_id,
-                             knowledge_metadata= structured_metadata[i]["metadata"],
-                             knowledge_type= knowledge_type
-        )
-        db.add(knowledge)
-        db.flush()
-        knowledge_ids.append(knowledge.id)
-    db.commit()
-    await queue.enqueue_job("create_knowledge_embedding", knowledge_ids)
+    await queue.enqueue_job("create_knowledge_embedding", text_content, user_id)
     return {"message": "Knowledge fed successfully"}
 
 
-@router.post("/file_upload-")
-def file_upload(
+@router.post("/image_upload")
+async def image_upload(
     file: Annotated[UploadFile, File(...)],
     user_id: Annotated[int, Depends(VerifyJWT)],
+    queue: Annotated[ArqRedis, Depends(get_queue)],
 ):
     original_filename = Path(file.filename or "upload").name
     temporary_path = TEMP_IMAGE_DIR / f"{uuid4().hex}{Path(original_filename).suffix}"
@@ -397,7 +386,21 @@ def file_upload(
     try:
         TEMP_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
         with temporary_path.open("wb") as local_file:
-            shutil.copyfileobj(file.file, local_file)
+            bytes_written = 0
+            while chunk := file.file.read(UPLOAD_CHUNK_SIZE_BYTES):
+                bytes_written += len(chunk)
+                if bytes_written > MAX_IMAGE_SIZE_BYTES:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                        detail="Image must not exceed 100 KB",
+                    )
+                local_file.write(chunk)
+
+        if not is_supported_image(temporary_path):
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail="Only PNG, JPEG, and WEBP images are supported",
+            )
 
         upload_result = upload_file(temporary_path, original_filename)
     except OSError as exc:
@@ -415,17 +418,16 @@ def file_upload(
             temporary_path.unlink(missing_ok=True)
         except OSError:
             pass
-
     try:
-        image_string= send_prompt_to_read_image(upload_result["secure_url"])
+        await queue.enqueue_job("create_image_embeddings", user_id, upload_result)
     except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail= "Error in reading the image")
-
-    try:
-        embeddings= get_embedding(image_string)
-    except Exception:
-        raise HTTPException(status_code=502, detail="Error while creating embeddings")
-
-    knowledge= Knowledge()
+        try:
+            delete_file(
+                upload_result["public_id"],
+                upload_result.get("resource_type", "image"),
+            )
+        except CloudinaryError:
+            pass
+        raise
 
     return {"message": "File uploaded successfully"}
