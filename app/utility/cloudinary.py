@@ -21,3 +21,12 @@ def upload_file(file_path, filename: str | None = None) -> dict:
         use_filename=True,
         unique_filename=True,
     )
+
+
+def delete_file(public_id: str, resource_type: str = "image") -> dict:
+    """Delete an uploaded Cloudinary asset."""
+    return cloudinary.uploader.destroy(
+        public_id,
+        resource_type=resource_type,
+        invalidate=True,
+    )
