@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -5,14 +6,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.chat import router as chat_router
 from app.api.messages import router as messages_router
 from app.api.user import router as user_router
-from app.core_tasks.queue import create_redis_pool
+from app.core_tasks.worker.queue import create_redis_pool
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI): #when the server starts this runs and redis gets created.
+    from app.core_tasks.pubsub_setup.redis_pubsub import redis_listener
+
     app.state.redis= await create_redis_pool()
+    listener_task = asyncio.create_task(
+        redis_listener(app.state.redis)
+    )
     try:
         yield
     finally:
+        await listener_task.cancel()
         await app.state.redis.aclose()
 
 app= FastAPI(title='Alaya', lifespan=lifespan)

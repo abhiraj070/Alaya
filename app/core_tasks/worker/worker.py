@@ -8,13 +8,29 @@ from app.api.messages import send_prompt_to_read_image, send_prompt_to_standardi
 from app.db.connect import SessionLocal
 from app.utility.cloudinary import delete_file
 from app.db.model.chat import Embedding, EmbeddingKind, Knowledge
-from app.core_tasks.embeddings import get_embedding
-from app.core_tasks.queue import redis_settings
+from app.core_tasks.llm_setup.embeddings_llm import get_embedding
+from app.core_tasks.worker.queue import redis_settings
+
+async def publish_websocket_status(ctx, user_id: int, status: str, message: str) -> None:
+    try:
+        await ctx["redis"].publish(
+            "websocket_messages",
+            json.dumps({
+                "user_id": user_id,
+                "data": {
+                    "status": status,
+                    "message": message,
+                },
+            }),
+        )
+    except Exception:
+        pass
+
 
 async def create_knowledge_embedding(
         ctx,
         text_content: str,
-        user_id: int
+        user_id: int,
 ):
     db= SessionLocal()
     try:
@@ -66,8 +82,22 @@ async def create_knowledge_embedding(
             db.add(db_embeddings)
 
         db.commit()
+
+        await publish_websocket_status(
+            ctx,
+            user_id,
+            "completed",
+            "Data stored successfully",
+        )
+
     except Exception:
         db.rollback()
+        await publish_websocket_status(
+            ctx,
+            user_id,
+            "Failed",
+            "Unable to store the data",
+        )
         raise
     finally:
         db.close()
@@ -137,6 +167,13 @@ async def create_image_embeddings(
         )
         db.add(embed_table)
         db.commit()
+        await publish_websocket_status(
+            ctx,
+            user_id,
+            "completed",
+            "Data stored successfully",
+        )
+
     except Exception:
         db.rollback()
         try:
@@ -146,6 +183,12 @@ async def create_image_embeddings(
             )
         except CloudinaryError:
             pass
+        await publish_websocket_status(
+            ctx,
+            user_id,
+            "Failed",
+            "Unable to store the data",
+        )
         raise
     finally:
         db.close()
