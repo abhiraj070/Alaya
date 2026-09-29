@@ -15,6 +15,7 @@ The backend is built with FastAPI, PostgreSQL/pgvector, Redis, ARQ, SQLAlchemy, 
 - Normalizes compound input into standalone facts.
 - Extracts dynamic structured metadata from those facts.
 - Creates knowledge embeddings asynchronously through an ARQ worker.
+- Reports background knowledge and image-processing status over WebSockets.
 - Chooses semantic, SQL, or hybrid retrieval for each question.
 - Streams an LLM-generated response back to the client.
 
@@ -27,6 +28,8 @@ Knowledge input
     -> store in PostgreSQL
     -> enqueue embedding job in Redis
     -> ARQ worker creates pgvector embedding
+    -> publish completion status through Redis pub/sub
+    -> deliver status to the user's WebSocket connection
 
 User question
     -> normalize/split question
@@ -51,6 +54,7 @@ All knowledge and retrieval queries are scoped to the authenticated user.
 | Vector search | pgvector (`vector(1536)`) |
 | Migrations | Alembic |
 | Queue | Redis, ARQ |
+| Realtime notifications | WebSockets, Redis pub/sub |
 | Authentication | JWT (HS256), Argon2 |
 | LLM | OpenAI `gpt-4o-mini` |
 | Embeddings | OpenAI `text-embedding-3-small` |
@@ -64,7 +68,12 @@ alaya/
 ├── app/
 │   ├── api/                     # User, chat, and message/knowledge endpoints
 │   ├── auth/                    # JWT request dependency
-│   ├── core_tasks/              # LLM, embeddings, retrieval, queue, and worker
+│   ├── core_tasks/
+│   │   ├── llm_setup/           # Chat and embedding model clients
+│   │   ├── pubsub_setup/        # Redis-to-WebSocket notification listener
+│   │   ├── search/              # Semantic, SQL, and hybrid retrieval
+│   │   ├── websocket/           # WebSocket endpoint and active connections
+│   │   ├── worker/              # ARQ queue configuration and background jobs
 │   │   └── system_prompts/      # Prompts used by the retrieval pipeline
 │   ├── db/
 │   │   ├── model/               # SQLAlchemy models
@@ -113,9 +122,12 @@ XAI_API_KEY=
 TYPESAFE_API_KEY=unused-placeholder
 REDIS_HOST=localhost
 REDIS_PORT=6379
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
 ```
 
-`DATABASE_URL`, `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`, `OPENAI_API_KEY`, and `TYPESAFE_API_KEY` are currently required when the application imports its settings. `XAI_API_KEY` is optional and reserved for the configured Grok provider.
+`DATABASE_URL`, `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`, `OPENAI_API_KEY`, `TYPESAFE_API_KEY`, and the three `CLOUDINARY_*` values are currently required when the application imports its settings. `XAI_API_KEY` is optional and reserved for the configured Grok provider.
 
 Do not commit `.env`; it is already excluded by `.gitignore`.
 
@@ -155,7 +167,7 @@ uvicorn app.main:app --reload
 ARQ worker:
 
 ```bash
-arq app.core_tasks.worker.WorkerSettings
+arq app.core_tasks.worker.worker.WorkerSettings
 ```
 
 The API is available at `http://127.0.0.1:8000`. Interactive documentation is available at:
@@ -165,7 +177,7 @@ The API is available at `http://127.0.0.1:8000`. Interactive documentation is av
 
 ## API overview
 
-All routes are mounted under `/api`.
+HTTP routes are mounted under `/api`. The WebSocket endpoint is available separately at `/ws`.
 
 ### Users
 
@@ -198,12 +210,36 @@ All routes are mounted under `/api`.
 | `PUT` | `/api/messages/update_message/{chat_id}/{message_id}` | Required | Edit a message |
 | `DELETE` | `/api/messages/delete_message/{message_id}` | Required | Delete a message |
 | `POST` | `/api/messages/feed_knowledge` | Required | Store knowledge and enqueue its embeddings |
+| `POST` | `/api/messages/image_upload` | Required | Upload an image and enqueue background extraction and embedding |
 
 Protected routes accept either an `access_token` cookie or this header:
 
 ```http
 Authorization: Bearer <access-token>
 ```
+
+### WebSocket notifications
+
+Connect to the WebSocket endpoint with the user ID that should receive background-job notifications:
+
+```text
+ws://127.0.0.1:8000/ws?user_id=<user-id>
+```
+
+Browser connections are accepted only when the `Origin` header is exactly `http://localhost:3000`. Missing or different origins are rejected with WebSocket policy-violation code `1008`.
+
+The API process subscribes to the Redis `websocket_messages` channel. After an ARQ knowledge or image job finishes, the worker publishes a status message and the API forwards it to the active socket for that user. Client messages are currently ignored; the connection is receive-only from the client's perspective.
+
+Example server message:
+
+```json
+{
+  "status": "completed",
+  "message": "Data stored successfully"
+}
+```
+
+Failed jobs use a `Failed` status with an explanatory message. Redis pub/sub notifications are transient, so messages published while the user is disconnected are not retained or replayed.
 
 ## Example workflow
 
@@ -259,9 +295,10 @@ Deleting a user cascades to chats and messages at the ORM level. Deleting a chat
 ## Configuration notes
 
 - CORS currently targets a local frontend at `http://localhost:3000`.
-- The active chat provider is OpenAI. A Grok provider configuration exists in `app/core_tasks/chat_llm.py` but is not selected.
+- The active chat provider is OpenAI. A Grok provider configuration exists in `app/core_tasks/llm_setup/chat_llm.py` but is not selected.
 - Access and refresh tokens currently expire after 15 minutes and 30 days respectively; these durations are hard-coded in token generation even though matching environment settings exist.
 - Login cookies use `secure=False` for local HTTP development. Production deployments should enable secure cookies and use HTTPS.
+- WebSocket connections currently allow only the local frontend origin `http://localhost:3000`.
 
 ## Current limitations
 
@@ -269,6 +306,8 @@ Deleting a user cascades to chats and messages at the ORM level. Deleting a chat
 - Refresh-token rotation and a refresh endpoint are not implemented; the database refresh-token field is not populated during login.
 - The request schemas contain some fields that are ignored by the handlers (for example, the supplied chat title and message user ID).
 - Knowledge ingestion does not yet chunk large inputs.
+- The WebSocket currently identifies users through a client-supplied `user_id`; JWT-backed WebSocket authorization must be completed before production use.
+- Active WebSocket connections and Redis pub/sub notifications are not durable; reconnecting clients do not receive missed notifications.
 - There is no automated test suite or containerized full-stack development environment yet.
 
 These constraints make the current code suitable for local development and experimentation, not a production deployment.
