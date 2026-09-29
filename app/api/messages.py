@@ -3,6 +3,8 @@ import json
 from uuid import uuid4
 from pathlib import Path
 from typing import Annotated, Any
+
+from starlette.requests import Request
 from typesafe_sdk import AsyncTypeSafeClient, Choice
 from arq import ArqRedis
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -12,10 +14,10 @@ from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import StreamingResponse
 from app.auth.VerifyJWT import VerifyJWT
-from app.core_tasks.chat_llm import client, MODEL, VISION_MODEL
-from app.core_tasks.embeddings import get_embedding
-from app.core_tasks.queue import get_queue
-from app.core_tasks.retrieval import retrieve_queries
+from app.core_tasks.llm_setup.chat_llm import client, MODEL, VISION_MODEL
+from app.core_tasks.llm_setup.embeddings_llm import get_embedding
+from app.core_tasks.worker.queue import get_queue
+from app.core_tasks.search.retrieval import retrieve_queries
 from app.db.connect import get_db
 from app.db.model.chat import Chat, Message, Embedding
 from app.env_config.settings import get_settings
@@ -366,11 +368,13 @@ async def delete_message(message_id: int, db: Annotated[Session, Depends(get_db)
 # TODO: add a bg process here.
 # TODO: add chunking for large inputs.
 @router.post("/feed_knowledge")
-async def feed_knowledge(user_id: Annotated[int, Depends(VerifyJWT)],
-                         text_content: str,
-                         queue: Annotated[ArqRedis, Depends(get_queue)]
+async def feed_knowledge(
+        request: Request,
+        user_id: Annotated[int, Depends(VerifyJWT)],
+        text_content: str,
+        queue: Annotated[ArqRedis, Depends(get_queue)]
 ):
-    await queue.enqueue_job("create_knowledge_embedding", text_content, user_id)
+    await queue.enqueue_job("create_knowledge_embedding", text_content, user_id, request.app.state.redis)
     return {"message": "Knowledge fed successfully"}
 
 
