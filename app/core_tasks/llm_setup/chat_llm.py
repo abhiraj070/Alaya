@@ -1,5 +1,5 @@
 from app.env_config.settings import get_settings
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 settings = get_settings()
 PROVIDERS = {
@@ -16,7 +16,7 @@ PROVIDERS = {
 }
 
 config = PROVIDERS["openai"]
-client = OpenAI(
+client = AsyncOpenAI(
     api_key=getattr(settings, config["api_key_env"]),
     base_url=config["base_url"],
 )

@@ -48,9 +48,9 @@ sql_retrieval_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_pro
 response_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "response_prompt.md").read_text()
 image_read_prompt=(Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "read_image.md").read_text()
 
-def send_prompt_to_normalize(user_query: str) -> str:
+async def send_prompt_to_normalize(user_query: str) -> str:
     current_date= date.today().isoformat()
-    response = client.chat.completions.create(
+    response = await client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": f"{normalization_prompt}\nCurrent date: {current_date}"},
@@ -61,8 +61,8 @@ def send_prompt_to_normalize(user_query: str) -> str:
     )
     return response.choices[0].message.content
 
-def send_prompt_to_standardise(user_queries: list[str]) -> str:
-    response = client.chat.completions.create(
+async def send_prompt_to_standardise(user_queries: list[str]) -> str:
+    response = await client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": f"{structure_knowledge}"},
@@ -73,8 +73,8 @@ def send_prompt_to_standardise(user_queries: list[str]) -> str:
     )
     return response.choices[0].message.content
 
-def send_prompt_to_read_image(image_url: str) -> str:
-    response = client.chat.completions.create(
+async def send_prompt_to_read_image(image_url: str) -> str:
+    response = await client.chat.completions.create(
         model=VISION_MODEL,
         messages=[
             {
@@ -154,8 +154,8 @@ async def decide_retrieval_strategy(user_queries: list[str]) -> list[str]:
 #   }
 # }
 
-def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
-    response = client.chat.completions.create(
+async def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
+    response = await client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": sql_retrieval_prompt},
@@ -166,8 +166,8 @@ def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
     )
     return json.loads(response.choices[0].message.content)
 
-def send_prompt_for_response(data: list[dict[str,Any]]):
-    stream = client.chat.completions.create(
+async def send_prompt_for_response(data: list[dict[str,Any]]):
+    stream = await client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": response_prompt},
@@ -374,8 +374,13 @@ async def feed_knowledge(
         text_content: str,
         queue: Annotated[ArqRedis, Depends(get_queue)]
 ):
-    await queue.enqueue_job("create_knowledge_embedding", text_content, user_id, request.app.state.redis)
-    return {"message": "Knowledge fed successfully"}
+    if text_content.strip() == "":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message cannot be spaces or blank")
+    try:
+        await queue.enqueue_job("create_knowledge_embedding", text_content, user_id, request.app.state.redis)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File upload failed")
+    return {"message": "Knowledge queued for processing"}
 
 
 @router.post("/image_upload")
@@ -423,7 +428,12 @@ async def image_upload(
         except OSError:
             pass
     try:
-        await queue.enqueue_job("create_image_embeddings", user_id, upload_result)
+        cloudinary_data = {
+            "secure_url": upload_result["secure_url"],
+            "public_id": upload_result["public_id"],
+            "resource_type": upload_result.get("resource_type", "image"),
+        }
+        await queue.enqueue_job("create_image_embeddings", user_id, cloudinary_data)
     except Exception:
         try:
             delete_file(
@@ -432,6 +442,6 @@ async def image_upload(
             )
         except CloudinaryError:
             pass
-        raise
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File upload failed")
 
-    return {"message": "File uploaded successfully"}
+    return {"message": "Knowledge queued for processing"}
