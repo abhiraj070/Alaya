@@ -13,7 +13,6 @@ cloudinary.config(
 
 
 def upload_file(file_path, filename: str | None = None) -> dict:
-    """Upload a locally stored file to Cloudinary."""
     return cloudinary.uploader.upload(
         str(file_path),
         resource_type="auto",
@@ -24,7 +23,6 @@ def upload_file(file_path, filename: str | None = None) -> dict:
 
 
 def delete_file(public_id: str, resource_type: str = "image") -> dict:
-    """Delete an uploaded Cloudinary asset."""
     return cloudinary.uploader.destroy(
         public_id,
         resource_type=resource_type,
