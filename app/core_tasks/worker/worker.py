@@ -11,6 +11,8 @@ from app.db.model.chat import Embedding, EmbeddingKind, Knowledge
 from app.core_tasks.llm_setup.embeddings_llm import get_embedding
 from app.core_tasks.worker.queue import redis_settings
 
+
+#inside worker, we cannot use the websocket connection pool instance because here worker is a whole separate process
 async def publish_websocket_status(ctx, user_id: int, status: str, message: str) -> None:
     try:
         await ctx["redis"].publish(
@@ -38,16 +40,43 @@ async def create_knowledge_embedding(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty")
 
         #normalise
-        try:
-            embeddable_query= send_prompt_to_normalize(text_content)
-        except Exception:
-            raise HTTPException(status_code=502, detail="Query normalization failed")
-        embeddable_queries= json.loads(embeddable_query)["queries"]
+        for attempt in range(2):
+            try:
+                embeddable_query= await send_prompt_to_normalize(text_content)
+                normalized_data= json.loads(embeddable_query)
+                if not isinstance(normalized_data, dict):
+                    raise ValueError("Normalized response must be an object")
+                embeddable_queries= normalized_data.get("queries")
+                if not isinstance(embeddable_queries, list) or len(embeddable_queries) == 0:
+                    raise ValueError("Queries must be a non-empty list")
+                if not all(isinstance(query, str) and query.strip() for query in embeddable_queries):
+                    raise ValueError("Each query must be a non-empty string")
+                break
+            except Exception:
+                if attempt == 1:
+                    raise HTTPException(status_code=502, detail="Query normalization failed")
 
         #structured metadata
-        structured_metadata= json.loads(
-            send_prompt_to_standardise(embeddable_queries)
-        )
+        for attempt in range(2):
+            try:
+                structured_metadata= json.loads(
+                    await send_prompt_to_standardise(embeddable_queries)
+                )
+                if not isinstance(structured_metadata, list):
+                    raise ValueError("Structured metadata must be a list")
+                if len(structured_metadata) != len(embeddable_queries):
+                    raise ValueError("Metadata count must match query count")
+                for metadata in structured_metadata:
+                    if not isinstance(metadata, dict):
+                        raise ValueError("Each metadata item must be an object")
+                    if not isinstance(metadata.get("fact_type"), str) or not metadata["fact_type"].strip():
+                        raise ValueError("Each metadata item must contain a fact type")
+                    if not isinstance(metadata.get("metadata"), dict):
+                        raise ValueError("Each metadata item must contain a metadata object")
+                break
+            except Exception:
+                if attempt == 1:
+                    raise HTTPException(status_code=502, detail="Metadata generation failed")
 
         #store metadata
         knowledge_ids= []
@@ -73,7 +102,17 @@ async def create_knowledge_embedding(
             embedding= db.execute(stmt).scalar_one_or_none()
             if embedding is not None:
                 continue
-            embeddings= await get_embedding([knowledge.text_content])
+            for attempt in range(2):
+                try:
+                    embeddings= await get_embedding([knowledge.text_content])
+                    if not isinstance(embeddings, list) or len(embeddings) != 1:
+                        raise ValueError("Embedding count must match input count")
+                    if not isinstance(embeddings[0], dict) or "vector" not in embeddings[0]:
+                        raise ValueError("Embedding response is invalid")
+                    break
+                except Exception:
+                    if attempt == 1:
+                        raise HTTPException(status_code=502, detail="Error while creating embeddings")
             db_embeddings= Embedding(knowledge_id= knowledge.id,
                                      kind= EmbeddingKind.KNOWLEDGE,
                                      embedded_text= knowledge.text_content,
@@ -136,21 +175,47 @@ async def create_image_embeddings(
     db= SessionLocal()
 
     try:
-        try:
-            image_obj = json.loads(send_prompt_to_read_image(upload_result["secure_url"]))
-            image_string = image_obj["string"]
-        except Exception:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error in reading the image")
+        for attempt in range(2):
+            try:
+                image_obj = json.loads(await send_prompt_to_read_image(upload_result["secure_url"]))
+                if not isinstance(image_obj, dict):
+                    raise ValueError("Image response must be an object")
+                image_string = image_obj.get("string")
+                if not isinstance(image_string, str) or not image_string.strip():
+                    raise ValueError("Image response must contain a non-empty string")
+                break
+            except Exception:
+                if attempt == 1:
+                    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error in reading the image")
 
-        try:
-            structured_metadata = json.loads(send_prompt_to_standardise([image_string]))[0]
-        except Exception:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error in reading the image")
+        for attempt in range(2):
+            try:
+                structured_metadata_list = json.loads(await send_prompt_to_standardise([image_string]))
+                if not isinstance(structured_metadata_list, list) or len(structured_metadata_list) != 1:
+                    raise ValueError("Metadata count must match input count")
+                structured_metadata = structured_metadata_list[0]
+                if not isinstance(structured_metadata, dict):
+                    raise ValueError("Metadata must be an object")
+                if not isinstance(structured_metadata.get("fact_type"), str) or not structured_metadata["fact_type"].strip():
+                    raise ValueError("Metadata must contain a fact type")
+                if not isinstance(structured_metadata.get("metadata"), dict):
+                    raise ValueError("Metadata must contain a metadata object")
+                break
+            except Exception:
+                if attempt == 1:
+                    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error in reading the image")
 
-        try:
-            embeddings = await get_embedding([image_string])
-        except Exception:
-            raise HTTPException(status_code=502, detail="Error while creating embeddings")
+        for attempt in range(2):
+            try:
+                embeddings = await get_embedding([image_string])
+                if not isinstance(embeddings, list) or len(embeddings) != 1:
+                    raise ValueError("Embedding count must match input count")
+                if not isinstance(embeddings[0], dict) or "vector" not in embeddings[0]:
+                    raise ValueError("Embedding response is invalid")
+                break
+            except Exception:
+                if attempt == 1:
+                    raise HTTPException(status_code=502, detail="Error while creating embeddings")
 
         knowledge = Knowledge(knowledge_type=structured_metadata["fact_type"],
                               user_id=user_id,
