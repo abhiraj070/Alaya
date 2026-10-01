@@ -11,8 +11,9 @@ async def redis_listener(redis):
                 continue
 
             data = json.loads(message["data"])
-            websocket = userid_to_ws(data["user_id"])
-            await websocket.send_json({"status":data["data"]["status"],"message":data["data"]["message"]})
+            websocket = userid_to_ws.get(data["user_id"])
+            if websocket:
+                await websocket.send_json({"status":data["data"]["status"],"message":data["data"]["message"]})
 
     finally:
         await pubsub.unsubscribe("websocket_messages")

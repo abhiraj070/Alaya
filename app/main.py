@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI): #when the server starts this runs and redis ge
     try:
         yield
     finally:
-        await listener_task.cancel()
+        listener_task.cancel()
         await app.state.redis.aclose()
 
 app= FastAPI(title='Alaya', lifespan=lifespan)

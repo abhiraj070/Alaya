@@ -39,14 +39,14 @@ SUPPORTED_IMAGE_SIGNATURES = (
     b"\xff\xd8\xff",
 )
 
-normalization_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "normalization_prompt.md").read_text()
-structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "structure_knowledge_metadeta.md").read_text()
+normalization_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "normalization_prompt.md").read_text(encoding="utf-8")
+structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "structure_knowledge_metadeta.md").read_text(encoding="utf-8")
 #decision_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "decision.md").read_text()
-criteria= json.loads((Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "criteria_decision.md").read_text())
-instruction= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "instruction_decision.md").read_text()
-sql_retrieval_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "sql_retrieval.md").read_text()
-response_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "response_prompt.md").read_text()
-image_read_prompt=(Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "read_image.md").read_text()
+criteria= json.loads((Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "criteria_decision.md").read_text(encoding="utf-8"))
+instruction= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "instruction_decision.md").read_text(encoding="utf-8")
+sql_retrieval_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "sql_retrieval.md").read_text(encoding="utf-8")
+response_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "response_prompt.md").read_text(encoding="utf-8")
+image_read_prompt=(Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "read_image.md").read_text(encoding="utf-8")
 
 async def send_prompt_to_normalize(user_query: str) -> str:
     current_date= date.today().isoformat()
@@ -177,7 +177,7 @@ async def send_prompt_for_response(data: list[dict[str,Any]]):
         temperature=0.2,
         stream=True
     )
-    for chunk in stream:
+    async for chunk in stream:
         content = chunk.choices[0].delta.content
         if content:
             yield content
@@ -208,7 +208,7 @@ async def handle_new_message(chat_id: int,
 
     #normalization
     try:
-        embeddable_query= send_prompt_to_normalize(message.message_content)
+        embeddable_query= await send_prompt_to_normalize(message.message_content)
         embeddable_queries= json.loads(embeddable_query)["queries"]
     except Exception:
         raise HTTPException(status_code=502, detail="Query normalization failed")
@@ -248,7 +248,7 @@ async def handle_new_message(chat_id: int,
 
     #search
     try:
-        search_results= retrieve_queries(db, user_id, embeddable_queries, decisions,
+        search_results= await retrieve_queries(db, user_id, embeddable_queries, decisions,
                                          embeddings, db_message.id, send_prompt_to_plan)
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Search could not be completed")
@@ -301,7 +301,7 @@ async def update_message(chat_id: int,
 
     # normalization
     try:
-        embeddable_query = send_prompt_to_normalize(newMessage)
+        embeddable_query = await send_prompt_to_normalize(newMessage)
         embeddable_queries = json.loads(embeddable_query)["queries"]
     except Exception:
         raise HTTPException(status_code=502, detail="Query normalization failed")
@@ -377,7 +377,7 @@ async def feed_knowledge(
     if text_content.strip() == "":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message cannot be spaces or blank")
     try:
-        await queue.enqueue_job("create_knowledge_embedding", text_content, user_id, request.app.state.redis)
+        await queue.enqueue_job("create_knowledge_embedding", text_content, user_id)
     except Exception:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File upload failed")
     return {"message": "Knowledge queued for processing"}
@@ -444,4 +444,4 @@ async def image_upload(
             pass
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File upload failed")
 
-    return {"message": "Knowledge queued for processing"}
+    return {"message": "Image queued for processing"}

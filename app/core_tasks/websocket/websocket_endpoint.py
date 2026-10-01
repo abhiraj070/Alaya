@@ -1,3 +1,5 @@
+from fastapi.params import Depends
+
 from app.auth.VerifyJWT import VerifyJWT
 from app.main import app
 from fastapi import WebSocket, WebSocketDisconnect
@@ -10,7 +12,7 @@ ALLOWED_WEBSOCKET_ORIGINS = {"http://localhost:3000"}
 @app.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    user_id:Annotated[int, VerifyJWT]
+    user_id:Annotated[int, Depends(VerifyJWT)]
 ):
     origin = websocket.headers.get("origin")
     if origin not in ALLOWED_WEBSOCKET_ORIGINS:

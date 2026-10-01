@@ -114,7 +114,7 @@ def sql_search(db, user_id: int, plan: dict, schema: dict, knowledge_ids: list[i
     value= db.execute(stmt).scalar()
     return {"operation": plan.get("operation"), "value": float(value) if isinstance(value, Decimal) else value}
 
-def retrieve_queries(db, user_id: int, queries: list[str], strategies: list[str],
+async def retrieve_queries(db, user_id: int, queries: list[str], strategies: list[str],
                      embeddings: list[dict], message_id: int, get_plan) -> list[dict]:
     if len(queries)!=len(strategies) or len(queries)!=len(embeddings):
         raise ValueError("Queries, strategies and embeddings must match")
@@ -124,7 +124,7 @@ def retrieve_queries(db, user_id: int, queries: list[str], strategies: list[str]
         if strategy=="semantic":
             data= semantic_search(db, user_id, embeddings[i]["vector"])
         elif strategy=="sql":
-            data= sql_search(db, user_id, get_plan(queries[i], schema), schema)
+            data= sql_search(db, user_id, await get_plan(queries[i], schema), schema)
         elif strategy=="hybrid":
             semantic= semantic_search(db, user_id, embeddings[i]["vector"])
             knowledge_ids= [item["data"]["id"] for item in semantic]
