@@ -167,7 +167,7 @@ uvicorn app.main:app --reload
 ARQ worker:
 
 ```bash
-arq app.core_tasks.worker.worker.WorkerSettings
+arq app.core_tasks.arq_worker.arq_worker.WorkerSettings
 ```
 
 The API is available at `http://127.0.0.1:8000`. Interactive documentation is available at:
