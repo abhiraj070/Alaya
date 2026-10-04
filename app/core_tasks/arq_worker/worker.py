@@ -3,16 +3,19 @@ from fastapi import HTTPException
 from cloudinary.exceptions import Error as CloudinaryError
 from starlette import status
 import json
+from pathlib import Path
 
 from app.api.messages import send_prompt_to_read_image, send_prompt_to_standardise, send_prompt_to_normalize
+from app.core_tasks.chunking.recursive_chunk import recursive_chunk
+from app.core_tasks.extraction.extractor import extract_text
 from app.db.connect import SessionLocal
 from app.utility.cloudinary import delete_file
 from app.db.model.chat import Embedding, EmbeddingKind, Knowledge
 from app.core_tasks.llm_setup.embeddings_llm import get_embedding
-from app.core_tasks.worker.queue import redis_settings
+from app.core_tasks.arq_worker.arqRedis_init import redis_settings
 
 
-#inside worker, we cannot use the websocket connection pool instance because here worker is a whole separate process
+#inside arq_worker, we cannot use the websocket connection pool instance because here arq_worker is a whole separate process
 async def publish_websocket_status(ctx, user_id: int, status: str, message: str) -> None:
     try:
         await ctx["redis"].publish(
@@ -141,32 +144,6 @@ async def create_knowledge_embedding(
     finally:
         db.close()
 
-# async def create_message_embedding(ctx, message_id: int):
-#     db= SessionLocal()
-#     try:
-#         stmt= select(Message).where(Message.id==message_id)
-#         message= db.execute(stmt).scalar_one_or_none()
-#         if message is None:
-#             return
-#         stmt= select(Embedding).where(Embedding.message_id==message_id)
-#         embedding= db.execute(stmt).scalar_one_or_none()
-#         if embedding is not None:
-#             return
-#         embeddings= await get_embedding([message.message_content])
-#         db_embeddings= Embedding(message_id= message.id,
-#                                  kind= EmbeddingKind.MESSAGE,
-#                                  embedded_text= message.message_content,
-#                                  vector= embeddings[0]
-#         )
-#         db.add(db_embeddings)
-#         db.commit()
-#         db.refresh(db_embeddings)
-#     except Exception:
-#         db.rollback()
-#         raise
-#     finally:
-#         db.close()
-
 async def create_image_embeddings(
         ctx,
         user_id: int,
@@ -258,6 +235,107 @@ async def create_image_embeddings(
     finally:
         db.close()
 
+async def create_file_embeddings(
+        ctx,
+        file_path: str,
+        user_id: int,
+):
+    db= SessionLocal()
+    try:
+        try:
+            text= extract_text(file_path)
+        except Exception:
+            raise HTTPException(status_code=502, detail="Error while extracting text")
+
+        try:
+            chunks= recursive_chunk(text)
+            if not chunks:
+                raise ValueError("Text cannot be empty")
+        except Exception:
+            raise HTTPException(status_code=502, detail="Error while creating chunks")
+
+        #structured metadata
+        for attempt in range(2):
+            try:
+                structured_metadata= json.loads(await send_prompt_to_standardise(chunks))
+                if not isinstance(structured_metadata, list) or len(structured_metadata) != len(chunks):
+                    raise ValueError("Metadata count must match chunk count")
+                for metadata in structured_metadata:
+                    if not isinstance(metadata, dict):
+                        raise ValueError("Each metadata item must be an object")
+                    if not isinstance(metadata.get("fact_type"), str) or not metadata["fact_type"].strip():
+                        raise ValueError("Each metadata item must contain a fact type")
+                    if not isinstance(metadata.get("metadata"), dict):
+                        raise ValueError("Each metadata item must contain a metadata object")
+                break
+            except Exception:
+                if attempt == 1:
+                    raise HTTPException(status_code=502, detail="Metadata generation failed")
+
+        for attempt in range(2):
+            try:
+                embeddings = await get_embedding(chunks)
+                if not isinstance(embeddings, list) or len(embeddings) != len(chunks):
+                    raise ValueError("Embedding count must match chunk count")
+                if not all(isinstance(embedding, dict) and "vector" in embedding for embedding in embeddings):
+                    raise ValueError("Embedding response is invalid")
+                break
+            except Exception:
+                if attempt == 1:
+                    raise HTTPException(status_code=502, detail="Error while creating embeddings")
+
+        for i, chunk in enumerate(chunks):
+            knowledge= Knowledge(text_content=chunk,
+                                 user_id=user_id,
+                                 knowledge_metadata=structured_metadata[i]["metadata"],
+                                 knowledge_type=structured_metadata[i]["fact_type"]
+            )
+            db.add(knowledge)
+            db.flush()
+            db_embeddings= Embedding(knowledge_id=knowledge.id,
+                                     kind=EmbeddingKind.KNOWLEDGE,
+                                     embedded_text=chunk,
+                                     vector=embeddings[i]["vector"]
+            )
+            db.add(db_embeddings)
+
+        db.commit()
+        await publish_websocket_status(ctx, user_id, "completed", "Data stored successfully")
+
+    except Exception:
+        db.rollback()
+        await publish_websocket_status(ctx, user_id, "Failed", "Unable to store the data")
+        raise
+    finally:
+        db.close()
+        Path(file_path).unlink(missing_ok=True)
+
+# async def create_message_embedding(ctx, message_id: int):
+#     db= SessionLocal()
+#     try:
+#         stmt= select(Message).where(Message.id==message_id)
+#         message= db.execute(stmt).scalar_one_or_none()
+#         if message is None:
+#             return
+#         stmt= select(Embedding).where(Embedding.message_id==message_id)
+#         embedding= db.execute(stmt).scalar_one_or_none()
+#         if embedding is not None:
+#             return
+#         embeddings= await get_embedding([message.message_content])
+#         db_embeddings= Embedding(message_id= message.id,
+#                                  kind= EmbeddingKind.MESSAGE,
+#                                  embedded_text= message.message_content,
+#                                  vector= embeddings[0]
+#         )
+#         db.add(db_embeddings)
+#         db.commit()
+#         db.refresh(db_embeddings)
+#     except Exception:
+#         db.rollback()
+#         raise
+#     finally:
+#         db.close()
+
 class WorkerSettings:
-    functions= [create_knowledge_embedding, create_image_embeddings]
+    functions= [create_knowledge_embedding, create_image_embeddings, create_file_embeddings]
     redis_settings= redis_settings

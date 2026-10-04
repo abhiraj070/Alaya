@@ -16,7 +16,7 @@ from starlette.responses import StreamingResponse
 from app.auth.VerifyJWT import VerifyJWT
 from app.core_tasks.llm_setup.chat_llm import client, MODEL, VISION_MODEL
 from app.core_tasks.llm_setup.embeddings_llm import get_embedding
-from app.core_tasks.worker.queue import get_queue
+from app.core_tasks.arq_worker.get_queue import get_queue
 from app.core_tasks.search.retrieval import retrieve_queries
 from app.db.connect import get_db
 from app.db.model.chat import Chat, Message, Embedding
@@ -32,6 +32,7 @@ settings = get_settings()
 
 
 TEMP_IMAGE_DIR = Path(__file__).resolve().parents[2] / "temp_img"
+TEMP_FILE_DIR = Path(__file__).resolve().parents[2] / "temp_files"
 MAX_IMAGE_SIZE_BYTES = 100 * 1024
 UPLOAD_CHUNK_SIZE_BYTES = 64 * 1024
 SUPPORTED_IMAGE_SIGNATURES = (
@@ -445,3 +446,25 @@ async def image_upload(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File upload failed")
 
     return {"message": "Image queued for processing"}
+
+@router.post(
+    "/file_upload",
+    status_code=status.HTTP_201_CREATED)
+async def file_upload(
+        file: Annotated[UploadFile, File(...)],
+        user_id: Annotated[int, Depends(VerifyJWT)],
+        queue: Annotated[ArqRedis, Depends(get_queue)],
+):
+    original_filename= Path(file.filename or "upload").name
+    temporary_path= TEMP_FILE_DIR / f"{uuid4().hex}{Path(original_filename).suffix}"
+    try:
+        TEMP_FILE_DIR.mkdir(parents=True, exist_ok=True)
+        with temporary_path.open("wb") as local_file:
+            while chunk := await file.read(UPLOAD_CHUNK_SIZE_BYTES):
+                local_file.write(chunk)
+        await queue.enqueue_job("create_file_embeddings", str(temporary_path), user_id)
+    except Exception:
+        temporary_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File upload failed")
+
+    return {"message": "File queued for processing"}

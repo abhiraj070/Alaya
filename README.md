@@ -306,7 +306,7 @@ Images must be PNG, JPEG, or WEBP and no larger than 100 KB. The API checks the 
 
 ## Document extraction in progress
 
-`app/core_tasks/extraction/type_extractor.py` dispatches local file paths by extension:
+`app/core_tasks/extraction/extractor.py` dispatches local file paths by extension:
 
 | Formats | Extracted content |
 | --- | --- |
