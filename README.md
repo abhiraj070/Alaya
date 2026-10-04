@@ -4,7 +4,7 @@ Alaya is a personal knowledge and conversational retrieval API. It lets each use
 
 The backend is built with FastAPI, PostgreSQL/pgvector, Redis, ARQ, SQLAlchemy, and OpenAI.
 
-> **Project status:** Alaya is under active development. The core API and retrieval pipeline are present, but some production-hardening work is still outstanding. See [Current limitations](#current-limitations).
+> **Project status:** Alaya is under active development. Text and image ingestion pipelines are implemented, and document extraction is being added. The current checkout has API and worker startup blockers. See [Current limitations](#current-limitations) before running the setup commands.
 
 ## What Alaya does
 
@@ -15,6 +15,8 @@ The backend is built with FastAPI, PostgreSQL/pgvector, Redis, ARQ, SQLAlchemy, 
 - Normalizes compound input into standalone facts.
 - Extracts dynamic structured metadata from those facts.
 - Creates knowledge embeddings asynchronously through an ARQ worker.
+- Reads uploaded images through an OpenAI vision model and stores the extracted knowledge.
+- Includes local text extractors for PDF, DOCX, TXT, Markdown, CSV, XLSX, and PPTX files; the file-upload API is not yet connected.
 - Reports background knowledge and image-processing status over WebSockets.
 - Chooses semantic, SQL, or hybrid retrieval for each question.
 - Streams an LLM-generated response back to the client.
@@ -23,11 +25,10 @@ The backend is built with FastAPI, PostgreSQL/pgvector, Redis, ARQ, SQLAlchemy, 
 
 ```text
 Knowledge input
-    -> normalize/split input
-    -> extract structured metadata
-    -> store in PostgreSQL
-    -> enqueue embedding job in Redis
-    -> ARQ worker creates pgvector embedding
+    -> enqueue raw text in Redis
+    -> ARQ worker normalizes/splits input
+    -> extract structured metadata and create embeddings
+    -> commit knowledge and pgvector embeddings to PostgreSQL
     -> publish completion status through Redis pub/sub
     -> deliver status to the user's WebSocket connection
 
@@ -57,8 +58,11 @@ All knowledge and retrieval queries are scoped to the authenticated user.
 | Realtime notifications | WebSockets, Redis pub/sub |
 | Authentication | JWT (HS256), Argon2 |
 | LLM | OpenAI `gpt-4o-mini` |
+| Image extraction | OpenAI vision model configured by `VISION_MODEL` |
 | Embeddings | OpenAI `text-embedding-3-small` |
 | Retrieval classification | JEV through the TypeSafe SDK |
+| Image storage | Cloudinary |
+| Document extraction | PyMuPDF, python-docx, pandas, openpyxl, python-pptx |
 
 ## Project structure
 
@@ -69,17 +73,19 @@ alaya/
 │   ├── api/                     # User, chat, and message/knowledge endpoints
 │   ├── auth/                    # JWT request dependency
 │   ├── core_tasks/
+│   │   ├── arq_worker/          # ARQ queue configuration and background jobs
+│   │   ├── extraction/          # Local document and tabular text extractors
 │   │   ├── llm_setup/           # Chat and embedding model clients
-│   │   ├── pubsub_setup/        # Redis-to-WebSocket notification listener
+│   │   ├── redis_pubsub/        # Native Redis client and notification listener
 │   │   ├── search/              # Semantic, SQL, and hybrid retrieval
 │   │   ├── websocket/           # WebSocket endpoint and active connections
-│   │   ├── worker/              # ARQ queue configuration and background jobs
 │   │   └── system_prompts/      # Prompts used by the retrieval pipeline
 │   ├── db/
 │   │   ├── model/               # SQLAlchemy models
 │   │   └── connect.py           # Engine and session setup
 │   ├── env_config/              # Environment-backed settings
 │   ├── schema/                  # Pydantic request/response models
+│   ├── utility/                 # Cloudinary upload and deletion helpers
 │   └── main.py                  # FastAPI application entry point
 ├── alembic.ini
 └── requirements.txt
@@ -87,10 +93,12 @@ alaya/
 
 ## Prerequisites
 
-- Python 3.9 or newer
+- Python 3.10 or newer for the source syntax; the existing local environment uses Python 3.14. Check that the pinned dependencies support your chosen version.
 - PostgreSQL with the [pgvector](https://github.com/pgvector/pgvector) extension available
 - Redis
 - An OpenAI API key
+- A TypeSafe API key for retrieval-strategy classification
+- Cloudinary credentials for image uploads (also required by settings at startup)
 
 ## Local setup
 
@@ -102,10 +110,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-On Windows PowerShell, activate it with:
+On Windows PowerShell, create and activate the environment with:
 
 ```powershell
+python -m venv .venv
 .venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 ```
 
 ### 2. Configure environment variables
@@ -119,7 +129,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=30
 OPENAI_API_KEY=your-openai-api-key
 XAI_API_KEY=
-TYPESAFE_API_KEY=unused-placeholder
+TYPESAFE_API_KEY=your-typesafe-api-key
 REDIS_HOST=localhost
 REDIS_PORT=6379
 CLOUDINARY_CLOUD_NAME=your-cloud-name
@@ -167,7 +177,7 @@ uvicorn app.main:app --reload
 ARQ worker:
 
 ```bash
-arq app.core_tasks.arq_worker.arq_worker.WorkerSettings
+arq app.core_tasks.arq_worker.worker.WorkerSettings
 ```
 
 The API is available at `http://127.0.0.1:8000`. Interactive documentation is available at:
@@ -177,7 +187,7 @@ The API is available at `http://127.0.0.1:8000`. Interactive documentation is av
 
 ## API overview
 
-HTTP routes are mounted under `/api`. The WebSocket endpoint is available separately at `/ws`.
+HTTP routes are mounted under `/api`. The WebSocket endpoint is available separately at `/ws`. All chat routes require authentication; user registration and login are public.
 
 ### Users
 
@@ -207,9 +217,9 @@ HTTP routes are mounted under `/api`. The WebSocket endpoint is available separa
 | --- | --- | --- | --- |
 | `POST` | `/api/messages/new_messages/{chat_id}` | Required | Store a question, retrieve context, and stream a response |
 | `GET` | `/api/messages/get_messages/{chat_id}` | Required | List messages in a chat |
-| `PUT` | `/api/messages/update_message/{chat_id}/{message_id}` | Required | Edit a message |
+| `PUT` | `/api/messages/update_message/{chat_id}/{message_id}` | Required | Edit a message and regenerate embeddings; response streaming needs an async fix |
 | `DELETE` | `/api/messages/delete_message/{message_id}` | Required | Delete a message |
-| `POST` | `/api/messages/feed_knowledge` | Required | Store knowledge and enqueue its embeddings |
+| `POST` | `/api/messages/feed_knowledge` | Required | Queue raw text for normalization, metadata extraction, and embedding |
 | `POST` | `/api/messages/image_upload` | Required | Upload an image and enqueue background extraction and embedding |
 
 Protected routes accept either an `access_token` cookie or this header:
@@ -220,15 +230,17 @@ Authorization: Bearer <access-token>
 
 ### WebSocket notifications
 
-Connect to the WebSocket endpoint with the user ID that should receive background-job notifications:
+Connect to the WebSocket endpoint with an access-token cookie or, for clients that support custom headers, an `Authorization: Bearer <access-token>` header. The authenticated token determines which user's notifications are delivered:
 
 ```text
-ws://127.0.0.1:8000/ws?user_id=<user-id>
+ws://localhost:8000/ws
 ```
 
 Browser connections are accepted only when the `Origin` header is exactly `http://localhost:3000`. Missing or different origins are rejected with WebSocket policy-violation code `1008`.
 
-The API process subscribes to the Redis `websocket_messages` channel. After an ARQ knowledge or image job finishes, the worker publishes a status message and the API forwards it to the active socket for that user. Client messages are currently ignored; the connection is receive-only from the client's perspective.
+For browser clients, log in through `http://localhost:8000` so the cookie is available on the same host as the WebSocket. A `user_id` query parameter does not select the notification recipient.
+
+The API process uses a native `redis.asyncio.Redis` client to subscribe to the Redis `websocket_messages` channel, while an ARQ pool handles queued jobs. After an ARQ knowledge or image job finishes, the worker publishes a status message and the API forwards it to the active socket for that user. Client messages are currently ignored; the connection is receive-only from the client's perspective.
 
 Example server message:
 
@@ -258,7 +270,7 @@ curl -c cookies.txt -X POST http://127.0.0.1:8000/api/user/login \
 Create a chat (replace `1` with the registered user's ID):
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/chat/create_chat \
+curl -b cookies.txt -X POST http://127.0.0.1:8000/api/chat/create_chat \
   -H 'Content-Type: application/json' \
   -d '{"chat_title":"Personal memory","user_id":1}'
 ```
@@ -280,7 +292,32 @@ curl -N -b cookies.txt -X POST \
   -d '{"message_content":"How much did I spend on my laptop?","user_id":1}'
 ```
 
-The worker must finish the queued knowledge embedding before that knowledge can appear in semantic search.
+The endpoint returns `{"message":"Knowledge queued for processing"}`. The worker must finish processing before the knowledge is stored and available for retrieval.
+
+Upload an image as multipart form data:
+
+```bash
+curl -b cookies.txt -X POST \
+  http://127.0.0.1:8000/api/messages/image_upload \
+  -F 'file=@receipt.png'
+```
+
+Images must be PNG, JPEG, or WEBP and no larger than 100 KB. The API checks the file signature, uploads to Cloudinary, and queues extraction and embedding. It returns `{"message":"Image queued for processing"}`; completion or failure arrives over the WebSocket. Temporary local files are removed after upload, and Cloudinary cleanup is attempted if enqueueing or processing fails.
+
+## Document extraction in progress
+
+`app/core_tasks/extraction/type_extractor.py` dispatches local file paths by extension:
+
+| Formats | Extracted content |
+| --- | --- |
+| PDF | Embedded page text with page labels; no OCR for scanned pages |
+| DOCX | Paragraphs and table cells |
+| TXT, Markdown | UTF-8 text with replacement for invalid characters |
+| CSV | Non-empty values labeled with their column names |
+| XLSX | Cell values grouped by sheet; formulas use cached values |
+| PPTX | Text-bearing shapes grouped by slide |
+
+Unsupported extensions and files with no extractable text raise `ValueError`. These helpers accept local paths, not FastAPI `UploadFile` objects. `/api/messages/file_upload` is not registered because its declaration is missing the route decorator, and its handler and background job remain unfinished.
 
 ## Data model
 
@@ -302,11 +339,14 @@ Deleting a user cascades to chats and messages at the ORM level. Deleting a chat
 
 ## Current limitations
 
+- `app/api/messages.py` imports `get_queue` from `arqRedis_init.py`, but the dependency lives in `app/core_tasks/arq_worker/get_queue.py`; the import must be corrected before the API can start.
+- The unfinished `create_file_embeddings` function in `app/core_tasks/arq_worker/worker.py` contains an empty `try` block and causes a syntax error, preventing the ARQ worker from starting.
+- File ingestion is not available through the API yet; complete route registration, local file handling, enqueueing, and the file-processing worker before using it.
+- The message-update handler calls the async retrieval function without awaiting it, so its streamed response is currently broken.
 - Usernames are not currently declared unique at the database level.
 - Refresh-token rotation and a refresh endpoint are not implemented; the database refresh-token field is not populated during login.
 - The request schemas contain some fields that are ignored by the handlers (for example, the supplied chat title and message user ID).
 - Knowledge ingestion does not yet chunk large inputs.
-- The WebSocket currently identifies users through a client-supplied `user_id`; JWT-backed WebSocket authorization must be completed before production use.
 - Active WebSocket connections and Redis pub/sub notifications are not durable; reconnecting clients do not receive missed notifications.
 - There is no automated test suite or containerized full-stack development environment yet.
 
