@@ -1,6 +1,5 @@
 from openai import AsyncOpenAI
 from app.env_config.settings import get_settings
-from app.core_tasks.chunking.recursive_chunk import Chunk
 settings = get_settings()
 
 client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)

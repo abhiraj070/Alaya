@@ -108,9 +108,10 @@ def _add_overlap(
     result = []
 
     for i, chunk in enumerate(chunks):
-        previous = chunks[i - 1]
-        overlap_text = previous[-overlap:]
-        chunk = overlap_text + chunk
+        if i > 0 and overlap > 0:
+            previous = chunks[i - 1]
+            overlap_text = previous[-overlap:]
+            chunk = overlap_text + chunk
 
         result.append(chunk)
 

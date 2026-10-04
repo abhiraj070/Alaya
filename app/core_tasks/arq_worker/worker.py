@@ -255,22 +255,25 @@ async def create_file_embeddings(
             raise HTTPException(status_code=502, detail="Error while creating chunks")
 
         #structured metadata
-        for attempt in range(2):
-            try:
-                structured_metadata= json.loads(await send_prompt_to_standardise(chunks))
-                if not isinstance(structured_metadata, list) or len(structured_metadata) != len(chunks):
-                    raise ValueError("Metadata count must match chunk count")
-                for metadata in structured_metadata:
+        structured_metadata= []
+        for chunk in chunks:
+            for attempt in range(2):
+                try:
+                    metadata_list= json.loads(await send_prompt_to_standardise([chunk]))
+                    if not isinstance(metadata_list, list) or len(metadata_list) != 1:
+                        raise ValueError("Metadata count must match chunk count")
+                    metadata= metadata_list[0]
                     if not isinstance(metadata, dict):
                         raise ValueError("Each metadata item must be an object")
                     if not isinstance(metadata.get("fact_type"), str) or not metadata["fact_type"].strip():
                         raise ValueError("Each metadata item must contain a fact type")
                     if not isinstance(metadata.get("metadata"), dict):
                         raise ValueError("Each metadata item must contain a metadata object")
-                break
-            except Exception:
-                if attempt == 1:
-                    raise HTTPException(status_code=502, detail="Metadata generation failed")
+                    structured_metadata.append(metadata)
+                    break
+                except Exception:
+                    if attempt == 1:
+                        raise HTTPException(status_code=502, detail="Metadata generation failed")
 
         for attempt in range(2):
             try:
