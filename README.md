@@ -4,7 +4,7 @@ Alaya is a personal knowledge and conversational retrieval API. It lets each use
 
 The backend is built with FastAPI, PostgreSQL/pgvector, Redis, ARQ, SQLAlchemy, and OpenAI.
 
-> **Project status:** Alaya is under active development. Text and image ingestion pipelines are implemented, and document extraction is being added. The current checkout has API and worker startup blockers. See [Current limitations](#current-limitations) before running the setup commands.
+> **Project status:** Alaya is under active development. Text, image, and document ingestion pipelines are implemented, including document chunking and background processing. See [Current limitations](#current-limitations) for outstanding work.
 
 ## What Alaya does
 
@@ -16,8 +16,9 @@ The backend is built with FastAPI, PostgreSQL/pgvector, Redis, ARQ, SQLAlchemy, 
 - Extracts dynamic structured metadata from those facts.
 - Creates knowledge embeddings asynchronously through an ARQ worker.
 - Reads uploaded images through an OpenAI vision model and stores the extracted knowledge.
-- Includes local text extractors for PDF, DOCX, TXT, Markdown, CSV, XLSX, and PPTX files; the file-upload API is not yet connected.
-- Reports background knowledge and image-processing status over WebSockets.
+- Accepts PDF, DOCX, TXT, Markdown, CSV, XLSX, and PPTX uploads, extracts their text, and splits it into overlapping chunks.
+- Stores each document chunk with its own structured metadata and embedding.
+- Reports background text, image, and document-processing status over WebSockets.
 - Chooses semantic, SQL, or hybrid retrieval for each question.
 - Streams an LLM-generated response back to the client.
 
@@ -31,6 +32,17 @@ Knowledge input
     -> commit knowledge and pgvector embeddings to PostgreSQL
     -> publish completion status through Redis pub/sub
     -> deliver status to the user's WebSocket connection
+
+Document upload
+    -> save file locally in temp_files/
+    -> enqueue file path and authenticated user ID in Redis
+    -> ARQ worker extracts text from the saved file
+    -> recursively split text and add overlap
+    -> extract structured metadata one chunk at a time
+    -> create embeddings for the chunks
+    -> commit knowledge and embeddings to PostgreSQL
+    -> publish completion status through Redis pub/sub
+    -> delete the local file when the worker exits
 
 User question
     -> normalize/split question
@@ -74,6 +86,7 @@ alaya/
 │   ├── auth/                    # JWT request dependency
 │   ├── core_tasks/
 │   │   ├── arq_worker/          # ARQ queue configuration and background jobs
+│   │   ├── chunking/            # Recursive text splitting and overlap
 │   │   ├── extraction/          # Local document and tabular text extractors
 │   │   ├── llm_setup/           # Chat and embedding model clients
 │   │   ├── redis_pubsub/        # Native Redis client and notification listener
@@ -180,6 +193,8 @@ ARQ worker:
 arq app.core_tasks.arq_worker.worker.WorkerSettings
 ```
 
+Run the API and worker against the same local filesystem. Document jobs receive an absolute file path, so the worker must be able to read the API's `temp_files/` directory. Run both commands from the repository root so they load the same `.env`.
+
 The API is available at `http://127.0.0.1:8000`. Interactive documentation is available at:
 
 - Swagger UI: `http://127.0.0.1:8000/docs`
@@ -221,6 +236,7 @@ HTTP routes are mounted under `/api`. The WebSocket endpoint is available separa
 | `DELETE` | `/api/messages/delete_message/{message_id}` | Required | Delete a message |
 | `POST` | `/api/messages/feed_knowledge` | Required | Queue raw text for normalization, metadata extraction, and embedding |
 | `POST` | `/api/messages/image_upload` | Required | Upload an image and enqueue background extraction and embedding |
+| `POST` | `/api/messages/file_upload` | Required | Save a document locally and enqueue extraction, chunking, and knowledge storage |
 
 Protected routes accept either an `access_token` cookie or this header:
 
@@ -240,7 +256,7 @@ Browser connections are accepted only when the `Origin` header is exactly `http:
 
 For browser clients, log in through `http://localhost:8000` so the cookie is available on the same host as the WebSocket. A `user_id` query parameter does not select the notification recipient.
 
-The API process uses a native `redis.asyncio.Redis` client to subscribe to the Redis `websocket_messages` channel, while an ARQ pool handles queued jobs. After an ARQ knowledge or image job finishes, the worker publishes a status message and the API forwards it to the active socket for that user. Client messages are currently ignored; the connection is receive-only from the client's perspective.
+The API process uses a native `redis.asyncio.Redis` client to subscribe to the Redis `websocket_messages` channel, while an ARQ pool handles queued jobs. After an ARQ text, image, or document job finishes, the worker publishes a status message and the API forwards it to the active socket for that user. Client messages are currently ignored; the connection is receive-only from the client's perspective.
 
 Example server message:
 
@@ -283,6 +299,8 @@ curl -b cookies.txt -X POST \
   --data-urlencode 'text_content=I bought a laptop for 80000 INR on 2026-09-20'
 ```
 
+The knowledge endpoint returns `{"message":"Knowledge queued for processing"}`. Wait for the worker to finish before querying the stored knowledge.
+
 Ask a question and receive a streamed plain-text response (replace the chat ID if needed):
 
 ```bash
@@ -291,8 +309,6 @@ curl -N -b cookies.txt -X POST \
   -H 'Content-Type: application/json' \
   -d '{"message_content":"How much did I spend on my laptop?","user_id":1}'
 ```
-
-The endpoint returns `{"message":"Knowledge queued for processing"}`. The worker must finish processing before the knowledge is stored and available for retrieval.
 
 Upload an image as multipart form data:
 
@@ -304,7 +320,17 @@ curl -b cookies.txt -X POST \
 
 Images must be PNG, JPEG, or WEBP and no larger than 100 KB. The API checks the file signature, uploads to Cloudinary, and queues extraction and embedding. It returns `{"message":"Image queued for processing"}`; completion or failure arrives over the WebSocket. Temporary local files are removed after upload, and Cloudinary cleanup is attempted if enqueueing or processing fails.
 
-## Document extraction in progress
+## Document uploads and chunking
+
+Upload a document as multipart form data:
+
+```bash
+curl -b cookies.txt -X POST \
+  http://127.0.0.1:8000/api/messages/file_upload \
+  -F 'file=@notes.pdf'
+```
+
+The API returns HTTP `201` with `{"message":"File queued for processing"}` after saving the file under a generated filename in `temp_files/` and queueing `create_file_embeddings`. Processing happens in the worker; completion or failure is reported over the WebSocket.
 
 `app/core_tasks/extraction/extractor.py` dispatches local file paths by extension:
 
@@ -317,14 +343,20 @@ Images must be PNG, JPEG, or WEBP and no larger than 100 KB. The API checks the 
 | XLSX | Cell values grouped by sheet; formulas use cached values |
 | PPTX | Text-bearing shapes grouped by slide |
 
-Unsupported extensions and files with no extractable text raise `ValueError`. These helpers accept local paths, not FastAPI `UploadFile` objects. `/api/messages/file_upload` is not registered because its declaration is missing the route decorator, and its handler and background job remain unfinished.
+The worker passes the saved file's path to `extract_text`. Unsupported extensions and files with no extractable text fail during background processing, after the upload has been accepted.
+
+The recursive splitter uses a default chunk size of 1,000 characters and prepends up to 150 characters from the previous chunk. It tries paragraph, line, sentence, and smaller separators before falling back to character slicing. The first chunk has no overlap; later chunks can reach 1,150 characters after overlap is added. These sizes count characters, not tokens, and can be changed through the helper's arguments.
+
+Metadata is extracted separately for each chunk, while embeddings are requested for the full chunk list. Each chunk becomes one `Knowledge` row and one linked `Embedding` row belonging to the authenticated user. The worker commits the document's rows together and rolls them back if processing fails. Metadata and embedding generation each allow two attempts.
+
+The worker deletes the local file in its cleanup block after success or failure. If saving or queueing fails, the API attempts deletion immediately. Both `temp_files/` and `temp_img/` are excluded from Git.
 
 ## Data model
 
 - **User** owns chats, messages, and knowledge records. Passwords are hashed with Argon2 before insertion.
 - **Chat** groups messages for one user.
 - **Message** stores user/LLM content, its sender, owner, and creation time.
-- **Knowledge** stores a normalized fact, its dynamic JSONB metadata, fact type, and owner.
+- **Knowledge** stores a normalized text fact, extracted image content, or document chunk, together with its dynamic JSONB metadata, fact type, and owner.
 - **Embedding** links a 1,536-dimensional vector to either a message or knowledge record.
 
 Deleting a user cascades to chats and messages at the ORM level. Deleting a chat or message also removes its related messages or embeddings through configured relationships.
@@ -339,14 +371,14 @@ Deleting a user cascades to chats and messages at the ORM level. Deleting a chat
 
 ## Current limitations
 
-- `app/api/messages.py` imports `get_queue` from `arqRedis_init.py`, but the dependency lives in `app/core_tasks/arq_worker/get_queue.py`; the import must be corrected before the API can start.
-- The unfinished `create_file_embeddings` function in `app/core_tasks/arq_worker/worker.py` contains an empty `try` block and causes a syntax error, preventing the ARQ worker from starting.
-- File ingestion is not available through the API yet; complete route registration, local file handling, enqueueing, and the file-processing worker before using it.
 - The message-update handler calls the async retrieval function without awaiting it, so its streamed response is currently broken.
 - Usernames are not currently declared unique at the database level.
 - Refresh-token rotation and a refresh endpoint are not implemented; the database refresh-token field is not populated during login.
 - The request schemas contain some fields that are ignored by the handlers (for example, the supplied chat title and message user ID).
-- Knowledge ingestion does not yet chunk large inputs.
+- Document uploads are chunked, but direct text ingestion through `feed_knowledge` does not yet chunk large inputs.
+- Document uploads have no file-size limit or extension validation before queueing. Scanned PDFs require OCR, which is not implemented.
+- Document jobs require a shared filesystem, request all embeddings in one batch, and use the default ARQ timeout. Very large documents may exceed processing limits.
+- File cleanup depends on the worker's cleanup block running; an abrupt process termination can leave temporary files behind.
 - Active WebSocket connections and Redis pub/sub notifications are not durable; reconnecting clients do not receive missed notifications.
 - There is no automated test suite or containerized full-stack development environment yet.
 
@@ -371,6 +403,6 @@ alembic upgrade head
 
 - Implement refresh-token rotation and revocation.
 - Persist assistant responses and complete conversational context handling.
-- Add ingestion chunking, idempotency, and job-status tracking.
+- Extend chunking to direct text ingestion and add upload limits, embedding batches, idempotency, and durable job-status tracking.
 - Add unit/integration tests and Docker Compose for PostgreSQL, Redis, API, and worker.
 - Add structured logging, retries, rate limits, and production deployment configuration.
