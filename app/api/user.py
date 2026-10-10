@@ -97,9 +97,16 @@ async def update_user(user_id: int, request: UserUpdateRequest, db: Annotated[Se
     stmt= select(User).where(User.id==user_id)
     user= db.execute(stmt).scalar_one_or_none()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    user.name= request.name
-    user.username= request.username
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User not found")
+    if request.name != "":
+        user.name= request.name
+    if request.username != "":
+        stmt2= select(user).where(User.username==request.username)
+        user2= db.execute(stmt2).scalar_one_or_none()
+        if user2 is None:
+            user.username= request.username
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Username already taken")
     db.commit()
     db.refresh(user)
     return user

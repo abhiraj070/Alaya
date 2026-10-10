@@ -15,5 +15,5 @@ class LoginRequest(BaseModel):
     password: str
 
 class UserUpdateRequest(BaseModel):
-    name: str
-    username: str
+    name: str = ""
+    username: str = ""
