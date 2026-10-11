@@ -1,7 +1,26 @@
-.venv
+# Environment & Secrets
 .env
-.neon
-.idea
+*.env
+backend/.env
+
+# Python / Backend
+.venv/
+venv/
+backend/venv/
+backend/.venv/
+.neon/
+.idea/
+__pycache__/
+*.py[cod]
 temp_img/
 temp_files/
 
+# Frontend dependencies and build outputs
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
