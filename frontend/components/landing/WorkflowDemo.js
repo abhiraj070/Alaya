@@ -3,164 +3,231 @@
 import { useState } from "react";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 
-const DEMO_PRESETS = [
-  {
-    id: 1,
-    stageNum: 1,
-    title: "1. Upload Documents",
-    docContext: "3 Documents Added to Knowledge Base",
-    question: "Upload complete: Research Paper.pdf, Project Notes.docx, Financial Report.xlsx",
-    summary: "Files are stored securely in your private workspace. No manual tagging needed.",
-    actionTitle: "Supported File Types",
-    actionDetail: "PDF, DOCX, XLSX, TXT, PPTX & Images directly ingested.",
-    type: "upload",
-  },
-  {
-    id: 2,
-    stageNum: 2,
-    title: "2. Prepare Knowledge",
-    docContext: "Parsing & Extracting Chunks",
-    question: "How does Alaya index these files?",
-    summary: "Alaya breaks files into overlapping semantic chunks, extracts structured facts, and creates vector embeddings.",
-    actionTitle: "Knowledge Ready",
-    actionDetail: "1,536-dimensional embeddings linked to metadata for hybrid retrieval.",
-    type: "extract",
-  },
-  {
-    id: 3,
-    stageNum: 3,
-    title: "3. Ask in Chat",
-    docContext: "Conversational Composer Active",
-    question: "What were our main research findings on system latency?",
-    summary: "Typing natural questions searches your private Knowledge Base instead of generic web content.",
-    actionTitle: "Natural Language Query",
-    actionDetail: "Alaya understands complex multi-topic and comparative questions.",
-    type: "ask",
-  },
-  {
-    id: 4,
-    stageNum: 4,
-    title: "4. Receive Answers",
-    docContext: "Grounded Answer Synthesized",
-    question: "Can you provide the specific latency metrics from §3.2?",
-    summary: "Latency p95 dropped from 320ms to 94ms following the pgvector HNSW index rollout. Verified in Research Paper.pdf (page 14).",
-    actionTitle: "Exact Citations",
-    actionDetail: "Direct citation links verify every single statement.",
-    type: "answer",
-  },
-];
+const DEFAULT_MEMORY_TEXT =
+  "Today, I finished the first version of my project and discussed the next steps with my team.";
 
-export default function WorkflowDemo({ activeStage, onSelectStage }) {
-  const [selectedPresetId, setSelectedPresetId] = useState(activeStage);
+export default function WorkflowDemo() {
+  const [inputMode, setInputMode] = useState("write"); // "upload" | "write"
+  const [selectedDocId, setSelectedDocId] = useState("doc-1");
+  const [memoryInput, setMemoryInput] = useState(DEFAULT_MEMORY_TEXT);
+  const [isMemorySaved, setIsMemorySaved] = useState(true);
+  const [saveToast, setSaveToast] = useState("");
 
-  const currentPreset = DEMO_PRESETS.find((p) => p.stageNum === activeStage) || DEMO_PRESETS[0];
+  const handleSaveMemory = () => {
+    if (!memoryInput.trim()) return;
+    setIsMemorySaved(true);
+    setSaveToast("Saved to Knowledge Base!");
+    setTimeout(() => setSaveToast(""), 3000);
+  };
 
   return (
     <div className="relative mt-8 w-full rounded-2xl border border-border-strong bg-surface-primary/80 p-5 sm:p-7 backdrop-blur-md shadow-2xl">
-      {/* Top Header: Active Stage Context & Selector */}
+      {/* Top Header: Selectable Input Mode Switcher */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-4">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-sky opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-sky" />
           </span>
-          <span className="text-xs font-mono font-semibold text-text-primary">
-            {currentPreset.title}
+          <span className="text-xs font-mono font-semibold text-text-primary uppercase tracking-wider">
+            KNOWLEDGE INPUT DEMONSTRATION
           </span>
-          <span className="text-text-muted text-xs">•</span>
-          <span className="text-xs text-text-secondary">{currentPreset.docContext}</span>
         </div>
 
-        {/* Quick Stage Buttons */}
-        <div className="flex items-center gap-1.5">
-          {[1, 2, 3, 4].map((step) => (
-            <button
-              key={step}
-              type="button"
-              onClick={() => onSelectStage(step)}
-              className={`h-7 px-2.5 rounded text-[11px] font-mono transition-all ${
-                activeStage === step
-                  ? "border border-accent-sky/50 bg-surface-secondary text-accent-sky shadow-[0_0_10px_rgba(56,189,248,0.2)]"
-                  : "border border-transparent text-text-muted hover:text-text-primary"
-              }`}
-            >
-              Step {step}
-            </button>
-          ))}
+        {/* Dual Input Mode Tabs */}
+        <div className="flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-secondary p-1">
+          <button
+            type="button"
+            onClick={() => setInputMode("upload")}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all ${
+              inputMode === "upload"
+                ? "bg-surface-primary text-accent-sky shadow-sm border border-border-strong"
+                : "text-text-muted hover:text-text-primary"
+            }`}
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span>Upload Documents</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setInputMode("write")}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium transition-all ${
+              inputMode === "write"
+                ? "bg-surface-primary text-accent-sky shadow-sm border border-border-strong"
+                : "text-text-muted hover:text-text-primary"
+            }`}
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            <span>Write Knowledge</span>
+          </button>
         </div>
       </div>
 
-      {/* Main Interactive Chat Preview (Conversation Prioritized) */}
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-        {/* Left: Context Document Card List (Compact context) */}
-        <div className="lg:col-span-4 flex flex-col gap-2.5">
-          <span className="text-[10px] font-mono tracking-wider text-text-muted uppercase">
-            ACTIVE KNOWLEDGE BASE
-          </span>
-          <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-secondary/70 p-2.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded border border-rose-500/20 bg-rose-500/10 text-[9px] font-bold text-rose-400">
-              PDF
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium text-text-primary">Research Paper.pdf</p>
-              <p className="text-[10px] text-text-muted">18 pages • Latency analysis</p>
+      {/* Main Dual Demonstration Grid */}
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        {/* Left Side: Input Interface according to selected mode (col-span-5) */}
+        <div className="lg:col-span-5 flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-secondary/70 p-4 min-h-[300px]">
+          {inputMode === "upload" ? (
+            /* Mode A: Upload Documents */
+            <div className="flex flex-col justify-between h-full">
+              <div>
+                <div className="flex items-center justify-between border-b border-border-subtle pb-2">
+                  <span className="text-xs font-semibold text-text-primary">Uploaded Documents</span>
+                  <span className="text-[10px] font-mono text-accent-sky">MOCK SELECTOR</span>
+                </div>
+
+                <div className="mt-3 flex flex-col gap-2">
+                  {[
+                    { id: "doc-1", name: "Research Paper.pdf", type: "PDF", meta: "18 pages • pgvector analysis" },
+                    { id: "doc-2", name: "Project Architecture.docx", type: "DOCX", meta: "12 sections • Redis queue" },
+                    { id: "doc-3", name: "Financial Report Q3.xlsx", type: "XLSX", meta: "4 sheets • EBITDA metrics" },
+                  ].map((doc) => (
+                    <button
+                      key={doc.id}
+                      type="button"
+                      onClick={() => setSelectedDocId(doc.id)}
+                      className={`flex items-center gap-2.5 rounded-lg border p-2 text-left transition-all ${
+                        selectedDocId === doc.id
+                          ? "border-accent-sky bg-surface-primary shadow-sm"
+                          : "border-border-subtle bg-surface-primary/60 opacity-80 hover:opacity-100"
+                      }`}
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-border-strong text-[9px] font-mono text-accent-sky">
+                        {doc.type}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium text-text-primary">{doc.name}</p>
+                        <p className="text-[10px] text-text-muted">{doc.meta}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3 rounded border border-dashed border-border-subtle bg-surface-primary/40 p-2 text-center text-[10px] text-text-muted font-mono">
+                Supports PDF, DOCX, XLSX, TXT, PPTX & Images
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-secondary/70 p-2.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded border border-sky-500/20 bg-sky-500/10 text-[9px] font-bold text-sky-400">
-              DOCX
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium text-text-primary">Project Notes.docx</p>
-              <p className="text-[10px] text-text-muted">Architecture specs</p>
+          ) : (
+            /* Mode B: Write Knowledge / Memories */
+            <div className="flex flex-col justify-between h-full">
+              <div>
+                <div className="flex items-center justify-between border-b border-border-subtle pb-2">
+                  <span className="text-xs font-semibold text-text-primary">Write Knowledge Directly</span>
+                  <span className="text-[10px] font-mono text-accent-sky">NATURAL LANGUAGE</span>
+                </div>
+
+                <div className="mt-3">
+                  <label htmlFor="memory-input-demo" className="block text-[11px] text-text-muted mb-1 font-mono">
+                    Add a thought, decision, or fact to remember:
+                  </label>
+                  <textarea
+                    id="memory-input-demo"
+                    rows={4}
+                    value={memoryInput}
+                    onChange={(e) => {
+                      setMemoryInput(e.target.value);
+                      setIsMemorySaved(false);
+                    }}
+                    className="w-full rounded-lg border border-border-strong bg-surface-primary p-2.5 text-xs text-text-primary focus:border-accent-sky focus:outline-none focus:ring-1 focus:ring-accent-sky"
+                    placeholder="Tell Alaya what happened or what you want to remember..."
+                  />
+                </div>
+
+                {/* Save Feedback Toast / Status */}
+                {saveToast ? (
+                  <div className="mt-2 text-[11px] font-mono text-emerald-400 flex items-center gap-1.5 animate-fadeIn">
+                    <span>✓</span> {saveToast}
+                  </div>
+                ) : isMemorySaved ? (
+                  <div className="mt-2 text-[11px] font-mono text-accent-sky flex items-center gap-1.5">
+                    <span>•</span> Stored in your Knowledge Base
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Action Button */}
+              <div className="mt-3 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handleSaveMemory}
+                  className="btn-primary h-8 px-4 text-xs font-semibold uppercase tracking-wider shadow-sm"
+                >
+                  Add to Knowledge Base
+                </button>
+                <span className="text-[10px] font-mono text-text-muted">Type: Memory</span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-secondary/70 p-2.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded border border-emerald-500/20 bg-emerald-500/10 text-[9px] font-bold text-emerald-400">
-              XLSX
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium text-text-primary">Financial Report.xlsx</p>
-              <p className="text-[10px] text-text-muted">Q3 telemetry metrics</p>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Right: Simulated Chat Conversation */}
-        <div className="lg:col-span-8 flex flex-col justify-between rounded-xl border border-border-strong bg-surface-secondary/80 p-4 min-h-[260px]">
-          <div className="space-y-3">
-            {/* User Question Bubble */}
-            <div className="flex justify-end">
-              <div className="max-w-[90%] rounded-xl rounded-tr-sm bg-surface-tertiary px-3.5 py-2 text-xs text-text-primary border border-border-strong">
-                "{currentPreset.question}"
+        {/* Right Side: Conversational Chat Answering Based on Knowledge (col-span-7) */}
+        <div className="lg:col-span-7 flex flex-col justify-between rounded-xl border border-border-strong bg-surface-secondary/80 p-4 min-h-[300px]">
+          <div>
+            <div className="flex items-center justify-between border-b border-border-subtle pb-2 text-[11px] font-mono text-text-muted">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-accent-sky" />
+                <span className="font-semibold text-text-primary">Chat Retrieval Preview</span>
               </div>
+              <span className="text-accent-sky">
+                {inputMode === "upload" ? "SOURCE: DOCUMENT" : "SOURCE: MEMORY"}
+              </span>
             </div>
 
-            {/* Alaya Synthesized Answer Bubble */}
-            <div className="flex justify-start">
-              <div className="max-w-[95%] rounded-xl rounded-tl-sm bg-surface-primary border border-accent-sky/30 p-3.5 text-xs">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono mb-1.5">
-                  <AlayaWordmark className="font-bold text-xs" />
-                  <span>•</span>
-                  <span>{currentPreset.actionTitle}</span>
+            {/* Conversation Flow */}
+            <div className="mt-4 space-y-3">
+              {/* User Question */}
+              <div className="flex justify-end">
+                <div className="max-w-[85%] rounded-xl rounded-tr-sm bg-surface-tertiary px-3.5 py-2 text-xs text-text-primary border border-border-strong">
+                  {inputMode === "upload"
+                    ? "What did the research paper find regarding system latency?"
+                    : "What did I accomplish today?"}
                 </div>
-                <p className="text-text-primary leading-relaxed">
-                  {currentPreset.summary}
-                </p>
-                <div className="mt-2.5 flex items-center justify-between border-t border-border-subtle pt-2 text-[10px] text-text-muted font-mono">
-                  <span>{currentPreset.actionDetail}</span>
-                  <span className="text-accent-sky">GROUNDED</span>
+              </div>
+
+              {/* Alaya Synthesized Answer */}
+              <div className="flex justify-start">
+                <div className="max-w-[95%] rounded-xl rounded-tl-sm bg-surface-primary border border-accent-sky/30 p-3.5 text-xs shadow-md">
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono mb-1.5">
+                    <AlayaWordmark className="font-bold text-xs" />
+                    <span>•</span>
+                    <span className="text-text-muted">Grounded Retrieval</span>
+                  </div>
+
+                  <p className="text-text-primary leading-relaxed">
+                    {inputMode === "upload"
+                      ? "The research paper measured a 40% reduction in retrieval latency using HNSW vector indexing in pgvector compared to standard flat scans."
+                      : "You mentioned completing the first version of your project and discussing the next steps with your team."}
+                  </p>
+
+                  {/* Verified Source Citation */}
+                  <div className="mt-3 flex items-center justify-between border-t border-border-subtle pt-2 text-[10px] text-text-muted">
+                    <span className="flex items-center gap-1">
+                      <span>Source:</span>
+                      <span className="font-mono text-accent-sky">
+                        {inputMode === "upload"
+                          ? "Research Paper.pdf §3.2"
+                          : "Memory: Today's Accomplishments"}
+                      </span>
+                    </span>
+                    <span className="font-mono text-emerald-400">100% GROUNDED</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ChatGPT-Inspired Message Composer Preview */}
-          <div className="mt-4 pt-3 border-t border-border-subtle flex items-center justify-between rounded-lg bg-surface-primary px-3 py-2 border border-border-subtle">
-            <span className="text-xs text-text-muted font-sans">
-              Ask Alaya a follow-up question...
-            </span>
-            <span className="flex h-6 w-6 items-center justify-center rounded bg-accent-sky text-black text-xs font-bold shadow-sm">
+          {/* Chat Composer Preview */}
+          <div className="mt-4 pt-3 border-t border-border-subtle flex items-center justify-between rounded-lg bg-surface-primary px-3 py-2 border border-border-subtle text-xs text-text-muted">
+            <span>Ask a follow-up about your documents or memories...</span>
+            <span className="flex h-6 w-6 items-center justify-center rounded bg-accent-sky text-black text-xs font-bold">
               ↑
             </span>
           </div>

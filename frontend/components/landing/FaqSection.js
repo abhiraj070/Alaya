@@ -12,8 +12,12 @@ const FAQ_ITEMS = [
     a: "Alaya natively ingests PDF, DOCX, XLSX, TXT, PPTX, CSV, Markdown, and image uploads (processed via OCR and vision models). No external web links or text paste required.",
   },
   {
+    q: "Can I add information without uploading a document?",
+    a: "Yes! You can directly record thoughts, decisions, notes, or preferences in plain natural language through the 'Add Knowledge' feature. Alaya indexes these written memories alongside your uploaded files and retrieves them seamlessly during chat.",
+  },
+  {
     q: "How do citations and source references work?",
-    a: "Every response in the chat interface includes transparent citation badges. You can see precisely which document, section, and page contributed to each fact in the answer.",
+    a: "Every response in the chat interface includes transparent citation badges. You can see precisely which document, section, page, or written memory contributed to each fact in the answer.",
   },
   {
     q: "Is my uploaded knowledge private and secure?",

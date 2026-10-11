@@ -5,22 +5,23 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
     {
       id: 1,
       num: "01",
-      title: "Upload Documents",
-      desc: "Add your files in any supported format to your Knowledge Base.",
+      title: "Bring Your Knowledge",
+      desc: "Upload documents or write naturally about events, ideas, and information you want to remember.",
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="12" y1="18" x2="12" y2="12" />
+          <line x1="9" y1="15" x2="15" y2="15" />
         </svg>
       ),
-      cue: "PDF, DOCX, XLSX, TXT, IMG",
+      cue: "Files & Memories",
     },
     {
       id: 2,
       num: "02",
-      title: "Prepare Knowledge",
-      desc: "Alaya extracts and indexes your files for instant retrieval.",
+      title: "Build Your Knowledge Base",
+      desc: "Alaya organizes and indexes your documents and written thoughts into a unified, searchable space.",
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polygon points="12 2 2 7 12 12 22 7 12 2" />
@@ -28,13 +29,13 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
           <polyline points="2 12 12 17 22 12" />
         </svg>
       ),
-      cue: "Automatic Indexing",
+      cue: "Unified Indexing",
     },
     {
       id: 3,
       num: "03",
-      title: "Ask in Chat",
-      desc: "Type natural-language questions directly into the chat interface.",
+      title: "Ask Naturally",
+      desc: "Ask questions about information you've added in plain conversational English whenever you need answers.",
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -45,14 +46,14 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
     {
       id: 4,
       num: "04",
-      title: "Receive Answers",
-      desc: "Get accurate, synthesized responses backed by source citations.",
+      title: "Rediscover Information",
+      desc: "See accurate, synthesized answers grounded directly in your stored knowledge with source references.",
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="20 6 9 17 4 12" />
         </svg>
       ),
-      cue: "Verified Citations",
+      cue: "Grounded Answers",
     },
   ];
 

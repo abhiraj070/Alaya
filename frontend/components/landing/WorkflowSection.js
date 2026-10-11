@@ -61,8 +61,8 @@ export default function WorkflowSection() {
           </h2>
 
           <p className="mt-4 text-base sm:text-lg text-text-secondary leading-relaxed">
-            Upload your documents, let Alaya extract and understand their content,
-            and start asking questions. It's that simple.
+            Upload your documents or write down what you want to remember. Alaya builds
+            a unified knowledge base you can question anytime.
           </p>
         </div>
 

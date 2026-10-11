@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 
-const SAMPLE_QUESTION = "What are the main findings of my research paper?";
+const SAMPLE_QUESTION = "What decisions did we make about background jobs?";
 
 const SAMPLE_RESPONSE_POINTS = [
-  "Hybrid retrieval yields 99.2% accuracy by combining vector embeddings with metadata filters.",
-  "Document chunking with 128-token overlap eliminated context truncation across 18 pages.",
-  "Every generated claim is directly linked to verifiable source citations in your Knowledge Base.",
+  "You decided to use Redis for background jobs and asynchronous task queueing.",
+  "The decision was agreed upon with your team after finalizing the API specification.",
+  "Architecture specs confirm integration with ARQ worker and PostgreSQL connection pools.",
 ];
 
 export default function HeroChatDemo() {
@@ -26,18 +26,15 @@ export default function HeroChatDemo() {
           setTypedText(SAMPLE_QUESTION.slice(0, typedText.length + 1));
         }, 45);
       } else {
-        // Finished typing question, pause briefly before sending
         timer = setTimeout(() => {
           setStatePhase("sent");
         }, 800);
       }
     } else if (statePhase === "sent") {
-      // Simulate click send & thinking
       timer = setTimeout(() => {
         setStatePhase("thinking");
       }, 500);
     } else if (statePhase === "thinking") {
-      // Brief processing indicator
       timer = setTimeout(() => {
         setStatePhase("responding");
         setResponseIndex(1);
@@ -48,7 +45,6 @@ export default function HeroChatDemo() {
           setResponseIndex((prev) => prev + 1);
         }, 700);
       } else {
-        // Finished response, stay idle for a few seconds then restart loop
         timer = setTimeout(() => {
           setStatePhase("idle");
         }, 5000);
@@ -84,71 +80,73 @@ export default function HeroChatDemo() {
         </div>
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-emerald-400" />
-          <span className="text-[11px] font-mono text-text-secondary">3 Documents Active</span>
+          <span className="text-[11px] font-mono text-text-secondary">2 Documents • 1 Memory Active</span>
         </div>
       </div>
 
-      {/* Main Grid: Knowledge Base Sidebar + Chat Interface (Fixed height container) */}
+      {/* Main Grid: Knowledge Base Sidebar (Dual Input) + Chat Interface */}
       <div className="mt-3.5 grid grid-cols-1 gap-4 lg:grid-cols-12 flex-1 min-h-0">
-        {/* A. Knowledge Base Panel (col-span-4, fixed height) */}
+        {/* A. Knowledge Base Panel (col-span-4, fixed height, Dual Input) */}
         <div className="flex flex-col justify-between rounded-xl border border-border-subtle bg-surface-secondary/60 p-3 lg:col-span-4 h-full min-h-0 overflow-hidden">
-          <div>
-            <div className="flex items-center justify-between border-b border-border-subtle pb-2">
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between border-b border-border-subtle pb-1.5">
               <span className="text-[11px] font-semibold text-text-primary uppercase tracking-wider">
                 Knowledge Base
               </span>
               <span className="rounded bg-accent-sky/10 px-1.5 py-0.5 text-[9px] font-mono text-accent-sky border border-accent-sky/20">
-                UPLOADED
+                UNIFIED
               </span>
             </div>
 
-            {/* Uploaded Document Cards */}
-            <div className="flex flex-col gap-2 mt-2">
-              {/* Document 1: PDF */}
-              <div className="flex items-center gap-2.5 rounded-lg border border-accent-sky/30 bg-surface-primary/80 p-2 shadow-sm transition-colors">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-rose-500/20 bg-rose-500/10 text-[10px] font-bold text-rose-400">
-                  PDF
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium text-text-primary">Research Paper.pdf</p>
-                  <p className="text-[10px] text-text-muted">2.4 MB • 18 pages</p>
+            {/* Input A: Uploaded Documents */}
+            <div>
+              <span className="text-[9px] font-mono tracking-wider text-text-muted uppercase block mb-1">
+                A. UPLOADED DOCUMENTS
+              </span>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-primary/80 p-1.5 text-xs">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-rose-500/20 bg-rose-500/10 text-[9px] font-bold text-rose-400">
+                    PDF
+                  </span>
+                  <p className="truncate text-[11px] font-medium text-text-primary flex-1">Research Paper.pdf</p>
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent-sky" />
                 </div>
-                <span className="h-1.5 w-1.5 rounded-full bg-accent-sky" title="Active in retrieval" />
-              </div>
-
-              {/* Document 2: DOCX */}
-              <div className="flex items-center gap-2.5 rounded-lg border border-border-subtle bg-surface-primary/50 p-2 transition-colors">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-sky-500/20 bg-sky-500/10 text-[10px] font-bold text-sky-400">
-                  DOCX
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium text-text-primary">Project Notes.docx</p>
-                  <p className="text-[10px] text-text-muted">1.1 MB • 12 sections</p>
+                <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-primary/80 p-1.5 text-xs">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded border border-sky-500/20 bg-sky-500/10 text-[9px] font-bold text-sky-400">
+                    DOCX
+                  </span>
+                  <p className="truncate text-[11px] font-medium text-text-primary flex-1">Project Notes.docx</p>
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent-sky" />
                 </div>
               </div>
+            </div>
 
-              {/* Document 3: XLSX */}
-              <div className="flex items-center gap-2.5 rounded-lg border border-border-subtle bg-surface-primary/50 p-2 transition-colors">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-emerald-500/20 bg-emerald-500/10 text-[10px] font-bold text-emerald-400">
-                  XLSX
+            {/* Input B: Natural-Language Knowledge / Memory */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[9px] font-mono tracking-wider text-text-muted uppercase">
+                  B. NATURAL-LANGUAGE MEMORY
                 </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium text-text-primary">Financial Report.xlsx</p>
-                  <p className="text-[10px] text-text-muted">3.8 MB • 4 sheets</p>
+                <span className="text-[9px] font-mono text-emerald-400">SAVED ✓</span>
+              </div>
+              <div className="rounded-lg border border-accent-sky/30 bg-surface-primary/95 p-2 shadow-sm">
+                <div className="flex items-center gap-1.5 text-[10px] text-accent-sky font-mono mb-1">
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                  <span className="font-semibold">Memory Entry</span>
                 </div>
+                <p className="text-[10px] text-text-secondary leading-snug italic">
+                  "Today, I finished the API design and decided to use Redis for background jobs."
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Simple File Upload Indicator */}
-          <div className="mt-2 rounded-lg border border-dashed border-border-subtle bg-surface-primary/30 p-2 text-center shrink-0">
-            <span className="text-[10px] text-text-muted flex items-center justify-center gap-1">
-              <svg className="h-3 w-3 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-              Upload documents only
+          {/* Conceptual Relationship Note */}
+          <div className="mt-2 rounded-lg border border-dashed border-border-subtle bg-surface-primary/30 p-1.5 text-center shrink-0">
+            <span className="text-[9px] text-text-muted font-mono block">
+              Files + Memories → Shared Knowledge Base
             </span>
           </div>
         </div>
@@ -170,7 +168,7 @@ export default function HeroChatDemo() {
             </button>
           </div>
 
-          {/* Messages Container (Fixed available height, anchored to bottom, no expansion) */}
+          {/* Messages Container (Fixed available height, anchored to bottom, zero layout shift) */}
           <div className="my-2 flex-1 min-h-0 flex flex-col justify-end space-y-2.5 overflow-hidden">
             {/* User Message */}
             {statePhase !== "typing" && (
@@ -188,7 +186,7 @@ export default function HeroChatDemo() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-sky opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-sky" />
                 </span>
-                <span>Searching Research Paper.pdf...</span>
+                <span>Synthesizing from Project Notes & Memory...</span>
               </div>
             )}
 
@@ -199,11 +197,11 @@ export default function HeroChatDemo() {
                   <div className="flex items-center gap-1.5 text-[10px] font-mono mb-1.5">
                     <AlayaWordmark className="font-bold tracking-wider text-xs" />
                     <span>•</span>
-                    <span className="text-text-muted">Answers grounded in your documents</span>
+                    <span className="text-text-muted">Answers grounded in your documents & memories</span>
                   </div>
 
                   <p className="font-medium text-text-primary text-[11px]">
-                    The main findings of your research paper are:
+                    Based on your saved memory and project notes:
                   </p>
 
                   <ul className="mt-1.5 space-y-1 text-text-secondary text-[11px]">
@@ -219,10 +217,10 @@ export default function HeroChatDemo() {
                   <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-2 text-[10px]">
                     <span className="text-text-muted">Verified Sources:</span>
                     <span className="rounded bg-surface-secondary px-2 py-0.5 font-mono text-accent-sky border border-border-subtle">
-                      Research Paper.pdf §3.2
+                      Memory: Architecture Decisions
                     </span>
                     <span className="rounded bg-surface-secondary px-2 py-0.5 font-mono text-accent-sky border border-border-subtle">
-                      Project Notes.docx
+                      Project Notes.docx §2.1
                     </span>
                   </div>
                 </div>
@@ -230,7 +228,7 @@ export default function HeroChatDemo() {
             )}
           </div>
 
-          {/* B. ChatGPT-Inspired Message Composer (Pinned at bottom, fixed height) */}
+          {/* ChatGPT-Inspired Message Composer (Pinned at bottom, fixed height) */}
           <div className="relative mt-2 shrink-0">
             <div className="relative flex items-center rounded-xl border border-border-strong bg-surface-primary px-3 py-2 shadow-inner transition-all focus-within:border-accent-sky focus-within:ring-1 focus-within:ring-accent-sky">
               {/* Composer Input Display */}
@@ -241,7 +239,7 @@ export default function HeroChatDemo() {
                     <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-accent-sky animate-pulse align-middle" />
                   </span>
                 ) : (
-                  <span className="text-text-muted">Ask anything about your uploaded documents...</span>
+                  <span className="text-text-muted">Ask anything about your documents or memories...</span>
                 )}
               </div>
 
@@ -263,7 +261,7 @@ export default function HeroChatDemo() {
             </div>
 
             <p className="mt-1.5 text-center text-[10px] text-text-muted">
-              Alaya answers exclusively from your uploaded Knowledge Base.
+              Alaya answers exclusively from your unified Knowledge Base.
             </p>
           </div>
         </div>
