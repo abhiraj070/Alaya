@@ -43,12 +43,6 @@ export default function Navbar() {
           aria-label="Primary Navigation"
         >
           <a
-            href="#features"
-            className="transition-colors hover:text-text-primary focus-visible:text-text-primary focus-visible:outline-none"
-          >
-            Features
-          </a>
-          <a
             href="#how-it-works"
             className="transition-colors hover:text-text-primary focus-visible:text-text-primary focus-visible:outline-none"
           >
@@ -126,13 +120,6 @@ export default function Navbar() {
       {mobileMenuOpen && (
         <div className="border-b border-border-subtle bg-bg-secondary px-4 pt-3 pb-6 md:hidden">
           <div className="flex flex-col space-y-3">
-            <a
-              href="#features"
-              onClick={closeMobileMenu}
-              className="rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-primary hover:text-text-primary"
-            >
-              Features
-            </a>
             <a
               href="#how-it-works"
               onClick={closeMobileMenu}

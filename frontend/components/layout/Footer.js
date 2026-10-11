@@ -28,9 +28,6 @@ export default function Footer() {
 
           {/* Navigation Links */}
           <div className="flex flex-wrap items-center gap-6 text-text-secondary">
-            <a href="#features" className="hover:text-accent-sky transition-colors">
-              Features
-            </a>
             <a href="#how-it-works" className="hover:text-accent-sky transition-colors">
               How It Works
             </a>

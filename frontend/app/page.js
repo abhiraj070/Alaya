@@ -1,7 +1,6 @@
 import Navbar from "@/components/layout/Navbar";
 import Hero from "@/components/landing/Hero";
 import WorkflowSection from "@/components/landing/WorkflowSection";
-import FeaturesSection from "@/components/landing/FeaturesSection";
 import FaqSection from "@/components/landing/FaqSection";
 import FinalCtaSection from "@/components/landing/FinalCtaSection";
 import Footer from "@/components/layout/Footer";
@@ -19,9 +18,6 @@ export default function LandingPage() {
 
         {/* How It Works: 4 Simple User Journey Stages + Interactive Chat Preview */}
         <WorkflowSection />
-
-        {/* Features: Document Upload, Extraction, Conversational Retrieval, Natural Language */}
-        <FeaturesSection />
 
         {/* FAQ: Common questions about ingestion, retrieval, citations, and privacy */}
         <FaqSection />
