@@ -35,7 +35,7 @@ export default function WorkflowSection() {
     <section
       id="how-it-works"
       ref={sectionRef}
-      className="relative scroll-mt-20 py-20 md:py-28 overflow-hidden bg-bg-primary"
+      className="relative scroll-mt-20 pt-12 pb-20 md:pt-16 md:pb-28 overflow-hidden bg-bg-primary"
     >
       {/* Subtle Background Accent Glow */}
       <div

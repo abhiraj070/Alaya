@@ -4,6 +4,11 @@ import { useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
+import {
+  MOCK_DEMO_CREDENTIALS,
+  registerMockUser,
+  authenticateMockUser,
+} from "@/mock/users";
 
 export default function AuthCard() {
   const searchParams = useSearchParams();
@@ -12,11 +17,18 @@ export default function AuthCard() {
 
   const mode = searchParams.get("mode") === "signup" ? "signup" : "signin";
 
-  // Form Field States
+  // Sign In Form States
   const [signInEmail, setSignInEmail] = useState("");
   const [signInPassword, setSignInPassword] = useState("");
   const [showSignInPassword, setShowSignInPassword] = useState(false);
+  const [signInErrors, setSignInErrors] = useState({
+    email: "",
+    password: "",
+    general: "",
+  });
+  const [isSubmittingSignIn, setIsSubmittingSignIn] = useState(false);
 
+  // Sign Up Form States
   const [signUpFullName, setSignUpFullName] = useState("");
   const [signUpUsername, setSignUpUsername] = useState("");
   const [signUpEmail, setSignUpEmail] = useState("");
@@ -24,23 +36,194 @@ export default function AuthCard() {
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState("");
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [showSignUpConfirmPassword, setShowSignUpConfirmPassword] = useState(false);
+  const [signUpErrors, setSignUpErrors] = useState({
+    fullName: "",
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [isSubmittingSignUp, setIsSubmittingSignUp] = useState(false);
+  const [signUpSuccess, setSignUpSuccess] = useState(false);
+
+  // Persistent banner message on Sign In
+  const [bannerMessage, setBannerMessage] = useState(null);
 
   // Switch mode without page reload and update URL
   const handleModeChange = (newMode) => {
     if (newMode === mode) return;
+    setSignInErrors((prev) => ({ ...prev, general: "" }));
     const params = new URLSearchParams(searchParams.toString());
     params.set("mode", newMode);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  const handleSignInSubmit = (e) => {
-    e.preventDefault();
-    // Phase 3.1 UI scope: Full submission flow will be handled in Phase 3.2
+  // Email format validator
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
+  // Sign In Validation
+  const validateSignIn = () => {
+    const errors = { email: "", password: "", general: "" };
+    const trimmedEmail = signInEmail.trim();
+
+    if (!trimmedEmail) {
+      errors.email = "Please enter your email address.";
+    } else if (!validateEmail(trimmedEmail)) {
+      errors.email = "Please enter a valid email address (e.g., name@example.com).";
+    }
+
+    if (!signInPassword) {
+      errors.password = "Please enter your password.";
+    } else if (signInPassword.length < 8) {
+      errors.password = "Password must be at least 8 characters long.";
+    }
+
+    setSignInErrors(errors);
+    return !errors.email && !errors.password;
+  };
+
+  // Sign In Submit Handler
+  const handleSignInSubmit = (e) => {
+    e.preventDefault();
+    if (isSubmittingSignIn) return;
+
+    if (!validateSignIn()) {
+      return;
+    }
+
+    setIsSubmittingSignIn(true);
+    setSignInErrors((prev) => ({ ...prev, general: "" }));
+
+    // Simulate mock authentication delay (frontend demonstration)
+    setTimeout(() => {
+      const result = authenticateMockUser(signInEmail, signInPassword);
+
+      if (result.success) {
+        // Store session state in sessionStorage (without plaintext passwords)
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(
+            "alaya_mock_user",
+            JSON.stringify({
+              ...result.user,
+              isAuthenticated: true,
+            })
+          );
+        }
+
+        // Clear sensitive field
+        setSignInPassword("");
+        setIsSubmittingSignIn(false);
+
+        // Direct navigation to /app
+        router.push("/app");
+      } else {
+        setIsSubmittingSignIn(false);
+        setSignInErrors((prev) => ({
+          ...prev,
+          general:
+            "Invalid credentials. Please verify your email and password, or use demo account (alex.mercer@example.com / password123).",
+        }));
+      }
+    }, 650);
+  };
+
+  // Sign Up Validation
+  const validateSignUp = () => {
+    const errors = {
+      fullName: "",
+      username: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    };
+
+    const trimmedFullName = signUpFullName.trim();
+    const trimmedUsername = signUpUsername.trim();
+    const trimmedEmail = signUpEmail.trim();
+
+    if (!trimmedFullName) {
+      errors.fullName = "Please enter your full name.";
+    }
+
+    if (!trimmedUsername) {
+      errors.username = "Please enter a username.";
+    }
+
+    if (!trimmedEmail) {
+      errors.email = "Please enter your email address.";
+    } else if (!validateEmail(trimmedEmail)) {
+      errors.email = "Please enter a valid email address (e.g., name@example.com).";
+    }
+
+    if (!signUpPassword) {
+      errors.password = "Please enter a password.";
+    } else if (signUpPassword.length < 8) {
+      errors.password = "Password must be at least 8 characters long.";
+    }
+
+    if (!signUpConfirmPassword) {
+      errors.confirmPassword = "Please confirm your password.";
+    } else if (signUpConfirmPassword !== signUpPassword) {
+      errors.confirmPassword = "Passwords do not match.";
+    }
+
+    setSignUpErrors(errors);
+    return !Object.values(errors).some((err) => !!err);
+  };
+
+  // Sign Up Submit Handler
   const handleSignUpSubmit = (e) => {
     e.preventDefault();
-    // Phase 3.1 UI scope: Full submission flow will be handled in Phase 3.2
+    if (isSubmittingSignUp) return;
+
+    if (!validateSignUp()) {
+      return;
+    }
+
+    setIsSubmittingSignUp(true);
+
+    // Simulate mock registration (frontend demonstration)
+    setTimeout(() => {
+      const registered = registerMockUser({
+        name: signUpFullName.trim(),
+        username: signUpUsername.trim(),
+        email: signUpEmail.trim(),
+        password: signUpPassword,
+      });
+
+      // Clear sensitive fields
+      setSignUpPassword("");
+      setSignUpConfirmPassword("");
+
+      // Prepopulate Sign In email
+      setSignInEmail(registered.email);
+      setSignInErrors({ email: "", password: "", general: "" });
+
+      // Trigger success state and banner
+      setSignUpSuccess(true);
+      setBannerMessage({
+        title: "Account created successfully",
+        subtext: "Your account has been created. Please sign in to continue.",
+      });
+
+      setIsSubmittingSignUp(false);
+    }, 600);
+  };
+
+  // Action to transition from SignUp success to SignIn
+  const handleGoToSignIn = () => {
+    setSignUpSuccess(false);
+    handleModeChange("signin");
+  };
+
+  // Helper to autofill demo credentials
+  const handleFillDemo = () => {
+    setSignInEmail(MOCK_DEMO_CREDENTIALS.email);
+    setSignInPassword(MOCK_DEMO_CREDENTIALS.password);
+    setSignInErrors({ email: "", password: "", general: "" });
   };
 
   return (
@@ -118,7 +301,10 @@ export default function AuthCard() {
             id="tab-signup"
             aria-selected={mode === "signup"}
             aria-controls="panel-signup"
-            onClick={() => handleModeChange("signup")}
+            onClick={() => {
+              setSignUpSuccess(false);
+              handleModeChange("signup");
+            }}
             className={`flex-1 rounded-lg py-2 text-xs font-semibold tracking-wide transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky ${
               mode === "signup"
                 ? "bg-surface-primary text-accent-sky border border-accent-sky/40 shadow-sm"
@@ -137,7 +323,57 @@ export default function AuthCard() {
             aria-labelledby="tab-signin"
             className="mt-6 animate-fadeIn transition-opacity duration-200"
           >
-            <form onSubmit={handleSignInSubmit} className="space-y-4">
+            {/* Success Banner if redirected from Sign Up */}
+            {bannerMessage && (
+              <div
+                className="mb-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-emerald-400 flex items-start gap-3 shadow-sm animate-fadeIn"
+                role="status"
+              >
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 mt-0.5">
+                  <svg
+                    className="h-3.5 w-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <div className="flex-1 text-xs leading-normal">
+                  <p className="font-semibold text-emerald-300">
+                    {bannerMessage.title}
+                  </p>
+                  <p className="text-emerald-400/90 text-[11px] mt-0.5">
+                    {bannerMessage.subtext}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setBannerMessage(null)}
+                  className="text-emerald-400/70 hover:text-emerald-200 text-xs p-1 rounded"
+                  aria-label="Dismiss success message"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* General Credentials Error Alert */}
+            {signInErrors.general && (
+              <div
+                className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-400 font-mono flex items-start gap-2 animate-fadeIn"
+                role="alert"
+              >
+                <span className="shrink-0 text-rose-400 mt-0.5">⚠</span>
+                <span>{signInErrors.general}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSignInSubmit} noValidate className="space-y-4">
               <div>
                 <label
                   htmlFor="signin-email"
@@ -150,12 +386,31 @@ export default function AuthCard() {
                   name="email"
                   type="email"
                   autoComplete="email"
-                  required
                   value={signInEmail}
-                  onChange={(e) => setSignInEmail(e.target.value)}
+                  onChange={(e) => {
+                    setSignInEmail(e.target.value);
+                    if (signInErrors.email) {
+                      setSignInErrors((prev) => ({ ...prev, email: "" }));
+                    }
+                  }}
                   placeholder="name@example.com"
-                  className="input-field w-full text-xs sm:text-sm"
+                  className={`input-field w-full text-xs sm:text-sm ${
+                    signInErrors.email
+                      ? "border-rose-500/70 focus:border-rose-500 focus:ring-rose-500"
+                      : ""
+                  }`}
+                  aria-invalid={!!signInErrors.email}
+                  aria-describedby={signInErrors.email ? "signin-email-error" : undefined}
                 />
+                {signInErrors.email && (
+                  <p
+                    id="signin-email-error"
+                    className="mt-1 text-[11px] text-rose-400 font-mono flex items-center gap-1"
+                    role="alert"
+                  >
+                    <span>⚠</span> {signInErrors.email}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -173,11 +428,21 @@ export default function AuthCard() {
                     name="password"
                     type={showSignInPassword ? "text" : "password"}
                     autoComplete="current-password"
-                    required
                     value={signInPassword}
-                    onChange={(e) => setSignInPassword(e.target.value)}
+                    onChange={(e) => {
+                      setSignInPassword(e.target.value);
+                      if (signInErrors.password) {
+                        setSignInErrors((prev) => ({ ...prev, password: "" }));
+                      }
+                    }}
                     placeholder="••••••••"
-                    className="input-field w-full pr-10 text-xs sm:text-sm"
+                    className={`input-field w-full pr-10 text-xs sm:text-sm ${
+                      signInErrors.password
+                        ? "border-rose-500/70 focus:border-rose-500 focus:ring-rose-500"
+                        : ""
+                    }`}
+                    aria-invalid={!!signInErrors.password}
+                    aria-describedby={signInErrors.password ? "signin-password-error" : undefined}
                   />
                   <button
                     type="button"
@@ -216,24 +481,75 @@ export default function AuthCard() {
                     )}
                   </button>
                 </div>
+                {signInErrors.password && (
+                  <p
+                    id="signin-password-error"
+                    className="mt-1 text-[11px] text-rose-400 font-mono flex items-center gap-1"
+                    role="alert"
+                  >
+                    <span>⚠</span> {signInErrors.password}
+                  </p>
+                )}
               </div>
 
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="btn-primary w-full h-10 text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)]"
+                  disabled={isSubmittingSignIn}
+                  className="btn-primary w-full h-10 text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)] disabled:opacity-75 disabled:cursor-not-allowed"
                 >
-                  Sign In
+                  {isSubmittingSignIn ? (
+                    <span className="inline-flex items-center justify-center gap-2">
+                      <svg
+                        className="h-4 w-4 animate-spin text-bg-primary"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      <span>Signing In...</span>
+                    </span>
+                  ) : (
+                    <span>Sign In</span>
+                  )}
+                </button>
+              </div>
+
+              {/* Demo Account Fill Shortcut */}
+              <div className="flex items-center justify-between text-[11px] text-text-muted border-t border-border-subtle/70 pt-3">
+                <span>Demo: alex.mercer@example.com</span>
+                <button
+                  type="button"
+                  onClick={handleFillDemo}
+                  className="font-medium text-accent-sky hover:text-accent-sky-light hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded px-1"
+                >
+                  Fill Demo
                 </button>
               </div>
             </form>
 
             {/* Switch to Sign Up Prompt */}
-            <div className="mt-6 text-center text-xs text-text-secondary border-t border-border-subtle pt-4">
+            <div className="mt-5 text-center text-xs text-text-secondary border-t border-border-subtle pt-4">
               <span>Don&apos;t have an account? </span>
               <button
                 type="button"
-                onClick={() => handleModeChange("signup")}
+                onClick={() => {
+                  setSignUpSuccess(false);
+                  handleModeChange("signup");
+                }}
                 className="font-semibold text-accent-sky hover:text-accent-sky-light hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded px-1"
               >
                 Sign up
@@ -250,212 +566,390 @@ export default function AuthCard() {
             aria-labelledby="tab-signup"
             className="mt-6 animate-fadeIn transition-opacity duration-200"
           >
-            <form onSubmit={handleSignUpSubmit} className="space-y-3.5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label
-                    htmlFor="signup-fullname"
-                    className="block text-xs font-medium text-text-secondary mb-1.5"
+            {signUpSuccess ? (
+              /* Success State with Green Check Icon and required messages */
+              <div className="py-4 text-center animate-fadeIn" role="status">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 shadow-[0_0_24px_rgba(34,197,94,0.25)]">
+                  <svg
+                    className="h-7 w-7"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
                   >
-                    Your Name
-                  </label>
-                  <input
-                    id="signup-fullname"
-                    name="fullName"
-                    type="text"
-                    autoComplete="name"
-                    required
-                    value={signUpFullName}
-                    onChange={(e) => setSignUpFullName(e.target.value)}
-                    placeholder="Your Name"
-                    className="input-field w-full text-xs sm:text-sm"
-                  />
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="signup-username"
-                    className="block text-xs font-medium text-text-secondary mb-1.5"
-                  >
-                    Username
-                  </label>
-                  <input
-                    id="signup-username"
-                    name="username"
-                    type="text"
-                    autoComplete="username"
-                    required
-                    value={signUpUsername}
-                    onChange={(e) => setSignUpUsername(e.target.value)}
-                    placeholder="@username"
-                    className="input-field w-full text-xs sm:text-sm"
-                  />
-                </div>
-              </div>
+                <h2 className="mt-4 text-xl font-bold tracking-tight text-text-primary">
+                  Account created successfully
+                </h2>
 
-              <div>
-                <label
-                  htmlFor="signup-email"
-                  className="block text-xs font-medium text-text-secondary mb-1.5"
-                >
-                  Email address
-                </label>
-                <input
-                  id="signup-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={signUpEmail}
-                  onChange={(e) => setSignUpEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="input-field w-full text-xs sm:text-sm"
-                />
-              </div>
+                <p className="mt-2 text-xs sm:text-sm text-text-secondary leading-relaxed max-w-xs mx-auto">
+                  Your account has been created. Please sign in to continue.
+                </p>
 
-              <div>
-                <label
-                  htmlFor="signup-password"
-                  className="block text-xs font-medium text-text-secondary mb-1.5"
-                >
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="signup-password"
-                    name="password"
-                    type={showSignUpPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    required
-                    value={signUpPassword}
-                    onChange={(e) => setSignUpPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="input-field w-full pr-10 text-xs sm:text-sm"
-                  />
+                <div className="mt-6">
                   <button
                     type="button"
-                    onClick={() => setShowSignUpPassword(!showSignUpPassword)}
-                    aria-label={showSignUpPassword ? "Hide password" : "Show password"}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-accent-sky focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded"
+                    onClick={handleGoToSignIn}
+                    className="btn-primary w-full h-11 text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)]"
                   >
-                    {showSignUpPassword ? (
-                      <svg
-                        className="h-4 w-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="h-4 w-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    )}
+                    Go to Sign In
                   </button>
                 </div>
               </div>
+            ) : (
+              <form onSubmit={handleSignUpSubmit} noValidate className="space-y-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      htmlFor="signup-fullname"
+                      className="block text-xs font-medium text-text-secondary mb-1.5"
+                    >
+                      Your Name
+                    </label>
+                    <input
+                      id="signup-fullname"
+                      name="fullName"
+                      type="text"
+                      autoComplete="name"
+                      value={signUpFullName}
+                      onChange={(e) => {
+                        setSignUpFullName(e.target.value);
+                        if (signUpErrors.fullName) {
+                          setSignUpErrors((prev) => ({ ...prev, fullName: "" }));
+                        }
+                      }}
+                      placeholder="Your Name"
+                      className={`input-field w-full text-xs sm:text-sm ${
+                        signUpErrors.fullName
+                          ? "border-rose-500/70 focus:border-rose-500 focus:ring-rose-500"
+                          : ""
+                      }`}
+                      aria-invalid={!!signUpErrors.fullName}
+                      aria-describedby={
+                        signUpErrors.fullName ? "signup-fullname-error" : undefined
+                      }
+                    />
+                    {signUpErrors.fullName && (
+                      <p
+                        id="signup-fullname-error"
+                        className="mt-1 text-[11px] text-rose-400 font-mono flex items-center gap-1"
+                        role="alert"
+                      >
+                        <span>⚠</span> {signUpErrors.fullName}
+                      </p>
+                    )}
+                  </div>
 
-              <div>
-                <label
-                  htmlFor="signup-confirm-password"
-                  className="block text-xs font-medium text-text-secondary mb-1.5"
-                >
-                  Confirm password
-                </label>
-                <div className="relative">
-                  <input
-                    id="signup-confirm-password"
-                    name="confirmPassword"
-                    type={showSignUpConfirmPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    required
-                    value={signUpConfirmPassword}
-                    onChange={(e) => setSignUpConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="input-field w-full pr-10 text-xs sm:text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowSignUpConfirmPassword(!showSignUpConfirmPassword)
-                    }
-                    aria-label={
-                      showSignUpConfirmPassword
-                        ? "Hide confirm password"
-                        : "Show confirm password"
-                    }
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-accent-sky focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded"
+                  <div>
+                    <label
+                      htmlFor="signup-username"
+                      className="block text-xs font-medium text-text-secondary mb-1.5"
+                    >
+                      Username
+                    </label>
+                    <input
+                      id="signup-username"
+                      name="username"
+                      type="text"
+                      autoComplete="username"
+                      value={signUpUsername}
+                      onChange={(e) => {
+                        setSignUpUsername(e.target.value);
+                        if (signUpErrors.username) {
+                          setSignUpErrors((prev) => ({ ...prev, username: "" }));
+                        }
+                      }}
+                      placeholder="@username"
+                      className={`input-field w-full text-xs sm:text-sm ${
+                        signUpErrors.username
+                          ? "border-rose-500/70 focus:border-rose-500 focus:ring-rose-500"
+                          : ""
+                      }`}
+                      aria-invalid={!!signUpErrors.username}
+                      aria-describedby={
+                        signUpErrors.username ? "signup-username-error" : undefined
+                      }
+                    />
+                    {signUpErrors.username && (
+                      <p
+                        id="signup-username-error"
+                        className="mt-1 text-[11px] text-rose-400 font-mono flex items-center gap-1"
+                        role="alert"
+                      >
+                        <span>⚠</span> {signUpErrors.username}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="signup-email"
+                    className="block text-xs font-medium text-text-secondary mb-1.5"
                   >
-                    {showSignUpConfirmPassword ? (
-                      <svg
-                        className="h-4 w-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                        <line x1="1" y1="1" x2="23" y2="23" />
-                      </svg>
+                    Email address
+                  </label>
+                  <input
+                    id="signup-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    value={signUpEmail}
+                    onChange={(e) => {
+                      setSignUpEmail(e.target.value);
+                      if (signUpErrors.email) {
+                        setSignUpErrors((prev) => ({ ...prev, email: "" }));
+                      }
+                    }}
+                    placeholder="name@example.com"
+                    className={`input-field w-full text-xs sm:text-sm ${
+                      signUpErrors.email
+                        ? "border-rose-500/70 focus:border-rose-500 focus:ring-rose-500"
+                        : ""
+                    }`}
+                    aria-invalid={!!signUpErrors.email}
+                    aria-describedby={
+                      signUpErrors.email ? "signup-email-error" : undefined
+                    }
+                  />
+                  {signUpErrors.email && (
+                    <p
+                      id="signup-email-error"
+                      className="mt-1 text-[11px] text-rose-400 font-mono flex items-center gap-1"
+                      role="alert"
+                    >
+                      <span>⚠</span> {signUpErrors.email}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="signup-password"
+                    className="block text-xs font-medium text-text-secondary mb-1.5"
+                  >
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="signup-password"
+                      name="password"
+                      type={showSignUpPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={signUpPassword}
+                      onChange={(e) => {
+                        setSignUpPassword(e.target.value);
+                        if (signUpErrors.password) {
+                          setSignUpErrors((prev) => ({ ...prev, password: "" }));
+                        }
+                      }}
+                      placeholder="••••••••"
+                      className={`input-field w-full pr-10 text-xs sm:text-sm ${
+                        signUpErrors.password
+                          ? "border-rose-500/70 focus:border-rose-500 focus:ring-rose-500"
+                          : ""
+                      }`}
+                      aria-invalid={!!signUpErrors.password}
+                      aria-describedby={
+                        signUpErrors.password ? "signup-password-error" : undefined
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignUpPassword(!showSignUpPassword)}
+                      aria-label={showSignUpPassword ? "Hide password" : "Show password"}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-accent-sky focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded"
+                    >
+                      {showSignUpPassword ? (
+                        <svg
+                          className="h-4 w-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                          <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="h-4 w-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  {signUpErrors.password ? (
+                    <p
+                      id="signup-password-error"
+                      className="mt-1 text-[11px] text-rose-400 font-mono flex items-center gap-1"
+                      role="alert"
+                    >
+                      <span>⚠</span> {signUpErrors.password}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[10px] text-text-muted">
+                      Must be at least 8 characters
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="signup-confirm-password"
+                    className="block text-xs font-medium text-text-secondary mb-1.5"
+                  >
+                    Confirm password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="signup-confirm-password"
+                      name="confirmPassword"
+                      type={showSignUpConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={signUpConfirmPassword}
+                      onChange={(e) => {
+                        setSignUpConfirmPassword(e.target.value);
+                        if (signUpErrors.confirmPassword) {
+                          setSignUpErrors((prev) => ({ ...prev, confirmPassword: "" }));
+                        }
+                      }}
+                      placeholder="••••••••"
+                      className={`input-field w-full pr-10 text-xs sm:text-sm ${
+                        signUpErrors.confirmPassword
+                          ? "border-rose-500/70 focus:border-rose-500 focus:ring-rose-500"
+                          : ""
+                      }`}
+                      aria-invalid={!!signUpErrors.confirmPassword}
+                      aria-describedby={
+                        signUpErrors.confirmPassword
+                          ? "signup-confirm-password-error"
+                          : undefined
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowSignUpConfirmPassword(!showSignUpConfirmPassword)
+                      }
+                      aria-label={
+                        showSignUpConfirmPassword
+                          ? "Hide confirm password"
+                          : "Show confirm password"
+                      }
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-accent-sky focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded"
+                    >
+                      {showSignUpConfirmPassword ? (
+                        <svg
+                          className="h-4 w-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                          <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="h-4 w-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  {signUpErrors.confirmPassword && (
+                    <p
+                      id="signup-confirm-password-error"
+                      className="mt-1 text-[11px] text-rose-400 font-mono flex items-center gap-1"
+                      role="alert"
+                    >
+                      <span>⚠</span> {signUpErrors.confirmPassword}
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingSignUp}
+                    className="btn-primary w-full h-10 text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)] disabled:opacity-75 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingSignUp ? (
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <svg
+                          className="h-4 w-4 animate-spin text-bg-primary"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                        <span>Creating Account...</span>
+                      </span>
                     ) : (
-                      <svg
-                        className="h-4 w-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
+                      <span>Create Account</span>
                     )}
                   </button>
                 </div>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="btn-primary w-full h-10 text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)]"
-                >
-                  Create Account
-                </button>
-              </div>
-            </form>
+              </form>
+            )}
 
             {/* Switch to Sign In Prompt */}
-            <div className="mt-6 text-center text-xs text-text-secondary border-t border-border-subtle pt-4">
-              <span>Already have an account? </span>
-              <button
-                type="button"
-                onClick={() => handleModeChange("signin")}
-                className="font-semibold text-accent-sky hover:text-accent-sky-light hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded px-1"
-              >
-                Sign in
-              </button>
-            </div>
+            {!signUpSuccess && (
+              <div className="mt-5 text-center text-xs text-text-secondary border-t border-border-subtle pt-4">
+                <span>Already have an account? </span>
+                <button
+                  type="button"
+                  onClick={() => handleModeChange("signin")}
+                  className="font-semibold text-accent-sky hover:text-accent-sky-light hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded px-1"
+                >
+                  Sign in
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

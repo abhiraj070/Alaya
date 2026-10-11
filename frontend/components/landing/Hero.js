@@ -2,39 +2,8 @@ import HeroChatDemo from "./HeroChatDemo";
 import HeroBackground from "./HeroBackground";
 
 export default function Hero() {
-  const highlights = [
-    {
-      title: "Documents & Files",
-      desc: "Upload PDFs, DOCX, spreadsheets & slides",
-      icon: (
-        <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-        </svg>
-      ),
-    },
-    {
-      title: "Personal Memories",
-      desc: "Record daily logs, discussions & decisions",
-      icon: (
-        <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-        </svg>
-      ),
-    },
-    {
-      title: "Conversational Recall",
-      desc: "Ask questions later to retrieve any saved memory",
-      icon: (
-        <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      ),
-    },
-  ];
-
   return (
-    <section className="relative overflow-hidden pt-12 pb-20 md:pt-18 md:pb-28">
+    <section className="relative overflow-hidden pt-12 pb-10 md:pt-18 md:pb-14 border-b border-border-subtle">
       {/* Code-Generated Background (Atmospheric radial glow, technical grid, sparse particles) */}
       <HeroBackground />
 
@@ -83,25 +52,6 @@ export default function Hero() {
                   <polyline points="19 12 12 19 5 12" />
                 </svg>
               </a>
-            </div>
-
-            {/* Core Capability Highlights */}
-            <div className="mt-10 border-t border-border-subtle pt-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {highlights.map((item, idx) => (
-                  <div key={idx} className="flex flex-col">
-                    <div className="flex items-center gap-1.5">
-                      {item.icon}
-                      <span className="text-xs font-semibold text-text-primary">
-                        {item.title}
-                      </span>
-                    </div>
-                    <span className="mt-1 text-[11px] text-text-muted leading-tight">
-                      {item.desc}
-                    </span>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
 
