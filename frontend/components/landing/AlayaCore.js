@@ -119,7 +119,7 @@ export default function AlayaCore({ isProcessing = true }) {
           </svg>
 
           {/* Wordmark */}
-          <AlayaWordmark className="mt-1 text-[11px] font-bold tracking-[0.25em] text-text-primary" />
+          <AlayaWordmark className="mt-1 text-[11px] font-bold tracking-[0.25em]" />
           <span className="text-[8px] font-semibold tracking-wider text-accent-sky uppercase">
             CORE
           </span>

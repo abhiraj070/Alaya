@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 
-const SAMPLE_QUESTION = "What decisions did we make about background jobs?";
+const SAMPLE_QUESTION = "What did we decide about background jobs?";
 
 const SAMPLE_RESPONSE_POINTS = [
-  "You decided to use Redis for background jobs and asynchronous task queueing.",
-  "The decision was agreed upon with your team after finalizing the API specification.",
-  "Architecture specs confirm integration with ARQ worker and PostgreSQL connection pools.",
+  "You and Rahul decided to use Redis with ARQ for background jobs and task queueing.",
+  "The decision was agreed upon during your architecture discussion today.",
+  "Project Notes.docx also confirms Redis integration with PostgreSQL connection pools.",
 ];
 
 export default function HeroChatDemo() {
@@ -134,10 +134,10 @@ export default function HeroChatDemo() {
                   <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                   </svg>
-                  <span className="font-semibold">Memory Entry</span>
+                  <span className="font-semibold">Recorded Memory</span>
                 </div>
                 <p className="text-[10px] text-text-secondary leading-snug italic">
-                  "Today, I finished the API design and decided to use Redis for background jobs."
+                  &ldquo;Discussed architecture with Rahul. We decided to use Redis with ARQ for background jobs.&rdquo;
                 </p>
               </div>
             </div>
@@ -217,7 +217,7 @@ export default function HeroChatDemo() {
                   <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-2 text-[10px]">
                     <span className="text-text-muted">Source Citations:</span>
                     <span className="rounded bg-surface-secondary px-2 py-0.5 font-mono text-accent-sky border border-border-subtle">
-                      Memory · Architecture Decisions
+                      Memory · Discussion with Rahul
                     </span>
                     <span className="rounded bg-surface-secondary px-2 py-0.5 font-mono text-accent-sky border border-border-subtle">
                       Project Notes.docx §2.1
@@ -239,7 +239,7 @@ export default function HeroChatDemo() {
                     <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-accent-sky animate-pulse align-middle" />
                   </span>
                 ) : (
-                  <span className="text-text-muted">Ask anything about your Knowledge Base...</span>
+                  <span className="text-text-muted">Ask about your documents, decisions, or daily experiences...</span>
                 )}
               </div>
 

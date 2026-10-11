@@ -4,7 +4,7 @@ import { useState } from "react";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 
 const DEFAULT_MEMORY_TEXT =
-  "Today, I finished the first version of my project and discussed the next steps with my team.";
+  "I had an interesting discussion with Rahul about using Redis for background jobs. We decided to use ARQ with FastAPI.";
 
 export default function WorkflowDemo() {
   const [inputMode, setInputMode] = useState("write"); // "upload" | "write"
@@ -16,7 +16,7 @@ export default function WorkflowDemo() {
   const handleSaveMemory = () => {
     if (!memoryInput.trim()) return;
     setIsMemorySaved(true);
-    setSaveToast("Saved to Knowledge Base!");
+    setSaveToast("Memory saved to Knowledge Base!");
     setTimeout(() => setSaveToast(""), 3000);
   };
 
@@ -120,13 +120,13 @@ export default function WorkflowDemo() {
             <div className="flex flex-col justify-between h-full">
               <div>
                 <div className="flex items-center justify-between border-b border-border-subtle pb-2">
-                  <span className="text-xs font-semibold text-text-primary">Record Written Memory</span>
-                  <span className="text-[10px] font-mono text-accent-sky">DIRECT NOTE</span>
+                  <span className="text-xs font-semibold text-text-primary">Record Personal Memory</span>
+                  <span className="text-[10px] font-mono text-accent-sky">NATURAL LANGUAGE</span>
                 </div>
 
                 <div className="mt-3">
                   <label htmlFor="memory-input-demo" className="block text-[11px] text-text-muted mb-1 font-mono">
-                    Enter notes, decisions, or updates to remember:
+                    Tell Alaya what happened, a decision made, or something to remember:
                   </label>
                   <textarea
                     id="memory-input-demo"
@@ -137,7 +137,7 @@ export default function WorkflowDemo() {
                       setIsMemorySaved(false);
                     }}
                     className="w-full rounded-lg border border-border-strong bg-surface-primary p-2.5 text-xs text-text-primary focus:border-accent-sky focus:outline-none focus:ring-1 focus:ring-accent-sky"
-                    placeholder="e.g., Decided to use Redis for background queues with ARQ worker..."
+                    placeholder="e.g. I had an interesting discussion with Rahul about using Redis for background jobs. We decided to use ARQ with FastAPI."
                   />
                 </div>
 
@@ -160,7 +160,7 @@ export default function WorkflowDemo() {
                   onClick={handleSaveMemory}
                   className="btn-primary h-8 px-4 text-xs font-semibold uppercase tracking-wider shadow-sm"
                 >
-                  Save to Knowledge Base
+                  Save Memory
                 </button>
                 <span className="text-[10px] font-mono text-text-muted">Type: Memory</span>
               </div>
@@ -188,7 +188,7 @@ export default function WorkflowDemo() {
                 <div className="max-w-[85%] rounded-xl rounded-tr-sm bg-surface-tertiary px-3.5 py-2 text-xs text-text-primary border border-border-strong">
                   {inputMode === "upload"
                     ? "What did the research paper find regarding system latency?"
-                    : "What did I accomplish today?"}
+                    : "What did I discuss with Rahul about Redis?"}
                 </div>
               </div>
 
@@ -204,7 +204,7 @@ export default function WorkflowDemo() {
                   <p className="text-text-primary leading-relaxed">
                     {inputMode === "upload"
                       ? "The research paper measured a 40% reduction in retrieval latency using HNSW vector indexing in pgvector compared to standard flat scans."
-                      : "You mentioned completing the first version of your project and discussing the next steps with your team."}
+                      : "You discussed using Redis for background jobs with Rahul. You decided to use ARQ with FastAPI for asynchronous task execution."}
                   </p>
 
                   {/* Verified Source Citation */}
@@ -214,7 +214,7 @@ export default function WorkflowDemo() {
                       <span className="font-mono text-accent-sky">
                         {inputMode === "upload"
                           ? "Research Paper.pdf §3.2"
-                          : "Memory · Today's Accomplishments"}
+                          : "Memory · Discussion with Rahul"}
                       </span>
                     </span>
                     <span className="font-mono text-emerald-400">SOURCE VERIFIED</span>
@@ -226,7 +226,7 @@ export default function WorkflowDemo() {
 
           {/* Chat Composer Preview */}
           <div className="mt-4 pt-3 border-t border-border-subtle flex items-center justify-between rounded-lg bg-surface-primary px-3 py-2 border border-border-subtle text-xs text-text-muted">
-            <span>Ask a question about your Knowledge Base...</span>
+            <span>Ask about past discussions, daily logs, or documents...</span>
             <span className="flex h-6 w-6 items-center justify-center rounded bg-accent-sky text-black text-xs font-bold">
               ↑
             </span>

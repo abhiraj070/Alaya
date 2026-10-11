@@ -19,7 +19,7 @@ export default function FinalCtaSection() {
 
         {/* Required Headline */}
         <h2 className="mt-6 text-3xl font-extrabold tracking-tight text-text-primary sm:text-5xl lg:text-6xl leading-[1.1]">
-          Your knowledge is already there. <br />
+          Your documents, experiences, and ideas. <br />
           <span className="text-accent-sky drop-shadow-[0_0_24px_rgba(56,189,248,0.3)]">
             Start a conversation.
           </span>
@@ -27,8 +27,8 @@ export default function FinalCtaSection() {
 
         {/* Supporting Description */}
         <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg text-text-secondary leading-relaxed">
-          Create your Knowledge Base in minutes and experience conversational retrieval
-          built entirely on your own data.
+          Upload files or capture today&apos;s thoughts in your own words. Search and recall everything
+          through grounded conversational Chat.
         </p>
 
         {/* Primary CTA Button */}
@@ -54,7 +54,7 @@ export default function FinalCtaSection() {
         </div>
 
         <p className="mt-4 text-xs text-text-muted">
-          Instant setup · Multi-format ingestion · Verifiable source citations
+          Instant setup · Multi-format ingestion · Personal memories · Verifiable source citations
         </p>
       </div>
     </section>

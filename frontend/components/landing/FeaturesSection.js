@@ -1,9 +1,25 @@
 export default function FeaturesSection() {
   const features = [
     {
-      title: "Multi-Format Ingestion",
-      tag: "INGESTION ENGINE",
-      desc: "Ingest documents and write notes into one centralized Knowledge Base with automatic validation and format handling.",
+      title: "Personal Memory Capture",
+      tag: "PERSONAL MEMORIES",
+      desc: "Record everyday accomplishments, discussions, decisions, and ideas in your own words—without formatting or uploading documents.",
+      icon: (
+        <svg className="h-5 w-5 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+        </svg>
+      ),
+      bullets: [
+        "Log accomplishments, meetings, and decisions instantly",
+        "Preserve context, dates, and personal thoughts",
+        "Indexed alongside uploaded files in your Knowledge Base",
+      ],
+    },
+    {
+      title: "Document Ingestion",
+      tag: "MULTI-FORMAT INGESTION",
+      desc: "Upload PDFs, spreadsheets, presentations, and documents. Alaya extracts structured text, retains tables, and processes scanned pages.",
       icon: (
         <svg className="h-5 w-5 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -14,31 +30,14 @@ export default function FeaturesSection() {
       ),
       bullets: [
         "PDF, DOCX, XLSX, TXT, PPTX, CSV & images",
-        "Direct natural-language memory logging",
-        "Automated file parsing and metadata tagging",
-      ],
-    },
-    {
-      title: "Content Structuring",
-      tag: "AUTOMATIC PARSING",
-      desc: "Files are systematically parsed into structured segments with contextual overlap to retain hierarchical relationships and tables.",
-      icon: (
-        <svg className="h-5 w-5 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polygon points="12 2 2 7 12 12 22 7 12 2" />
-          <polyline points="2 17 12 22 22 17" />
-          <polyline points="2 12 12 17 22 12" />
-        </svg>
-      ),
-      bullets: [
-        "Context-preserving semantic chunking",
-        "Tabular and layout-aware parsing",
-        "OCR processing for scanned files and images",
+        "Context-preserving chunking and layout retention",
+        "OCR processing for scanned pages and images",
       ],
     },
     {
       title: "Hybrid Vector Retrieval",
       tag: "RETRIEVAL PIPELINE",
-      desc: "Alaya blends dense vector similarity with deterministic metadata filters to surface the most relevant excerpts before generating responses.",
+      desc: "Alaya blends dense vector embeddings with deterministic metadata filtering to surface the most relevant excerpts across files and memories.",
       icon: (
         <svg className="h-5 w-5 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="11" cy="11" r="8" />
@@ -48,22 +47,22 @@ export default function FeaturesSection() {
       bullets: [
         "High-dimensional vector embeddings",
         "pgvector HNSW index for fast similarity search",
-        "Metadata-filtered semantic queries",
+        "Unified search across files and recorded memories",
       ],
     },
     {
-      title: "Attributed Answers",
-      tag: "ANSWER SYNTHESIS",
-      desc: "Responses are synthesized strictly from retrieved context and accompanied by transparent source citations back to specific files and notes.",
+      title: "Source-Backed Recall",
+      tag: "CONVERSATIONAL CHAT",
+      desc: "Ask questions in conversational Chat and receive grounded answers attributed with transparent citations to specific files or written memories.",
       icon: (
         <svg className="h-5 w-5 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       ),
       bullets: [
-        "Answers grounded in retrieved context",
-        "Inline citations linking to source documents",
-        "Zero speculation outside your Knowledge Base",
+        "Answers grounded strictly in your Knowledge Base",
+        "Inline citations linking to source documents or memories",
+        "Zero speculation outside what you have stored",
       ],
     },
   ];
@@ -85,7 +84,7 @@ export default function FeaturesSection() {
           </h2>
 
           <p className="mt-4 text-base sm:text-lg text-text-secondary leading-relaxed">
-            The core architecture behind multi-format ingestion, semantic chunking,
+            The core architecture uniting personal memory capture, multi-format document ingestion,
             vector indexing, and transparent attribution.
           </p>
         </div>

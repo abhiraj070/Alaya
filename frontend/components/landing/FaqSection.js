@@ -4,20 +4,24 @@ import { useState } from "react";
 
 const FAQ_ITEMS = [
   {
-    q: "How does Alaya ensure answers remain grounded in my data?",
-    a: "Alaya operates on retrieval-augmented generation (RAG) strictly scoped to your Knowledge Base. When you ask a question in Chat, Alaya first retrieves relevant excerpts and metadata from your indexed documents and memories, using that verified context to formulate the response.",
+    q: "How does Alaya remember my daily experiences and decisions?",
+    a: "You can feed information directly into Alaya by writing in natural language—whether it's an accomplishment, a meeting decision, an internship interview reflection, or a project idea. Alaya indexes your text alongside uploaded documents, allowing you to ask questions about those moments later.",
   },
   {
-    q: "What document formats are supported?",
-    a: "Alaya supports PDF, DOCX, XLSX, TXT, PPTX, CSV, Markdown, and common image formats. Text within images and scanned documents is extracted using OCR during indexing.",
+    q: "Can I use Alaya without uploading any files?",
+    a: "Yes. You can use Alaya purely as a personal memory repository. Record your daily experiences, architectural decisions, and thoughts directly in your own words, then query them naturally through conversational Chat.",
   },
   {
-    q: "Can I record notes without uploading a file?",
-    a: "Yes. With written memories, you can directly log thoughts, decisions, or meeting notes in natural language. Alaya indexes these memories into your Knowledge Base alongside uploaded documents, making them searchable in Chat.",
+    q: "What document formats are supported for file uploads?",
+    a: "Alaya supports PDF, DOCX, XLSX, TXT, PPTX, CSV, and common image formats. Text within images and scanned documents is extracted using OCR during indexing.",
   },
   {
-    q: "How do source citations work?",
-    a: "Every answer generated in Chat includes attribution badges showing the exact document, section, page, or memory entry that supplied the underlying facts.",
+    q: "Does Alaya automatically record my life or background activity?",
+    a: "No. Alaya never listens in the background, tracks external applications, or automatically ingests private data without your explicit action. It only stores what you deliberately upload as files or enter as written memories.",
+  },
+  {
+    q: "How do source citations work for written memories?",
+    a: "When you ask a question that draws upon a personal memory you recorded, Alaya grounds its answer in that specific entry and displays a citation badge (e.g., 'Memory · Discussion with Rahul') indicating the exact recorded context.",
   },
   {
     q: "Is my Knowledge Base private and secure?",
@@ -40,7 +44,7 @@ export default function FaqSection() {
             Everything you need to know.
           </h2>
           <p className="mt-3 text-base text-text-secondary">
-            Clear answers about indexing, supported formats, source citations, and privacy.
+            Clear answers about personal memories, document indexing, source citations, and privacy.
           </p>
         </div>
 

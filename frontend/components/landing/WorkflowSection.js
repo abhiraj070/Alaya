@@ -61,8 +61,8 @@ export default function WorkflowSection() {
           </h2>
 
           <p className="mt-4 text-base sm:text-lg text-text-secondary leading-relaxed">
-            From raw information to instant answers—how Alaya structures your documents and notes
-            to power conversational discovery.
+            Capture information your way—upload existing files or record what happened during your day.
+            Alaya indexes both so you can recall them anytime.
           </p>
         </div>
 

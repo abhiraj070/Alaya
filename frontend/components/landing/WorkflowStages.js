@@ -5,8 +5,8 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
     {
       id: 1,
       num: "01",
-      title: "Add Knowledge",
-      desc: "Upload documents or record notes directly in natural language.",
+      title: "Capture What Matters",
+      desc: "Upload documents or write about your day—save an idea, record an event, or note a decision you might need later.",
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -15,13 +15,13 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
           <line x1="9" y1="15" x2="15" y2="15" />
         </svg>
       ),
-      cue: "Documents & Notes",
+      cue: "Files & Memories",
     },
     {
       id: 2,
       num: "02",
       title: "Index & Connect",
-      desc: "Alaya extracts content, creates semantic embeddings, and indexes your data.",
+      desc: "Alaya organizes and indexes your files and written memories into one unified Knowledge Base.",
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polygon points="12 2 2 7 12 12 22 7 12 2" />
@@ -29,31 +29,31 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
           <polyline points="2 12 12 17 22 12" />
         </svg>
       ),
-      cue: "Semantic Indexing",
+      cue: "Unified Indexing",
     },
     {
       id: 3,
       num: "03",
       title: "Ask in Chat",
-      desc: "Ask conversational questions in plain language without manual keyword searches.",
+      desc: "Ask conversational questions in plain language whenever you need to recall past events, facts, or decisions.",
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       ),
-      cue: "Conversational Chat",
+      cue: "Conversational Query",
     },
     {
       id: 4,
       num: "04",
-      title: "Verified Answers",
-      desc: "Receive synthesized responses linked directly to verifiable source citations.",
+      title: "Retrieve What You Stored",
+      desc: "Receive clear answers grounded in your stored experiences and documents, with direct source citations.",
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="20 6 9 17 4 12" />
         </svg>
       ),
-      cue: "Source Citations",
+      cue: "Attributed Recall",
     },
   ];
 

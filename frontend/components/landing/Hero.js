@@ -4,8 +4,8 @@ import HeroBackground from "./HeroBackground";
 export default function Hero() {
   const highlights = [
     {
-      title: "Unified Ingestion",
-      desc: "Files and written notes in one Knowledge Base",
+      title: "Documents & Files",
+      desc: "Upload PDFs, DOCX, spreadsheets & slides",
       icon: (
         <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -14,20 +14,20 @@ export default function Hero() {
       ),
     },
     {
-      title: "Conversational Chat",
-      desc: "Ask questions naturally without complex search syntax",
+      title: "Personal Memories",
+      desc: "Record daily logs, discussions & decisions",
       icon: (
         <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
         </svg>
       ),
     },
     {
-      title: "Source Citations",
-      desc: "Every response references original documents and notes",
+      title: "Conversational Recall",
+      desc: "Ask questions later to retrieve any saved memory",
       icon: (
         <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polyline points="20 6 9 17 4 12" />
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       ),
     },
@@ -45,12 +45,12 @@ export default function Hero() {
             {/* Introductory Badge */}
             <div className="inline-flex items-center gap-2 self-start rounded-full border border-border-strong bg-surface-secondary px-3 py-1 text-xs font-semibold tracking-wider text-text-secondary uppercase">
               <span className="h-1.5 w-1.5 rounded-full bg-accent-sky" />
-              <span>Personal Knowledge Platform</span>
+              <span>Documents & Personal Memories</span>
             </div>
 
             {/* Revised Main Headline */}
             <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-text-primary sm:text-5xl lg:text-6xl leading-[1.08]">
-              Your documents. <br />
+              Your documents & experiences. <br />
               <span className="text-accent-sky drop-shadow-[0_0_24px_rgba(56,189,248,0.3)]">
                 A conversation away.
               </span>
@@ -58,8 +58,9 @@ export default function Hero() {
 
             {/* Supporting Description */}
             <p className="mt-5 text-base sm:text-lg leading-relaxed text-text-secondary">
-              Connect your documents and personal notes into a single Knowledge Base.
-              Ask questions in natural language and receive answers backed by your own data.
+              Upload documents or tell Alaya what happened today in your own words—decisions
+              made, discussions held, ideas, or accomplishments. Ask questions anytime and
+              recall everything through natural conversation.
             </p>
 
             {/* Highlighted CTA */}

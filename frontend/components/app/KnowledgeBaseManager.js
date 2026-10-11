@@ -9,10 +9,11 @@ export default function KnowledgeBaseManager() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-  // Form states for Add Knowledge (Natural Language)
+  // Form states for Record Memory (Natural Language)
   const [memoryTitle, setMemoryTitle] = useState("");
   const [memoryContent, setMemoryContent] = useState("");
-  const [memoryCategory, setMemoryCategory] = useState("Milestone");
+  const [memoryCategory, setMemoryCategory] = useState("Accomplishment");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [successToast, setSuccessToast] = useState("");
 
@@ -21,30 +22,68 @@ export default function KnowledgeBaseManager() {
     return item.type === activeFilter;
   });
 
-  const handleAddMemorySubmit = (e) => {
+  const handleAddMemorySubmit = async (e) => {
     e.preventDefault();
     if (!memoryContent.trim()) {
-      setFormError("Please enter the knowledge you want Alaya to remember.");
+      setFormError("Please enter what you would like Alaya to remember.");
       return;
     }
+
+    const content = memoryContent.trim();
+    const title = memoryTitle.trim() || `${memoryCategory} Note`;
+    const formattedPayload = memoryTitle.trim()
+      ? `[${memoryCategory}] ${memoryTitle.trim()}: ${content}`
+      : `[${memoryCategory}] ${content}`;
 
     const newMemory = {
       id: `kb_mem_${Date.now()}`,
       type: "memory",
-      title: memoryTitle.trim() || "Quick Note",
-      content: memoryContent.trim(),
+      title: title,
+      content: content,
       category: memoryCategory,
       createdAt: new Date().toISOString(),
-      tags: ["#new", `#${memoryCategory.toLowerCase()}`],
+      tags: ["#memory", `#${memoryCategory.toLowerCase()}`],
     };
+
+    setIsSubmitting(true);
+    let backendSuccess = false;
+    let backendFeedback = "";
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(
+        `${apiUrl}/api/messages/feed_knowledge?text_content=${encodeURIComponent(formattedPayload)}`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+
+      if (res.ok) {
+        backendSuccess = true;
+        backendFeedback = "Queued for vector processing";
+      } else if (res.status === 401 || res.status === 403) {
+        backendFeedback = "Saved in session (sign in required for vector persistence)";
+      } else {
+        backendFeedback = "Saved in session (backend processing offline)";
+      }
+    } catch {
+      backendFeedback = "Saved in session (backend server offline)";
+    } finally {
+      setIsSubmitting(false);
+    }
 
     setItems([newMemory, ...items]);
     setMemoryTitle("");
     setMemoryContent("");
     setFormError("");
     setIsAddModalOpen(false);
-    setSuccessToast("Knowledge entry added successfully!");
-    setTimeout(() => setSuccessToast(""), 3500);
+    setSuccessToast(
+      backendSuccess
+        ? `Memory queued for embedding: "${title}"`
+        : `Memory recorded: "${title}" · ${backendFeedback}`
+    );
+    setTimeout(() => setSuccessToast(""), 4500);
   };
 
   const handleUploadDocSimulated = (fileName, fileType) => {
@@ -101,7 +140,7 @@ export default function KnowledgeBaseManager() {
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
-            <span>Add Knowledge</span>
+            <span>Record Memory</span>
           </button>
         </div>
       </div>
@@ -202,7 +241,7 @@ export default function KnowledgeBaseManager() {
                     {item.title} ({item.category})
                   </h3>
                   <p className="mt-1 text-xs text-text-primary leading-relaxed italic">
-                    "{item.content}"
+                    &ldquo;{item.content}&rdquo;
                   </p>
                 </div>
               </div>
@@ -223,17 +262,17 @@ export default function KnowledgeBaseManager() {
         ))}
       </div>
 
-      {/* Modal: Add Knowledge (Natural-Language Form) */}
+      {/* Modal: Record Memory (Natural-Language Form) */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl border border-border-strong bg-surface-primary p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border-subtle pb-3">
               <div>
                 <h3 className="text-base font-bold text-text-primary">
-                  Add Natural-Language Knowledge
+                  What would you like Alaya to remember?
                 </h3>
                 <p className="text-xs text-text-muted mt-0.5">
-                  Save facts, events, or preferences directly to your Knowledge Base.
+                  Record everyday accomplishments, decisions, discussions, ideas, or learnings in your own words.
                 </p>
               </div>
               <button
@@ -251,13 +290,13 @@ export default function KnowledgeBaseManager() {
             <form onSubmit={handleAddMemorySubmit} className="mt-4 space-y-4">
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1">
-                  Title / Subject (Optional)
+                  Title / Topic (Optional)
                 </label>
                 <input
                   type="text"
                   value={memoryTitle}
                   onChange={(e) => setMemoryTitle(e.target.value)}
-                  placeholder="e.g. Architecture Decisions, Meeting Summary"
+                  placeholder="e.g. Discussion with Rahul, Project Milestone"
                   className="input-field w-full text-xs"
                 />
               </div>
@@ -271,16 +310,17 @@ export default function KnowledgeBaseManager() {
                   onChange={(e) => setMemoryCategory(e.target.value)}
                   className="input-field w-full text-xs bg-surface-primary"
                 >
-                  <option value="Milestone">Milestone / Accomplishment</option>
+                  <option value="Accomplishment">Accomplishment / Milestone</option>
                   <option value="Decision">Decision / Architecture</option>
-                  <option value="Preference">Preference / Habit</option>
-                  <option value="Fact">Fact / Information</option>
+                  <option value="Experience">Experience / Event</option>
+                  <option value="Idea">Idea / Project Concept</option>
+                  <option value="Learning">Learning / Insight</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1">
-                  Knowledge Content <span className="text-accent-sky">*</span>
+                  Memory Details <span className="text-accent-sky">*</span>
                 </label>
                 <textarea
                   rows={4}
@@ -289,7 +329,7 @@ export default function KnowledgeBaseManager() {
                     setMemoryContent(e.target.value);
                     if (formError) setFormError("");
                   }}
-                  placeholder="e.g. I discussed the new project architecture with my team. We decided to use Redis for background jobs."
+                  placeholder="e.g. I had an interesting discussion with Rahul about using Redis for background jobs. We decided to use ARQ with FastAPI."
                   className="w-full rounded-lg border border-border-subtle bg-surface-secondary p-3 text-xs text-text-primary focus:border-accent-sky focus:outline-none focus:ring-1 focus:ring-accent-sky"
                 />
               </div>
@@ -314,9 +354,10 @@ export default function KnowledgeBaseManager() {
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary h-9 px-5 text-xs font-semibold uppercase tracking-wider shadow-sm"
+                  disabled={isSubmitting}
+                  className="btn-primary h-9 px-5 text-xs font-semibold uppercase tracking-wider shadow-sm disabled:opacity-50"
                 >
-                  Save Knowledge
+                  {isSubmitting ? "Saving..." : "Save Memory"}
                 </button>
               </div>
             </form>

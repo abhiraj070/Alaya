@@ -34,7 +34,7 @@ export default function Navbar() {
               <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.8" />
             </svg>
           </span>
-          <AlayaWordmark className="text-base font-bold tracking-[0.2em] text-text-primary" />
+          <AlayaWordmark className="text-base font-bold tracking-[0.2em]" />
         </Link>
 
         {/* Center: Desktop Navigation Links */}
