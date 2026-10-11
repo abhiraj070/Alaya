@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AlayaWordmark from "@/components/ui/AlayaWordmark";
 
 export default function Footer() {
   return (
@@ -21,7 +22,7 @@ export default function Footer() {
                 <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.8" />
               </svg>
             </span>
-            <span className="font-bold tracking-widest text-text-primary uppercase">ALAYA</span>
+            <AlayaWordmark className="font-bold tracking-widest text-text-primary" />
             <span className="text-text-muted">— AI-Powered Personal Knowledge Platform</span>
           </div>
 

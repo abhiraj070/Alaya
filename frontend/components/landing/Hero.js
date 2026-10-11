@@ -1,4 +1,3 @@
-import Link from "next/link";
 import HeroChatDemo from "./HeroChatDemo";
 import HeroBackground from "./HeroBackground";
 
@@ -63,15 +62,15 @@ export default function Hero() {
               information into answers you can use.
             </p>
 
-            {/* Primary & Secondary CTAs */}
-            <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-              <Link
-                href="/auth?mode=signup"
-                className="btn-primary group h-11 px-6 text-sm font-semibold tracking-wide uppercase shadow-[0_0_20px_rgba(56,189,248,0.25)] hover:shadow-[0_0_28px_rgba(56,189,248,0.4)]"
+            {/* Highlighted CTA */}
+            <div className="mt-8 flex items-center">
+              <a
+                href="#how-it-works"
+                className="btn-primary group h-12 px-7 text-sm font-semibold tracking-wide uppercase shadow-[0_0_24px_rgba(56,189,248,0.3)] hover:shadow-[0_0_35px_rgba(56,189,248,0.5)] inline-flex items-center"
               >
-                <span>Get Started</span>
+                <span>See How It Works</span>
                 <svg
-                  className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
+                  className="ml-2.5 h-4 w-4 transition-transform duration-200 group-hover:translate-y-0.5"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -79,16 +78,9 @@ export default function Hero() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                  <polyline points="12 5 19 12 12 19" />
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <polyline points="19 12 12 19 5 12" />
                 </svg>
-              </Link>
-
-              <a
-                href="#how-it-works"
-                className="btn-secondary h-11 px-6 text-sm font-medium hover:border-border-strong hover:bg-surface-tertiary"
-              >
-                See How It Works
               </a>
             </div>
 

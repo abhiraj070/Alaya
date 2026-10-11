@@ -1,3 +1,5 @@
+import AlayaWordmark from "@/components/ui/AlayaWordmark";
+
 export default function AlayaCore({ isProcessing = true }) {
   return (
     <div className="relative flex h-48 w-48 sm:h-52 sm:w-52 items-center justify-center">
@@ -117,9 +119,7 @@ export default function AlayaCore({ isProcessing = true }) {
           </svg>
 
           {/* Wordmark */}
-          <span className="mt-1 text-[11px] font-bold tracking-[0.25em] text-text-primary uppercase">
-            ALAYA
-          </span>
+          <AlayaWordmark className="mt-1 text-[11px] font-bold tracking-[0.25em] text-text-primary" />
           <span className="text-[8px] font-semibold tracking-wider text-accent-sky uppercase">
             CORE
           </span>

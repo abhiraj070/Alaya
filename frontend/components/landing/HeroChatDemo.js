@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import AlayaWordmark from "@/components/ui/AlayaWordmark";
 
 const SAMPLE_QUESTION = "What are the main findings of my research paper?";
 
@@ -195,8 +196,8 @@ export default function HeroChatDemo() {
             {(statePhase === "responding" || statePhase === "idle") && (
               <div className="flex justify-start shrink-0">
                 <div className="max-w-[95%] rounded-2xl rounded-tl-sm bg-surface-primary border border-accent-sky/30 p-3 shadow-lg text-xs">
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono text-accent-sky mb-1.5">
-                    <span className="font-bold tracking-wider">ALAYA</span>
+                  <div className="flex items-center gap-1.5 text-[10px] font-mono mb-1.5">
+                    <AlayaWordmark className="font-bold tracking-wider text-xs" />
                     <span>•</span>
                     <span className="text-text-muted">Answers grounded in your documents</span>
                   </div>

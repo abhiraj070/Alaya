@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import AlayaWordmark from "@/components/ui/AlayaWordmark";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -33,9 +34,7 @@ export default function Navbar() {
               <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.8" />
             </svg>
           </span>
-          <span className="text-base font-bold tracking-[0.2em] text-text-primary uppercase">
-            ALAYA
-          </span>
+          <AlayaWordmark className="text-base font-bold tracking-[0.2em] text-text-primary" />
         </Link>
 
         {/* Center: Desktop Navigation Links */}

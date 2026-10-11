@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AlayaWordmark from "@/components/ui/AlayaWordmark";
 
 const DEMO_PRESETS = [
   {
@@ -138,8 +139,8 @@ export default function WorkflowDemo({ activeStage, onSelectStage }) {
             {/* Alaya Synthesized Answer Bubble */}
             <div className="flex justify-start">
               <div className="max-w-[95%] rounded-xl rounded-tl-sm bg-surface-primary border border-accent-sky/30 p-3.5 text-xs">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono text-accent-sky mb-1.5">
-                  <span className="font-bold">ALAYA</span>
+                <div className="flex items-center gap-1.5 text-[10px] font-mono mb-1.5">
+                  <AlayaWordmark className="font-bold text-xs" />
                   <span>•</span>
                   <span>{currentPreset.actionTitle}</span>
                 </div>
