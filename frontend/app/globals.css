@@ -1,0 +1,415 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Alaya Design System - Design Tokens & Theme Configuration
+   Theme: Black and Sky Blue (Futuristic, Minimal, Premium, Technically Sophisticated)
+   ========================================================================== */
+
+@theme {
+  /* Color Palette - Backgrounds */
+  --color-bg-primary: #050505;
+  --color-bg-secondary: #0B0D0F;
+
+  /* Color Palette - Surfaces */
+  --color-surface-primary: #0D1014;
+  --color-surface-secondary: #11161B;
+  --color-surface-tertiary: #161C23;
+
+  /* Color Palette - Borders */
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+  --color-border-accent: rgba(56, 189, 248, 0.3);
+
+  /* Color Palette - Typography */
+  --color-text-primary: #F5F7FA;
+  --color-text-secondary: #A1AAB5;
+  --color-text-muted: #737D89;
+
+  /* Color Palette - Accent (Sky Blue) */
+  --color-accent-sky: #38BDF8;
+  --color-accent-sky-light: #7DD3FC;
+  --color-accent-sky-glow: rgba(56, 189, 248, 0.12);
+
+  /* Color Palette - Status */
+  --color-status-success: #22C55E;
+  --color-status-warning: #F59E0B;
+  --color-status-error: #EF4444;
+
+  /* Typography - Font Stack */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Restrained Radius Tokens */
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* Motion & Animation Timings */
+  --duration-fast: 150ms;
+  --duration-standard: 250ms;
+  --duration-large: 350ms;
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   CSS Custom Properties (:root)
+   For direct CSS variable access across inline styles, SVGs, and components
+   ========================================================================== */
+:root {
+  /* Backgrounds */
+  --bg-primary: #050505;
+  --bg-secondary: #0B0D0F;
+
+  /* Surfaces */
+  --surface-primary: #0D1014;
+  --surface-secondary: #11161B;
+  --surface-tertiary: #161C23;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-accent: rgba(56, 189, 248, 0.3);
+
+  /* Text Colors */
+  --text-primary: #F5F7FA;
+  --text-secondary: #A1AAB5;
+  --text-muted: #737D89;
+
+  /* Accent Colors */
+  --accent-sky: #38BDF8;
+  --accent-sky-light: #7DD3FC;
+  --accent-sky-glow: rgba(56, 189, 248, 0.12);
+
+  /* Status Colors */
+  --status-success: #22C55E;
+  --status-warning: #F59E0B;
+  --status-error: #EF4444;
+
+  /* Motion Variables */
+  --duration-fast: 150ms;
+  --duration-standard: 250ms;
+  --duration-large: 350ms;
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout and Spacing Tokens */
+  --container-max-width: 80rem;     /* 1280px */
+  --container-content-width: 64rem; /* 1024px */
+  --container-narrow-width: 48rem;  /* 768px */
+}
+
+/* ==========================================================================
+   Global Resets & Base Styles
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* Selection Styling - Focused Sky Blue Accent */
+::selection {
+  background-color: rgba(56, 189, 248, 0.25);
+  color: var(--text-primary);
+}
+
+/* Links */
+a {
+  color: inherit;
+  text-decoration: none;
+  text-decoration-skip-ink: auto;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+a:hover {
+  color: var(--accent-sky);
+}
+
+/* Focus-Visible - Sophisticated Sky Blue Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--accent-sky);
+  outline-offset: 2px;
+}
+
+/* Form Elements Reset */
+button, input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* ==========================================================================
+   Background Patterns & Accent Effects (Code-Based, No Stock Images)
+   ========================================================================== */
+
+/* Subtle Grid Pattern */
+.bg-grid-pattern {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+
+/* Subtle Dot Pattern */
+.bg-dot-pattern {
+  background-size: 24px 24px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+}
+
+/* Subtle Top Radial Glow */
+.bg-radial-glow {
+  background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.12), transparent 70%);
+}
+
+/* Focused Accent Glow (Centered or Hero) */
+.bg-accent-glow {
+  background-image: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.08), transparent 60%);
+}
+
+/* Ambient Surface Highlight */
+.surface-glow {
+  position: relative;
+}
+.surface-glow::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.2), rgba(255, 255, 255, 0.04));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Surface & Component Utility Conventions
+   ========================================================================== */
+
+/* Primary Surface Card */
+.surface-card {
+  background-color: var(--surface-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--duration-standard) var(--ease-standard),
+              background-color var(--duration-standard) var(--ease-standard);
+}
+
+.surface-card:hover {
+  border-color: var(--border-strong);
+}
+
+/* Interactive Card with subtle accent hover */
+.surface-card-interactive {
+  background-color: var(--surface-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-standard);
+}
+
+.surface-card-interactive:hover {
+  border-color: rgba(56, 189, 248, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Secondary Surface Panel */
+.surface-panel {
+  background-color: var(--surface-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+/* Elevated Popover / Modal Surface */
+.surface-elevated {
+  background-color: var(--surface-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8),
+              0 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Form Input Convention */
+.input-field {
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  background-color: var(--surface-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.input-field::placeholder {
+  color: var(--text-muted);
+}
+
+.input-field:hover {
+  border-color: var(--border-strong);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent-sky);
+  box-shadow: 0 0 0 1px var(--accent-sky);
+}
+
+/* Button Conventions */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding: 0 1rem;
+  background-color: var(--accent-sky);
+  color: #050505;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-standard);
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-sky-light);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding: 0 1rem;
+  background-color: var(--surface-secondary);
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+
+.btn-secondary:hover {
+  background-color: var(--surface-tertiary);
+  border-color: var(--border-strong);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard),
+              background-color var(--duration-fast) var(--ease-standard);
+}
+
+.btn-ghost:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-primary);
+}
+
+/* ==========================================================================
+   Typography Utility Classes
+   ========================================================================== */
+.heading-hero {
+  font-size: clamp(2.25rem, 5vw, 3.75rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.heading-section {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.heading-subsection {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.text-body {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.text-description {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.label-caps {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.label-form {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Motion & Accessibility (prefers-reduced-motion)
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
