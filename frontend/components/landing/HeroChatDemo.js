@@ -80,7 +80,7 @@ export default function HeroChatDemo() {
         </div>
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-emerald-400" />
-          <span className="text-[11px] font-mono text-text-secondary">2 Documents • 1 Memory Active</span>
+          <span className="text-[11px] font-mono text-text-secondary">2 Documents · 1 Memory</span>
         </div>
       </div>
 
@@ -101,7 +101,7 @@ export default function HeroChatDemo() {
             {/* Input A: Uploaded Documents */}
             <div>
               <span className="text-[9px] font-mono tracking-wider text-text-muted uppercase block mb-1">
-                A. UPLOADED DOCUMENTS
+                A. DOCUMENTS
               </span>
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-primary/80 p-1.5 text-xs">
@@ -125,7 +125,7 @@ export default function HeroChatDemo() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[9px] font-mono tracking-wider text-text-muted uppercase">
-                  B. NATURAL-LANGUAGE MEMORY
+                  B. MEMORIES
                 </span>
                 <span className="text-[9px] font-mono text-emerald-400">SAVED ✓</span>
               </div>
@@ -146,7 +146,7 @@ export default function HeroChatDemo() {
           {/* Conceptual Relationship Note */}
           <div className="mt-2 rounded-lg border border-dashed border-border-subtle bg-surface-primary/30 p-1.5 text-center shrink-0">
             <span className="text-[9px] text-text-muted font-mono block">
-              Files + Memories → Shared Knowledge Base
+              Documents & Memories → Unified Knowledge Base
             </span>
           </div>
         </div>
@@ -186,7 +186,7 @@ export default function HeroChatDemo() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-sky opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-accent-sky" />
                 </span>
-                <span>Synthesizing from Project Notes & Memory...</span>
+                <span>Synthesizing from Knowledge Base...</span>
               </div>
             )}
 
@@ -197,11 +197,11 @@ export default function HeroChatDemo() {
                   <div className="flex items-center gap-1.5 text-[10px] font-mono mb-1.5">
                     <AlayaWordmark className="font-bold tracking-wider text-xs" />
                     <span>•</span>
-                    <span className="text-text-muted">Answers grounded in your documents & memories</span>
+                    <span className="text-text-muted">Grounded in your Knowledge Base</span>
                   </div>
 
                   <p className="font-medium text-text-primary text-[11px]">
-                    Based on your saved memory and project notes:
+                    Based on your Knowledge Base:
                   </p>
 
                   <ul className="mt-1.5 space-y-1 text-text-secondary text-[11px]">
@@ -215,9 +215,9 @@ export default function HeroChatDemo() {
 
                   {/* Grounded Sources */}
                   <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-2 text-[10px]">
-                    <span className="text-text-muted">Verified Sources:</span>
+                    <span className="text-text-muted">Source Citations:</span>
                     <span className="rounded bg-surface-secondary px-2 py-0.5 font-mono text-accent-sky border border-border-subtle">
-                      Memory: Architecture Decisions
+                      Memory · Architecture Decisions
                     </span>
                     <span className="rounded bg-surface-secondary px-2 py-0.5 font-mono text-accent-sky border border-border-subtle">
                       Project Notes.docx §2.1
@@ -239,7 +239,7 @@ export default function HeroChatDemo() {
                     <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-accent-sky animate-pulse align-middle" />
                   </span>
                 ) : (
-                  <span className="text-text-muted">Ask anything about your documents or memories...</span>
+                  <span className="text-text-muted">Ask anything about your Knowledge Base...</span>
                 )}
               </div>
 
@@ -261,7 +261,7 @@ export default function HeroChatDemo() {
             </div>
 
             <p className="mt-1.5 text-center text-[10px] text-text-muted">
-              Alaya answers exclusively from your unified Knowledge Base.
+              Answers are synthesized exclusively from your Knowledge Base.
             </p>
           </div>
         </div>

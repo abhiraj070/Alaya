@@ -23,7 +23,7 @@ export default function Footer() {
               </svg>
             </span>
             <AlayaWordmark className="font-bold tracking-widest text-text-primary" />
-            <span className="text-text-muted">— AI-Powered Personal Knowledge Platform</span>
+            <span className="text-text-muted">— Personal Knowledge Platform</span>
           </div>
 
           {/* Navigation Links */}
@@ -49,8 +49,6 @@ export default function Footer() {
         <div className="mt-8 border-t border-border-subtle pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px]">
           <p>© {new Date().getFullYear()} Alaya Inc. All rights reserved.</p>
           <div className="flex items-center gap-4 text-text-muted">
-            <span>Conversational Retrieval Platform</span>
-            <span>•</span>
             <span className="text-emerald-400 flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
               Operational

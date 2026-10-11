@@ -4,8 +4,8 @@ import HeroBackground from "./HeroBackground";
 export default function Hero() {
   const highlights = [
     {
-      title: "Documents & Memories",
-      desc: "Upload files or write thoughts in plain language",
+      title: "Unified Ingestion",
+      desc: "Files and written notes in one Knowledge Base",
       icon: (
         <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -15,7 +15,7 @@ export default function Hero() {
     },
     {
       title: "Conversational Chat",
-      desc: "Ask natural questions like talking to a partner",
+      desc: "Ask questions naturally without complex search syntax",
       icon: (
         <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -23,8 +23,8 @@ export default function Hero() {
       ),
     },
     {
-      title: "Accurate Answers",
-      desc: "Verifiable citations back to your knowledge",
+      title: "Source Citations",
+      desc: "Every response references original documents and notes",
       icon: (
         <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="20 6 9 17 4 12" />
@@ -45,7 +45,7 @@ export default function Hero() {
             {/* Introductory Badge */}
             <div className="inline-flex items-center gap-2 self-start rounded-full border border-border-strong bg-surface-secondary px-3 py-1 text-xs font-semibold tracking-wider text-text-secondary uppercase">
               <span className="h-1.5 w-1.5 rounded-full bg-accent-sky" />
-              <span>Upload Documents • Save Memories • Ask Anything</span>
+              <span>Personal Knowledge Platform</span>
             </div>
 
             {/* Revised Main Headline */}
@@ -58,8 +58,8 @@ export default function Hero() {
 
             {/* Supporting Description */}
             <p className="mt-5 text-base sm:text-lg leading-relaxed text-text-secondary">
-              Upload your documents or tell Alaya what's on your mind. Build a personal
-              knowledge base you can revisit through natural conversations.
+              Connect your documents and personal notes into a single Knowledge Base.
+              Ask questions in natural language and receive answers backed by your own data.
             </p>
 
             {/* Highlighted CTA */}

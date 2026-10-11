@@ -1,9 +1,9 @@
 export default function FeaturesSection() {
   const features = [
     {
-      title: "Documents & Memories",
-      tag: "DUAL INGESTION",
-      desc: "Add knowledge through direct document uploads (PDF, DOCX, XLSX, TXT, PPTX, Images) or write down thoughts, decisions, and habits in plain natural language. Both reside in one unified Knowledge Base.",
+      title: "Multi-Format Ingestion",
+      tag: "INGESTION ENGINE",
+      desc: "Ingest documents and write notes into one centralized Knowledge Base with automatic validation and format handling.",
       icon: (
         <svg className="h-5 w-5 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -12,12 +12,16 @@ export default function FeaturesSection() {
           <line x1="9" y1="15" x2="15" y2="15" />
         </svg>
       ),
-      bullets: ["Direct multi-format uploads", "Natural-language written memories", "Unified Knowledge Base"],
+      bullets: [
+        "PDF, DOCX, XLSX, TXT, PPTX, CSV & images",
+        "Direct natural-language memory logging",
+        "Automated file parsing and metadata tagging",
+      ],
     },
     {
-      title: "Knowledge Extraction",
+      title: "Content Structuring",
       tag: "AUTOMATIC PARSING",
-      desc: "Files are automatically split into structured chunks with contextual overlap. Metadata, tables, and document sections are parsed to preserve relationships.",
+      desc: "Files are systematically parsed into structured segments with contextual overlap to retain hierarchical relationships and tables.",
       icon: (
         <svg className="h-5 w-5 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polygon points="12 2 2 7 12 12 22 7 12 2" />
@@ -25,30 +29,42 @@ export default function FeaturesSection() {
           <polyline points="2 12 12 17 22 12" />
         </svg>
       ),
-      bullets: ["Recursive text chunking", "Tabular and image OCR", "Dynamic entity extraction"],
+      bullets: [
+        "Context-preserving semantic chunking",
+        "Tabular and layout-aware parsing",
+        "OCR processing for scanned files and images",
+      ],
     },
     {
-      title: "Conversational Retrieval",
-      tag: "HYBRID RETRIEVAL",
-      desc: "Alaya dynamically chooses semantic vector candidates or deterministic metadata queries to find the precise facts before generating your answer.",
+      title: "Hybrid Vector Retrieval",
+      tag: "RETRIEVAL PIPELINE",
+      desc: "Alaya blends dense vector similarity with deterministic metadata filters to surface the most relevant excerpts before generating responses.",
       icon: (
         <svg className="h-5 w-5 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
       ),
-      bullets: ["1536-dimensional embeddings", "pgvector HNSW index", "Hybrid semantic + SQL filter"],
+      bullets: [
+        "High-dimensional vector embeddings",
+        "pgvector HNSW index for fast similarity search",
+        "Metadata-filtered semantic queries",
+      ],
     },
     {
-      title: "Natural-Language Questions",
-      tag: "CHAT EXPERIENCE",
-      desc: "Interact with all your knowledge through a clean, intuitive chat interface. Ask questions in plain English and receive answers backed by transparent file citations.",
+      title: "Attributed Answers",
+      tag: "ANSWER SYNTHESIS",
+      desc: "Responses are synthesized strictly from retrieved context and accompanied by transparent source citations back to specific files and notes.",
       icon: (
         <svg className="h-5 w-5 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       ),
-      bullets: ["Grounded, factual answers", "Direct document references", "Conversational session history"],
+      bullets: [
+        "Answers grounded in retrieved context",
+        "Inline citations linking to source documents",
+        "Zero speculation outside your Knowledge Base",
+      ],
     },
   ];
 
@@ -64,13 +80,13 @@ export default function FeaturesSection() {
           <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-text-primary sm:text-4xl lg:text-5xl leading-[1.15]">
             Engineered for precision. <br />
             <span className="text-accent-sky drop-shadow-[0_0_20px_rgba(56,189,248,0.25)]">
-              Focused on conversation.
+              Focused on answers.
             </span>
           </h2>
 
           <p className="mt-4 text-base sm:text-lg text-text-secondary leading-relaxed">
-            Upload your documents, ask questions in plain language, and turn scattered
-            information into answers you can use.
+            The core architecture behind multi-format ingestion, semantic chunking,
+            vector indexing, and transparent attribution.
           </p>
         </div>
 

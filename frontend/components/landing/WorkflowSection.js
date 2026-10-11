@@ -50,7 +50,7 @@ export default function WorkflowSection() {
         {/* Section Heading & Subtitle */}
         <div className="mx-auto max-w-3xl text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface-secondary px-3 py-1 text-xs font-semibold tracking-wider text-accent-sky uppercase">
-            <span>WORKFLOW & RETRIEVAL ENGINE</span>
+            <span>HOW IT WORKS</span>
           </div>
 
           <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-text-primary sm:text-4xl lg:text-5xl leading-[1.15]">
@@ -61,8 +61,8 @@ export default function WorkflowSection() {
           </h2>
 
           <p className="mt-4 text-base sm:text-lg text-text-secondary leading-relaxed">
-            Upload your documents or write down what you want to remember. Alaya builds
-            a unified knowledge base you can question anytime.
+            From raw information to instant answers—how Alaya structures your documents and notes
+            to power conversational discovery.
           </p>
         </div>
 

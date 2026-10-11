@@ -4,24 +4,24 @@ import { useState } from "react";
 
 const FAQ_ITEMS = [
   {
-    q: "How does Alaya answer questions without hallucinating?",
-    a: "Alaya relies exclusively on your uploaded Knowledge Base. When you submit a question in Chat, Alaya retrieves the most relevant semantic chunks and metadata facts from your files, assembling verified context before generating the conversational answer.",
+    q: "How does Alaya ensure answers remain grounded in my data?",
+    a: "Alaya operates on retrieval-augmented generation (RAG) strictly scoped to your Knowledge Base. When you ask a question in Chat, Alaya first retrieves relevant excerpts and metadata from your indexed documents and memories, using that verified context to formulate the response.",
   },
   {
-    q: "What document formats are supported for upload?",
-    a: "Alaya natively ingests PDF, DOCX, XLSX, TXT, PPTX, CSV, Markdown, and image uploads (processed via OCR and vision models). No external web links or text paste required.",
+    q: "What document formats are supported?",
+    a: "Alaya supports PDF, DOCX, XLSX, TXT, PPTX, CSV, Markdown, and common image formats. Text within images and scanned documents is extracted using OCR during indexing.",
   },
   {
-    q: "Can I add information without uploading a document?",
-    a: "Yes! You can directly record thoughts, decisions, notes, or preferences in plain natural language through the 'Add Knowledge' feature. Alaya indexes these written memories alongside your uploaded files and retrieves them seamlessly during chat.",
+    q: "Can I record notes without uploading a file?",
+    a: "Yes. With written memories, you can directly log thoughts, decisions, or meeting notes in natural language. Alaya indexes these memories into your Knowledge Base alongside uploaded documents, making them searchable in Chat.",
   },
   {
-    q: "How do citations and source references work?",
-    a: "Every response in the chat interface includes transparent citation badges. You can see precisely which document, section, page, or written memory contributed to each fact in the answer.",
+    q: "How do source citations work?",
+    a: "Every answer generated in Chat includes attribution badges showing the exact document, section, page, or memory entry that supplied the underlying facts.",
   },
   {
-    q: "Is my uploaded knowledge private and secure?",
-    a: "Yes. All uploaded files, chunks, embeddings, and chat sessions are strictly scoped to your authenticated account. Your files are never used to train public foundational models.",
+    q: "Is my Knowledge Base private and secure?",
+    a: "Yes. All documents, memories, embeddings, and chat histories are strictly isolated to your authenticated account. Your data is never shared across users or used to train public foundation models.",
   },
 ];
 
@@ -40,7 +40,7 @@ export default function FaqSection() {
             Everything you need to know.
           </h2>
           <p className="mt-3 text-base text-text-secondary">
-            Common questions about document ingestion, knowledge extraction, and conversational retrieval.
+            Clear answers about indexing, supported formats, source citations, and privacy.
           </p>
         </div>
 

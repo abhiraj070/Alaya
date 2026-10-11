@@ -27,8 +27,8 @@ export default function FinalCtaSection() {
 
         {/* Supporting Description */}
         <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg text-text-secondary leading-relaxed">
-          Upload your files and start asking questions in seconds. No complex configuration,
-          no manual tagging, and no hallucinations.
+          Create your Knowledge Base in minutes and experience conversational retrieval
+          built entirely on your own data.
         </p>
 
         {/* Primary CTA Button */}
@@ -54,7 +54,7 @@ export default function FinalCtaSection() {
         </div>
 
         <p className="mt-4 text-xs text-text-muted">
-          Free account • Instant document upload • Grounded AI answers
+          Instant setup · Multi-format ingestion · Verifiable source citations
         </p>
       </div>
     </section>
