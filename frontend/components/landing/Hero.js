@@ -1,11 +1,11 @@
 import Link from "next/link";
-import DocumentFlow from "./DocumentFlow";
+import HeroChatDemo from "./HeroChatDemo";
 import HeroBackground from "./HeroBackground";
 
 export default function Hero() {
-  const capabilities = [
+  const highlights = [
     {
-      title: "Multiple file formats",
+      title: "Document Upload",
       desc: "PDF, DOCX, XLSX, TXT, PPTX & Images",
       icon: (
         <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -15,57 +15,55 @@ export default function Hero() {
       ),
     },
     {
-      title: "AI extraction & understanding",
-      desc: "Vector embeddings & structured metadata",
-      icon: (
-        <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polygon points="12 2 2 7 12 12 22 7 12 2" />
-          <polyline points="2 17 12 22 22 17" />
-          <polyline points="2 12 12 17 22 12" />
-        </svg>
-      ),
-    },
-    {
-      title: "Chat with your knowledge",
-      desc: "Accurate conversational answers & citations",
+      title: "Conversational Chat",
+      desc: "Ask natural questions in plain English",
       icon: (
         <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       ),
     },
+    {
+      title: "Accurate Answers",
+      desc: "Verifiable citations back to your files",
+      icon: (
+        <svg className="h-4 w-4 text-accent-sky" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ),
+    },
   ];
 
   return (
-    <section className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-28">
-      {/* 1. Code-Generated Background (Atmosphere, Grid, Subtle Lights) */}
+    <section className="relative overflow-hidden pt-12 pb-20 md:pt-18 md:pb-28">
+      {/* Code-Generated Background (Atmospheric radial glow, technical grid, sparse particles) */}
       <HeroBackground />
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-8">
-          {/* Left Column: Hero Copy & Actions (col-span-5 or col-span-6) */}
+        <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-12 lg:gap-8">
+          {/* Left Column: Core Positioning Copy & CTAs */}
           <div className="flex flex-col text-left lg:col-span-5">
-            {/* Small Introductory Label Badge */}
+            {/* Introductory Badge */}
             <div className="inline-flex items-center gap-2 self-start rounded-full border border-border-strong bg-surface-secondary px-3 py-1 text-xs font-semibold tracking-wider text-text-secondary uppercase">
               <span className="h-1.5 w-1.5 rounded-full bg-accent-sky" />
-              <span>AI-Powered Personal Knowledge Platform</span>
+              <span>Upload your files. Ask anything.</span>
             </div>
 
-            {/* Main Headline */}
+            {/* Revised Main Headline */}
             <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-text-primary sm:text-5xl lg:text-6xl leading-[1.08]">
-              Your knowledge. <br />
+              Your documents. <br />
               <span className="text-accent-sky drop-shadow-[0_0_24px_rgba(56,189,248,0.3)]">
-                One intelligent interface.
+                A conversation away.
               </span>
             </h1>
 
             {/* Supporting Description */}
             <p className="mt-5 text-base sm:text-lg leading-relaxed text-text-secondary">
-              Alaya helps you extract, understand, and chat with your documents.
-              Turn your files into a living knowledge base and get accurate answers.
+              Upload your files, ask questions in plain language, and turn scattered
+              information into answers you can use.
             </p>
 
-            {/* Primary and Secondary CTA Buttons */}
+            {/* Primary & Secondary CTAs */}
             <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
               <Link
                 href="/auth?mode=signup"
@@ -94,10 +92,10 @@ export default function Hero() {
               </a>
             </div>
 
-            {/* Three Concise Capability Highlights */}
+            {/* Core Capability Highlights */}
             <div className="mt-10 border-t border-border-subtle pt-6">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {capabilities.map((item, idx) => (
+                {highlights.map((item, idx) => (
                   <div key={idx} className="flex flex-col">
                     <div className="flex items-center gap-1.5">
                       {item.icon}
@@ -114,9 +112,9 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Right Column: Animated Document-to-Knowledge Visualization (col-span-7) */}
+          {/* Right Column: Hero Interactive Chat & Knowledge Base Demonstration */}
           <div className="relative w-full lg:col-span-7">
-            <DocumentFlow />
+            <HeroChatDemo />
           </div>
         </div>
       </div>

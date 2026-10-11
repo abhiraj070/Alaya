@@ -5,8 +5,8 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
     {
       id: 1,
       num: "01",
-      title: "Upload",
-      desc: "Add your documents in any supported format.",
+      title: "Upload Documents",
+      desc: "Add your files in any supported format to your Knowledge Base.",
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -14,88 +14,51 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
           <line x1="12" y1="3" x2="12" y2="15" />
         </svg>
       ),
-      microVisual: (
-        <div className="mt-3 flex items-center gap-1">
-          {["PDF", "DOCX", "XLSX"].map((ext, i) => (
-            <span
-              key={i}
-              className="rounded border border-border-subtle bg-surface-primary px-1.5 py-0.5 text-[9px] font-mono text-text-muted"
-            >
-              {ext}
-            </span>
-          ))}
-          <span className="text-[9px] text-accent-sky font-mono">+more</span>
-        </div>
-      ),
+      cue: "PDF, DOCX, XLSX, TXT, IMG",
     },
     {
       id: 2,
       num: "02",
-      title: "Extract",
-      desc: "Alaya extracts clean, structured content.",
+      title: "Prepare Knowledge",
+      desc: "Alaya extracts and indexes your files for instant retrieval.",
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-          <polyline points="10 9 9 9 8 9" />
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 17 12 22 22 17" />
+          <polyline points="2 12 12 17 22 12" />
         </svg>
       ),
-      microVisual: (
-        <div className="mt-3 flex flex-col gap-1 w-full max-w-[130px]">
-          <div className="h-1.5 w-full rounded bg-accent-sky/40" />
-          <div className="h-1.5 w-4/5 rounded bg-surface-tertiary" />
-          <div className="h-1.5 w-2/3 rounded bg-surface-tertiary" />
-        </div>
-      ),
+      cue: "Automatic Indexing",
     },
     {
       id: 3,
       num: "03",
-      title: "Understand",
-      desc: "Content is chunked, embedded, and stored in your knowledge base.",
-      icon: (
-        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="18" cy="5" r="3" />
-          <circle cx="6" cy="12" r="3" />
-          <circle cx="18" cy="19" r="3" />
-          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-        </svg>
-      ),
-      microVisual: (
-        <div className="mt-3 flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-accent-sky" />
-          <span className="h-0.5 w-4 bg-accent-sky/40" />
-          <span className="h-2 w-2 rounded-full bg-accent-sky/70" />
-          <span className="h-0.5 w-4 bg-accent-sky/40" />
-          <span className="h-2 w-2 rounded-full bg-accent-sky" />
-        </div>
-      ),
-    },
-    {
-      id: 4,
-      num: "04",
-      title: "Ask",
-      desc: "Chat with your knowledge and get accurate answers.",
+      title: "Ask in Chat",
+      desc: "Type natural-language questions directly into the chat interface.",
       icon: (
         <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       ),
-      microVisual: (
-        <div className="mt-3 flex items-center gap-1 text-[10px] font-mono text-text-muted">
-          <span className="text-text-primary">Q:</span> Fact?
-          <span className="text-accent-sky font-semibold ml-1">A:</span> Answer
-        </div>
+      cue: "Plain English Queries",
+    },
+    {
+      id: 4,
+      num: "04",
+      title: "Receive Answers",
+      desc: "Get accurate, synthesized responses backed by source citations.",
+      icon: (
+        <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
       ),
+      cue: "Verified Citations",
     },
   ];
 
   return (
     <div className="relative w-full">
-      {/* Desktop Horizontal Connectors (hidden on mobile) */}
+      {/* Desktop Horizontal Connecting Line */}
       <div className="hidden lg:block absolute top-12 left-12 right-12 h-0.5 pointer-events-none" aria-hidden="true">
         <svg className="w-full h-4 overflow-visible" fill="none">
           <line
@@ -107,7 +70,7 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
             strokeWidth="1.5"
             strokeDasharray="4 6"
           />
-          {/* Active Flow Line indicator */}
+          {/* Active Flow Fill */}
           <line
             x1="0"
             y1="2"
@@ -141,11 +104,11 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
                   : "opacity-0 translate-y-4"
               }`}
               style={{
-                transitionDelay: `${idx * 120}ms`,
+                transitionDelay: `${idx * 100}ms`,
               }}
             >
               <div>
-                {/* Top Row: Number and Icon */}
+                {/* Number & Icon */}
                 <div className="flex items-center justify-between">
                   <span
                     className={`font-mono text-xs font-bold transition-colors ${
@@ -165,25 +128,21 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
                   </div>
                 </div>
 
-                {/* Stage Heading */}
+                {/* Title */}
                 <h3 className="mt-4 text-base font-semibold text-text-primary group-hover:text-white">
                   {stage.title}
                 </h3>
 
-                {/* Stage Description */}
+                {/* Description */}
                 <p className="mt-1.5 text-xs text-text-secondary leading-relaxed">
                   {stage.desc}
                 </p>
               </div>
 
-              {/* Bottom Micro-Visual & Action Cue */}
-              <div className="mt-4 pt-3 border-t border-border-subtle/60 flex items-center justify-between">
-                {stage.microVisual}
-                <span
-                  className={`text-[10px] font-mono transition-colors ${
-                    isActive ? "text-accent-sky font-semibold" : "text-text-muted group-hover:text-text-secondary"
-                  }`}
-                >
+              {/* Bottom Tag */}
+              <div className="mt-4 pt-3 border-t border-border-subtle/60 flex items-center justify-between text-[10px] font-mono">
+                <span className="text-text-muted">{stage.cue}</span>
+                <span className={isActive ? "text-accent-sky font-semibold" : "text-text-muted"}>
                   {isActive ? "VIEWING" : "SELECT"}
                 </span>
               </div>
