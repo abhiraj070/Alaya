@@ -1,19 +1,27 @@
 export default function AlayaWordmark({ className = "" }) {
   return (
     <span className={`inline-flex items-center uppercase ${className}`}>
-      <span className="text-accent-sky text-sky-400" style={{ color: "#38BDF8" }}>
+      <span className="text-accent-sky">
         A
       </span>
-      <span className="text-text-primary text-white" style={{ color: "#F5F7FA" }}>
+      <span
+        data-wordmark-char="text"
+        className="text-text-primary text-black dark:text-white"
+        style={{ color: "var(--text-primary, currentColor)" }}
+      >
         L
       </span>
-      <span className="text-accent-sky text-sky-400" style={{ color: "#38BDF8" }}>
+      <span className="text-accent-sky">
         A
       </span>
-      <span className="text-text-primary text-white" style={{ color: "#F5F7FA" }}>
+      <span
+        data-wordmark-char="text"
+        className="text-text-primary text-black dark:text-white"
+        style={{ color: "var(--text-primary, currentColor)" }}
+      >
         Y
       </span>
-      <span className="text-accent-sky text-sky-400" style={{ color: "#38BDF8" }}>
+      <span className="text-accent-sky">
         A
       </span>
     </span>

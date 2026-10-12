@@ -102,6 +102,113 @@
 }
 
 /* ==========================================================================
+   Light (Day) Mode Variables
+   ========================================================================== */
+html.light {
+  color-scheme: light;
+}
+
+html.light,
+body.light {
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F8FAFC;
+  --color-surface-primary: #FFFFFF;
+  --color-surface-secondary: #F1F5F9;
+  --color-surface-tertiary: #E2E8F0;
+  --color-border-subtle: rgba(0, 0, 0, 0.1);
+  --color-border-strong: rgba(0, 0, 0, 0.2);
+  --color-border-accent: rgba(2, 132, 199, 0.4);
+
+  --color-text-primary: #000000;
+  --color-text-secondary: #18181B;
+  --color-text-muted: #3F3F46;
+
+  --color-accent-sky: #0284C7;
+  --color-accent-sky-light: #0369A1;
+  --color-accent-sky-glow: rgba(2, 132, 199, 0.15);
+
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F8FAFC;
+  --surface-primary: #FFFFFF;
+  --surface-secondary: #F1F5F9;
+  --surface-tertiary: #E2E8F0;
+  --border-subtle: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.2);
+  --border-accent: rgba(2, 132, 199, 0.4);
+
+  --text-primary: #000000;
+  --text-secondary: #18181B;
+  --text-muted: #3F3F46;
+
+  --accent-sky: #0284C7;
+  --accent-sky-light: #0369A1;
+  --accent-sky-glow: rgba(2, 132, 199, 0.15);
+}
+
+/* ==========================================================================
+   ChatGPT-Style Autohiding Scrollbar
+   Hidden by default; becomes visible on hover and during scrolling
+   ========================================================================== */
+*,
+.chat-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.25s ease;
+}
+
+*:hover,
+.chat-scrollbar:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+html.light *:hover,
+html.light .chat-scrollbar:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+::-webkit-scrollbar,
+.chat-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track,
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb,
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+  transition: background-color 0.25s ease;
+}
+
+*:hover::-webkit-scrollbar-thumb,
+*:active::-webkit-scrollbar-thumb,
+.chat-scrollbar:hover::-webkit-scrollbar-thumb,
+.chat-scrollbar:active::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+::-webkit-scrollbar-thumb:hover,
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.38);
+}
+
+html.light *:hover::-webkit-scrollbar-thumb,
+html.light *:active::-webkit-scrollbar-thumb,
+html.light .chat-scrollbar:hover::-webkit-scrollbar-thumb,
+html.light .chat-scrollbar:active::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+html.light ::-webkit-scrollbar-thumb:hover,
+html.light .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.38);
+}
+
+/* ==========================================================================
    Global Resets & Base Styles
    ========================================================================== */
 *, *::before, *::after {
@@ -146,10 +253,27 @@ a:hover {
   color: var(--accent-sky);
 }
 
-/* Focus-Visible - Sophisticated Sky Blue Focus Ring */
+/* Focus-Visible - Sophisticated Sky Blue Focus Ring for buttons and links */
 :focus-visible {
   outline: 2px solid var(--accent-sky);
   outline-offset: 2px;
+}
+
+/* Explicit Outline Removal for Inputs, Textareas, and Forms */
+textarea,
+input,
+form,
+textarea:focus,
+textarea:focus-visible,
+input:focus,
+input:focus-visible,
+form:focus,
+form:focus-visible,
+form:focus-within {
+  outline: none !important;
+  outline-style: none !important;
+  outline-width: 0 !important;
+  outline-offset: 0 !important;
 }
 
 /* Form Elements Reset & Clickable Elements */
@@ -310,22 +434,54 @@ select:disabled {
   height: 2.5rem;
   padding: 0 1rem;
   background-color: var(--accent-sky);
-  color: #050505;
-  font-weight: 500;
+  color: #000000 !important;
+  font-weight: 600;
   font-size: 0.875rem;
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: background-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard),
               transform var(--duration-fast) var(--ease-standard);
 }
 
 .btn-primary:hover {
-  background-color: var(--accent-sky-light);
+  background-color: #0ea5e9;
+  color: #000000 !important;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
 }
 
 .btn-primary:active {
   transform: scale(0.98);
+}
+
+/* Light mode primary button: high-contrast blue with white text */
+html.light .btn-primary,
+.light .btn-primary {
+  background-color: #0284C7;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2);
+}
+
+html.light .btn-primary:hover,
+.light .btn-primary:hover {
+  background-color: #0369A1;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+}
+
+/* Guarantee Alaya wordmark L & Y visibility in both light and dark modes */
+html.light [data-wordmark-char="text"],
+.light [data-wordmark-char="text"],
+body.light [data-wordmark-char="text"] {
+  color: #000000 !important;
+}
+
+html.dark [data-wordmark-char="text"],
+:root:not(.light) [data-wordmark-char="text"],
+body:not(.light) [data-wordmark-char="text"] {
+  color: #F5F7FA !important;
 }
 
 .btn-secondary {

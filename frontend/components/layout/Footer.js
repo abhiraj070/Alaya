@@ -22,7 +22,7 @@ export default function Footer() {
                 <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.8" />
               </svg>
             </span>
-            <AlayaWordmark className="font-bold tracking-widest" />
+            <AlayaWordmark className="font-bold tracking-widest text-text-primary" />
             <span className="text-text-muted">— Personal Knowledge Platform</span>
           </div>
 

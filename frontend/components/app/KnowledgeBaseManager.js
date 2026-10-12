@@ -3,6 +3,16 @@
 import { useState } from "react";
 import { mockKnowledgeItems } from "@/mock/knowledge";
 
+function formatItemDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const year = d.getUTCFullYear();
+  const month = months[d.getUTCMonth()];
+  const day = d.getUTCDate();
+  return `${month} ${day}, ${year}`;
+}
+
 export default function KnowledgeBaseManager() {
   const [items, setItems] = useState(mockKnowledgeItems);
   const [activeFilter, setActiveFilter] = useState("all"); // "all" | "document" | "memory"
@@ -152,7 +162,7 @@ export default function KnowledgeBaseManager() {
           <button
             type="button"
             onClick={() => setSuccessToast("")}
-            className="text-emerald-400 hover:text-white"
+            className="text-emerald-400 hover:text-text-primary transition-colors"
           >
             ✕
           </button>
@@ -210,8 +220,8 @@ export default function KnowledgeBaseManager() {
                 {item.type === "document" ? "Document" : "Memory"}
               </span>
 
-              <span className="text-[10px] font-mono text-text-muted">
-                {new Date(item.createdAt).toLocaleDateString()}
+              <span className="text-[10px] font-mono text-text-muted" suppressHydrationWarning>
+                {formatItemDate(item.createdAt)}
               </span>
             </div>
 
@@ -281,7 +291,7 @@ export default function KnowledgeBaseManager() {
                   setIsAddModalOpen(false);
                   setFormError("");
                 }}
-                className="text-text-muted hover:text-white"
+                className="text-text-muted hover:text-text-primary transition-colors"
               >
                 ✕
               </button>
@@ -381,7 +391,7 @@ export default function KnowledgeBaseManager() {
               <button
                 type="button"
                 onClick={() => setIsUploadModalOpen(false)}
-                className="text-text-muted hover:text-white"
+                className="text-text-muted hover:text-text-primary transition-colors"
               >
                 ✕
               </button>

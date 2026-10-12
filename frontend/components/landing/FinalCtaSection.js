@@ -35,7 +35,7 @@ export default function FinalCtaSection() {
         <div className="mt-8 flex justify-center">
           <Link
             href="/auth?mode=signup"
-            className="btn-primary group h-12 px-8 text-sm font-semibold tracking-wide uppercase shadow-[0_0_25px_rgba(56,189,248,0.3)] hover:shadow-[0_0_35px_rgba(56,189,248,0.5)]"
+            className="btn-primary group h-12 px-8 text-sm font-semibold tracking-wide uppercase"
           >
             <span>Get Started</span>
             <svg

@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import ChatHeader from "@/components/app/ChatHeader";
 import ChatEmptyState from "@/components/app/ChatEmptyState";
 import ChatMessages from "@/components/app/ChatMessages";
 import ChatInput from "@/components/app/ChatInput";
-import { findMockResponse, mockConversation } from "@/mock/chat";
+import { findMockResponse } from "@/mock/chat";
 
 export default function Chat({ messages = [], setMessages }) {
   const [inputValue, setInputValue] = useState("");
@@ -152,49 +151,18 @@ export default function Chat({ messages = [], setMessages }) {
     activeTimersRef.current.push(thinkTimer);
   };
 
-  const handleResetConversation = () => {
-    cancelAllSimulation();
-    setMessages([]);
-  };
-
-  const handleLoadSampleConversation = () => {
-    cancelAllSimulation();
-    setMessages(mockConversation);
-  };
-
   const isBusy = isThinking || isStreaming;
 
   return (
     <div className="relative flex flex-col h-full w-full overflow-hidden bg-bg-primary">
-      {/* Conversation Header Bar */}
-      <ChatHeader
-        onResetConversation={handleResetConversation}
-        hasMessages={messages.length > 0}
-      />
-
-      {/* Main Conversation Scrollable Region */}
+      {/* Main Conversation Scrollable Region with ChatGPT-style autohiding scrollbar */}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto flex flex-col justify-between select-text"
+        className="flex-1 overflow-y-auto chat-scrollbar flex flex-col justify-between select-text"
       >
         {messages.length === 0 ? (
-          <div className="flex-1 flex flex-col justify-center">
-            <ChatEmptyState
-              onSelectPrompt={(prompt) => handleSendMessage(prompt)}
-              disabled={isBusy}
-            />
-            {/* Quick action to restore sample conversation */}
-            <div className="pb-4 text-center">
-              <button
-                type="button"
-                onClick={handleLoadSampleConversation}
-                className="text-xs text-text-muted hover:text-accent-sky underline cursor-pointer transition-colors"
-              >
-                Load sample research conversation
-              </button>
-            </div>
-          </div>
+          <ChatEmptyState />
         ) : (
           <ChatMessages
             messages={messages}

@@ -31,7 +31,7 @@ export default function FileNode({ file, isActive, onClick }) {
 
         {/* File Details */}
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-text-primary group-hover:text-white">
+          <p className="truncate text-xs font-medium text-text-primary group-hover:text-accent-sky transition-colors">
             {file.name}
           </p>
           <p className="text-[10px] text-text-muted">

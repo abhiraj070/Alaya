@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -57,7 +58,8 @@ export default function Navbar() {
         </nav>
 
         {/* Right: Desktop Actions */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-3">
+          <ThemeToggle />
           <Link
             href="/auth?mode=signin"
             className="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky rounded-md px-2 py-1"
@@ -66,14 +68,15 @@ export default function Navbar() {
           </Link>
           <Link
             href="/auth?mode=signup"
-            className="btn-primary h-9 px-4 text-xs font-semibold tracking-wide uppercase shadow-[0_0_12px_rgba(56,189,248,0.2)] hover:shadow-[0_0_18px_rgba(56,189,248,0.35)]"
+            className="btn-primary h-9 px-4 text-xs font-semibold tracking-wide uppercase"
           >
             Get Started
           </Link>
         </div>
 
-        {/* Mobile: Hamburger Toggle Button */}
-        <div className="flex md:hidden">
+        {/* Mobile: Actions (Theme Toggle & Hamburger Toggle Button) */}
+        <div className="flex md:hidden items-center gap-2">
+          <ThemeToggle />
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

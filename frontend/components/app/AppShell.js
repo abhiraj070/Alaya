@@ -9,17 +9,59 @@ import Chat from "@/components/app/Chat";
 import { getStoredUser, subscribeUserStorage, mockUser } from "@/mock/users";
 
 export default function AppShell() {
-  // On tablet screens, default to collapsed sidebar to maximize workspace area
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    if (typeof window !== "undefined" && window.innerWidth >= 768 && window.innerWidth < 1024) {
-      return true;
-    }
-    return false;
-  });
+  // Default to expanded; tablet auto-collapse handled after mount to prevent hydration mismatch
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("chat"); // Chat active by default
-  const [chatMessages, setChatMessages] = useState([]); // Preserved across Chat & KB navigation
+  const [activeTab, setActiveTab] = useState("chat"); // Chat (Ask) active by default
+  const [chats, setChats] = useState([
+    {
+      id: "chat-1",
+      title: "New chat",
+      messages: [],
+      createdAt: 1,
+    },
+  ]);
+  const [activeChatId, setActiveChatId] = useState("chat-1");
+
+  const activeChat = chats.find((c) => c.id === activeChatId) || chats[0];
+  const activeChatMessages = activeChat?.messages || [];
+
+  const handleSetMessages = (newMessagesOrUpdater) => {
+    setChats((prevChats) =>
+      prevChats.map((c) => {
+        if (c.id === (activeChat?.id || prevChats[0]?.id)) {
+          const updatedMessages =
+            typeof newMessagesOrUpdater === "function"
+              ? newMessagesOrUpdater(c.messages)
+              : newMessagesOrUpdater;
+          return {
+            ...c,
+            messages: updatedMessages,
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  const handleNewChat = () => {
+    const newId = `chat-${Date.now()}`;
+    const newChat = {
+      id: newId,
+      title: "New chat",
+      messages: [],
+      createdAt: Date.now(),
+    };
+    setChats((prev) => [newChat, ...prev]);
+    setActiveChatId(newId);
+    setActiveTab("chat");
+  };
+
+  const handleSelectChat = (chatId) => {
+    setActiveChatId(chatId);
+    setActiveTab("chat");
+  };
 
   // Synchronize user profile with external browser storage safely
   const currentUser = useSyncExternalStore(
@@ -66,6 +108,10 @@ export default function AppShell() {
           isCollapsed={isSidebarCollapsed}
           activeTab={activeTab}
           onSelectTab={setActiveTab}
+          chats={chats}
+          activeChatId={activeChatId}
+          onNewChat={handleNewChat}
+          onSelectChat={handleSelectChat}
           user={currentUser}
         />
 
@@ -75,6 +121,10 @@ export default function AppShell() {
           onClose={() => setIsMobileDrawerOpen(false)}
           activeTab={activeTab}
           onSelectTab={setActiveTab}
+          chats={chats}
+          activeChatId={activeChatId}
+          onNewChat={handleNewChat}
+          onSelectChat={handleSelectChat}
           user={currentUser}
         />
 
@@ -83,12 +133,16 @@ export default function AppShell() {
           className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-primary transition-all duration-300 motion-reduce:transition-none"
           id="main-workspace-content"
           role="region"
-          aria-label={activeTab === "chat" ? "Chat Workspace" : "Knowledge Base Workspace"}
+          aria-label={activeTab === "chat" ? "Ask Workspace" : "Knowledge Base Workspace"}
         >
           {activeTab === "chat" ? (
-            <Chat messages={chatMessages} setMessages={setChatMessages} />
+            <Chat
+              key={activeChat?.id}
+              messages={activeChatMessages}
+              setMessages={handleSetMessages}
+            />
           ) : (
-            <div className="flex-1 overflow-y-auto flex flex-col">
+            <div className="flex-1 overflow-y-auto chat-scrollbar flex flex-col">
               <WorkspacePlaceholder activeTab={activeTab} />
             </div>
           )}

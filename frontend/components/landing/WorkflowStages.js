@@ -130,7 +130,7 @@ export default function WorkflowStages({ activeStage, onSelectStage, isVisible }
                 </div>
 
                 {/* Title */}
-                <h3 className="mt-4 text-base font-semibold text-text-primary group-hover:text-white">
+                <h3 className="mt-4 text-base font-semibold text-text-primary group-hover:text-accent-sky transition-colors">
                   {stage.title}
                 </h3>
 

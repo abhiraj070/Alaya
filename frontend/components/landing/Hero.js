@@ -36,7 +36,7 @@ export default function Hero() {
             <div className="mt-8 flex items-center">
               <a
                 href="#how-it-works"
-                className="btn-primary group h-12 px-7 text-sm font-semibold tracking-wide uppercase shadow-[0_0_24px_rgba(56,189,248,0.3)] hover:shadow-[0_0_35px_rgba(56,189,248,0.5)] inline-flex items-center"
+                className="btn-primary group h-12 px-7 text-sm font-semibold tracking-wide uppercase inline-flex items-center"
               >
                 <span>See How It Works</span>
                 <svg

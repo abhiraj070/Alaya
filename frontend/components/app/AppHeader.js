@@ -2,16 +2,13 @@
 
 import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
-import UserAvatar from "@/components/ui/UserAvatar";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export default function AppHeader({
   isSidebarCollapsed = false,
   isMobileDrawerOpen = false,
   onToggleSidebar,
-  user,
 }) {
-  const userName = user?.name || "Abhiraj Sharma";
-
   return (
     <header className="relative z-20 flex h-14 shrink-0 items-center justify-between border-b border-border-subtle bg-bg-secondary/90 px-3 sm:px-4 backdrop-blur-md select-none">
       {/* Left side: Toggle button and ALAYA Wordmark */}
@@ -78,16 +75,9 @@ export default function AppHeader({
         </Link>
       </div>
 
-      {/* Right side: User avatar button navigating to /profile */}
+      {/* Right side: Night / Day Mode Toggle */}
       <div className="flex items-center gap-3">
-        <Link
-          href="/profile"
-          aria-label={`View profile for ${userName}`}
-          title="View Profile"
-          className="group flex items-center justify-center rounded-full p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky cursor-pointer transition-transform duration-200 hover:scale-105"
-        >
-          <UserAvatar name={userName} size="sm" />
-        </Link>
+        <ThemeToggle />
       </div>
     </header>
   );

@@ -42,10 +42,11 @@ export default function ChatInput({
             e.preventDefault();
             if (!isSendDisabled) onSubmit();
           }}
-          className={`relative flex items-end rounded-2xl border transition-all duration-200 ${
+          style={{ outline: "none", boxShadow: "none" }}
+          className={`relative flex items-end rounded-2xl border transition-all duration-200 outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none ring-0 focus:ring-0 focus-within:ring-0 ${
             disabled
               ? "border-border-subtle bg-surface-primary/70 opacity-80"
-              : "border-border-strong bg-surface-primary shadow-[0_8px_30px_rgba(0,0,0,0.6)] focus-within:border-accent-sky/60 focus-within:shadow-[0_0_20px_rgba(56,189,248,0.15)]"
+              : "border-border-strong bg-surface-primary shadow-[0_8px_30px_rgba(0,0,0,0.6)]"
           }`}
         >
           {/* Multiline Input Textarea */}
@@ -61,7 +62,8 @@ export default function ChatInput({
                 ? "Alaya is generating a response..."
                 : "Ask Alaya anything..."
             }
-            className="w-full bg-transparent px-4 py-3.5 pr-14 text-sm sm:text-base text-text-primary placeholder:text-text-muted outline-none resize-none leading-relaxed font-sans max-h-44 min-h-[52px] overflow-y-auto disabled:cursor-not-allowed"
+            style={{ outline: "none", boxShadow: "none" }}
+            className="w-full bg-transparent px-4 py-3.5 pr-14 text-sm sm:text-base text-text-primary placeholder:text-text-muted outline-none focus:outline-none focus-visible:outline-none resize-none leading-relaxed font-sans max-h-44 min-h-[52px] overflow-y-auto disabled:cursor-not-allowed border-none ring-0 focus:ring-0"
             aria-label="Message composer"
           />
 
