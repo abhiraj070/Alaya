@@ -142,6 +142,9 @@ async def login(request: LoginRequest, db: Annotated[Session, Depends(get_db)], 
     access_token = tokens["access_token"]
     refresh_token = tokens["refresh_token"]
 
+    user.refreshToken=refresh_token
+    db.commit()
+
     response.set_cookie(
         key="access_token",
         value=access_token,
