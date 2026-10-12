@@ -1,15 +1,10 @@
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import KnowledgeBaseManager from "@/components/app/KnowledgeBaseManager";
+import AppShell from "@/components/app/AppShell";
+
+export const metadata = {
+  title: "Workspace | Alaya",
+  description: "Alaya main application workspace - Chat and Knowledge Base.",
+};
 
 export default function AppPage() {
-  return (
-    <div className="relative min-h-screen bg-bg-primary text-text-primary flex flex-col selection:bg-accent-sky/25 selection:text-text-primary">
-      <Navbar />
-      <main className="flex-1 py-8">
-        <KnowledgeBaseManager />
-      </main>
-      <Footer />
-    </div>
-  );
+  return <AppShell />;
 }
