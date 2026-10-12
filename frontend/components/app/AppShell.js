@@ -5,6 +5,7 @@ import AppHeader from "@/components/app/AppHeader";
 import Sidebar from "@/components/app/Sidebar";
 import MobileDrawer from "@/components/app/MobileDrawer";
 import WorkspacePlaceholder from "@/components/app/WorkspacePlaceholder";
+import Chat from "@/components/app/Chat";
 import { getStoredUser, subscribeUserStorage, mockUser } from "@/mock/users";
 
 export default function AppShell() {
@@ -18,6 +19,7 @@ export default function AppShell() {
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("chat"); // Chat active by default
+  const [chatMessages, setChatMessages] = useState([]); // Preserved across Chat & KB navigation
 
   // Synchronize user profile with external browser storage safely
   const currentUser = useSyncExternalStore(
@@ -78,12 +80,18 @@ export default function AppShell() {
 
         {/* Resizing Main Content Area */}
         <main
-          className="flex-1 flex flex-col min-w-0 overflow-y-auto bg-bg-primary transition-all duration-300 motion-reduce:transition-none"
+          className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-primary transition-all duration-300 motion-reduce:transition-none"
           id="main-workspace-content"
           role="region"
           aria-label={activeTab === "chat" ? "Chat Workspace" : "Knowledge Base Workspace"}
         >
-          <WorkspacePlaceholder activeTab={activeTab} />
+          {activeTab === "chat" ? (
+            <Chat messages={chatMessages} setMessages={setChatMessages} />
+          ) : (
+            <div className="flex-1 overflow-y-auto flex flex-col">
+              <WorkspacePlaceholder activeTab={activeTab} />
+            </div>
+          )}
         </main>
       </div>
     </div>
