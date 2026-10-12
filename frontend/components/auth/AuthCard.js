@@ -4,25 +4,32 @@ import { useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
-import {
-  MOCK_DEMO_CREDENTIALS,
-  registerMockUser,
-  authenticateMockUser,
-} from "@/mock/users";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function AuthCard() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  const mode = searchParams.get("mode") === "signup" ? "signup" : "signin";
+  const urlMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
+  const [activeMode, setActiveMode] = useState(urlMode);
+  const [prevUrlMode, setPrevUrlMode] = useState(urlMode);
+
+  // Sync state if searchParams change externally (e.g. browser back/forward or external navigation)
+  if (urlMode !== prevUrlMode) {
+    setPrevUrlMode(urlMode);
+    setActiveMode(urlMode);
+  }
+
+  const mode = activeMode;
 
   // Sign In Form States
-  const [signInEmail, setSignInEmail] = useState("");
+  const [signInIdentifier, setSignInIdentifier] = useState("");
   const [signInPassword, setSignInPassword] = useState("");
   const [showSignInPassword, setShowSignInPassword] = useState(false);
   const [signInErrors, setSignInErrors] = useState({
-    email: "",
+    identifier: "",
     password: "",
     general: "",
   });
@@ -42,6 +49,7 @@ export default function AuthCard() {
     email: "",
     password: "",
     confirmPassword: "",
+    general: "",
   });
   const [isSubmittingSignUp, setIsSubmittingSignUp] = useState(false);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
@@ -51,11 +59,16 @@ export default function AuthCard() {
 
   // Switch mode without page reload and update URL
   const handleModeChange = (newMode) => {
-    if (newMode === mode) return;
+    setActiveMode(newMode);
     setSignInErrors((prev) => ({ ...prev, general: "" }));
+    setSignUpErrors((prev) => ({ ...prev, general: "" }));
     const params = new URLSearchParams(searchParams.toString());
     params.set("mode", newMode);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    const newUrl = `${pathname}?${params.toString()}`;
+    router.replace(newUrl, { scroll: false });
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", newUrl);
+    }
   };
 
   // Email format validator
@@ -66,27 +79,50 @@ export default function AuthCard() {
 
   // Sign In Validation
   const validateSignIn = () => {
-    const errors = { email: "", password: "", general: "" };
-    const trimmedEmail = signInEmail.trim();
+    const errors = { identifier: "", password: "", general: "" };
+    const trimmedId = signInIdentifier.trim();
 
-    if (!trimmedEmail) {
-      errors.email = "Please enter your email address.";
-    } else if (!validateEmail(trimmedEmail)) {
-      errors.email = "Please enter a valid email address (e.g., name@example.com).";
+    if (!trimmedId) {
+      errors.identifier = "Please enter your username.";
     }
 
     if (!signInPassword) {
       errors.password = "Please enter your password.";
-    } else if (signInPassword.length < 8) {
-      errors.password = "Password must be at least 8 characters long.";
+    } else if (signInPassword.length < 4) {
+      errors.password = "Password must be at least 4 characters long.";
     }
 
     setSignInErrors(errors);
-    return !errors.email && !errors.password;
+    return !errors.identifier && !errors.password;
   };
 
-  // Sign In Submit Handler
-  const handleSignInSubmit = (e) => {
+  // API Helper: Call Login Endpoint
+  const callLoginApi = async (username, password) => {
+    const payload = {
+      username: username.trim().replace(/^@/, ""),
+      password,
+    };
+
+    try {
+      return await fetch(`${API_BASE}/api/user/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // Fallback via Next.js proxy if direct API_BASE failed
+      return await fetch(`/api/user/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+    }
+  };
+
+  // Sign In Submit Handler (Connects directly to Backend API)
+  const handleSignInSubmit = async (e) => {
     e.preventDefault();
     if (isSubmittingSignIn) return;
 
@@ -97,37 +133,54 @@ export default function AuthCard() {
     setIsSubmittingSignIn(true);
     setSignInErrors((prev) => ({ ...prev, general: "" }));
 
-    // Simulate mock authentication delay (frontend demonstration)
-    setTimeout(() => {
-      const result = authenticateMockUser(signInEmail, signInPassword);
+    try {
+      const response = await callLoginApi(signInIdentifier, signInPassword);
 
-      if (result.success) {
-        // Store session state in sessionStorage (without plaintext passwords)
+      if (response.ok) {
+        const userData = await response.json();
+
+        // Store user session profile in sessionStorage (NO passwords!)
         if (typeof window !== "undefined") {
           sessionStorage.setItem(
-            "alaya_mock_user",
+            "alaya_user",
             JSON.stringify({
-              ...result.user,
+              id: userData.id,
+              name: userData.name,
+              username: userData.username,
               isAuthenticated: true,
             })
           );
         }
 
-        // Clear sensitive field
+        // Clear sensitive password
         setSignInPassword("");
         setIsSubmittingSignIn(false);
 
-        // Direct navigation to /app
+        // Navigate to /app
         router.push("/app");
       } else {
+        const errorData = await response.json().catch(() => ({}));
+        let message = errorData.detail;
+
+        if (response.status === 404) {
+          message = "User not found. Please check your username or register an account.";
+        } else if (response.status === 401) {
+          message = "Incorrect password. Please try again.";
+        } else if (!message) {
+          message = "Authentication failed. Please verify your credentials.";
+        }
+
         setIsSubmittingSignIn(false);
-        setSignInErrors((prev) => ({
-          ...prev,
-          general:
-            "Invalid credentials. Please verify your email and password, or use demo account (alex.mercer@example.com / password123).",
-        }));
+        setSignInErrors((prev) => ({ ...prev, general: message }));
       }
-    }, 650);
+    } catch {
+      setIsSubmittingSignIn(false);
+      setSignInErrors((prev) => ({
+        ...prev,
+        general:
+          "Unable to connect to backend server. Please verify backend is running on port 8000.",
+      }));
+    }
   };
 
   // Sign Up Validation
@@ -138,6 +191,7 @@ export default function AuthCard() {
       email: "",
       password: "",
       confirmPassword: "",
+      general: "",
     };
 
     const trimmedFullName = signUpFullName.trim();
@@ -160,8 +214,8 @@ export default function AuthCard() {
 
     if (!signUpPassword) {
       errors.password = "Please enter a password.";
-    } else if (signUpPassword.length < 8) {
-      errors.password = "Password must be at least 8 characters long.";
+    } else if (signUpPassword.length < 4) {
+      errors.password = "Password must be at least 4 characters long.";
     }
 
     if (!signUpConfirmPassword) {
@@ -174,8 +228,34 @@ export default function AuthCard() {
     return !Object.values(errors).some((err) => !!err);
   };
 
-  // Sign Up Submit Handler
-  const handleSignUpSubmit = (e) => {
+  // API Helper: Call Register Endpoint
+  const callRegisterApi = async (name, username, password) => {
+    const payload = {
+      name: name.trim(),
+      username: username.trim().replace(/^@/, ""),
+      password,
+    };
+
+    try {
+      return await fetch(`${API_BASE}/api/user/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+    } catch {
+      // Fallback via Next.js proxy
+      return await fetch(`/api/user/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+    }
+  };
+
+  // Sign Up Submit Handler (Connects directly to Backend API)
+  const handleSignUpSubmit = async (e) => {
     e.preventDefault();
     if (isSubmittingSignUp) return;
 
@@ -184,46 +264,66 @@ export default function AuthCard() {
     }
 
     setIsSubmittingSignUp(true);
+    setSignUpErrors((prev) => ({ ...prev, general: "" }));
 
-    // Simulate mock registration (frontend demonstration)
-    setTimeout(() => {
-      const registered = registerMockUser({
-        name: signUpFullName.trim(),
-        username: signUpUsername.trim(),
-        email: signUpEmail.trim(),
-        password: signUpPassword,
-      });
+    try {
+      const response = await callRegisterApi(
+        signUpFullName,
+        signUpUsername,
+        signUpPassword
+      );
 
-      // Clear sensitive fields
-      setSignUpPassword("");
-      setSignUpConfirmPassword("");
+      if (response.ok) {
+        const newUser = await response.json();
 
-      // Prepopulate Sign In email
-      setSignInEmail(registered.email);
-      setSignInErrors({ email: "", password: "", general: "" });
+        // Clear sensitive fields
+        setSignUpPassword("");
+        setSignUpConfirmPassword("");
 
-      // Trigger success state and banner
-      setSignUpSuccess(true);
-      setBannerMessage({
-        title: "Account created successfully",
-        subtext: "Your account has been created. Please sign in to continue.",
-      });
+        // Prepopulate Sign In username
+        setSignInIdentifier(newUser.username || signUpUsername.trim());
+        setSignInErrors({ identifier: "", password: "", general: "" });
 
+        // Trigger success state and banner
+        setSignUpSuccess(true);
+        setBannerMessage({
+          title: "Account created successfully",
+          subtext: "Your account has been created. Please sign in to continue.",
+        });
+
+        setIsSubmittingSignUp(false);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        const message =
+          errorData.detail ||
+          "Registration failed. Username may already be in use.";
+
+        setIsSubmittingSignUp(false);
+        setSignUpErrors((prev) => ({ ...prev, general: message }));
+      }
+    } catch {
       setIsSubmittingSignUp(false);
-    }, 600);
+      setSignUpErrors((prev) => ({
+        ...prev,
+        general:
+          "Unable to connect to backend server. Please verify backend is running on port 8000.",
+      }));
+    }
   };
 
   // Action to transition from SignUp success to SignIn
   const handleGoToSignIn = () => {
     setSignUpSuccess(false);
-    handleModeChange("signin");
-  };
-
-  // Helper to autofill demo credentials
-  const handleFillDemo = () => {
-    setSignInEmail(MOCK_DEMO_CREDENTIALS.email);
-    setSignInPassword(MOCK_DEMO_CREDENTIALS.password);
-    setSignInErrors({ email: "", password: "", general: "" });
+    setActiveMode("signin");
+    setSignInErrors((prev) => ({ ...prev, general: "" }));
+    setSignUpErrors((prev) => ({ ...prev, general: "" }));
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("mode", "signin");
+    const newUrl = `${pathname}?${params.toString()}`;
+    router.replace(newUrl, { scroll: false });
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", newUrl);
+    }
   };
 
   return (
@@ -287,7 +387,7 @@ export default function AuthCard() {
             aria-selected={mode === "signin"}
             aria-controls="panel-signin"
             onClick={() => handleModeChange("signin")}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold tracking-wide transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky ${
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold tracking-wide transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky cursor-pointer ${
               mode === "signin"
                 ? "bg-surface-primary text-accent-sky border border-accent-sky/40 shadow-sm"
                 : "border border-transparent text-text-muted hover:text-text-primary"
@@ -305,7 +405,7 @@ export default function AuthCard() {
               setSignUpSuccess(false);
               handleModeChange("signup");
             }}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold tracking-wide transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky ${
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold tracking-wide transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky cursor-pointer ${
               mode === "signup"
                 ? "bg-surface-primary text-accent-sky border border-accent-sky/40 shadow-sm"
                 : "border border-transparent text-text-muted hover:text-text-primary"
@@ -354,7 +454,7 @@ export default function AuthCard() {
                 <button
                   type="button"
                   onClick={() => setBannerMessage(null)}
-                  className="text-emerald-400/70 hover:text-emerald-200 text-xs p-1 rounded"
+                  className="text-emerald-400/70 hover:text-emerald-200 text-xs p-1 rounded cursor-pointer"
                   aria-label="Dismiss success message"
                 >
                   ✕
@@ -362,7 +462,7 @@ export default function AuthCard() {
               </div>
             )}
 
-            {/* General Credentials Error Alert */}
+            {/* General Error Alert from API */}
             {signInErrors.general && (
               <div
                 className="mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-400 font-mono flex items-start gap-2 animate-fadeIn"
@@ -376,39 +476,41 @@ export default function AuthCard() {
             <form onSubmit={handleSignInSubmit} noValidate className="space-y-4">
               <div>
                 <label
-                  htmlFor="signin-email"
+                  htmlFor="signin-username"
                   className="block text-xs font-medium text-text-secondary mb-1.5"
                 >
-                  Email address
+                  Username
                 </label>
                 <input
-                  id="signin-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={signInEmail}
+                  id="signin-username"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
+                  value={signInIdentifier}
                   onChange={(e) => {
-                    setSignInEmail(e.target.value);
-                    if (signInErrors.email) {
-                      setSignInErrors((prev) => ({ ...prev, email: "" }));
+                    setSignInIdentifier(e.target.value);
+                    if (signInErrors.identifier) {
+                      setSignInErrors((prev) => ({ ...prev, identifier: "" }));
                     }
                   }}
-                  placeholder="name@example.com"
+                  placeholder="@username"
                   className={`input-field w-full text-xs sm:text-sm ${
-                    signInErrors.email
+                    signInErrors.identifier
                       ? "border-rose-500/70 focus:border-rose-500 focus:ring-rose-500"
                       : ""
                   }`}
-                  aria-invalid={!!signInErrors.email}
-                  aria-describedby={signInErrors.email ? "signin-email-error" : undefined}
+                  aria-invalid={!!signInErrors.identifier}
+                  aria-describedby={
+                    signInErrors.identifier ? "signin-identifier-error" : undefined
+                  }
                 />
-                {signInErrors.email && (
+                {signInErrors.identifier && (
                   <p
-                    id="signin-email-error"
+                    id="signin-identifier-error"
                     className="mt-1 text-[11px] text-rose-400 font-mono flex items-center gap-1"
                     role="alert"
                   >
-                    <span>⚠</span> {signInErrors.email}
+                    <span>⚠</span> {signInErrors.identifier}
                   </p>
                 )}
               </div>
@@ -442,13 +544,15 @@ export default function AuthCard() {
                         : ""
                     }`}
                     aria-invalid={!!signInErrors.password}
-                    aria-describedby={signInErrors.password ? "signin-password-error" : undefined}
+                    aria-describedby={
+                      signInErrors.password ? "signin-password-error" : undefined
+                    }
                   />
                   <button
                     type="button"
                     onClick={() => setShowSignInPassword(!showSignInPassword)}
                     aria-label={showSignInPassword ? "Hide password" : "Show password"}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-accent-sky focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-accent-sky focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded cursor-pointer"
                   >
                     {showSignInPassword ? (
                       <svg
@@ -496,7 +600,7 @@ export default function AuthCard() {
                 <button
                   type="submit"
                   disabled={isSubmittingSignIn}
-                  className="btn-primary w-full h-10 text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)] disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="btn-primary w-full h-10 text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)] disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isSubmittingSignIn ? (
                     <span className="inline-flex items-center justify-center gap-2">
@@ -527,18 +631,6 @@ export default function AuthCard() {
                   )}
                 </button>
               </div>
-
-              {/* Demo Account Fill Shortcut */}
-              <div className="flex items-center justify-between text-[11px] text-text-muted border-t border-border-subtle/70 pt-3">
-                <span>Demo: alex.mercer@example.com</span>
-                <button
-                  type="button"
-                  onClick={handleFillDemo}
-                  className="font-medium text-accent-sky hover:text-accent-sky-light hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded px-1"
-                >
-                  Fill Demo
-                </button>
-              </div>
             </form>
 
             {/* Switch to Sign Up Prompt */}
@@ -550,7 +642,7 @@ export default function AuthCard() {
                   setSignUpSuccess(false);
                   handleModeChange("signup");
                 }}
-                className="font-semibold text-accent-sky hover:text-accent-sky-light hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded px-1"
+                className="font-semibold text-accent-sky hover:text-accent-sky-light hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded px-1 cursor-pointer"
               >
                 Sign up
               </button>
@@ -596,14 +688,37 @@ export default function AuthCard() {
                   <button
                     type="button"
                     onClick={handleGoToSignIn}
-                    className="btn-primary w-full h-11 text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)]"
+                    className="btn-primary w-full h-11 text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)] cursor-pointer inline-flex items-center justify-center gap-2"
                   >
-                    Go to Sign In
+                    <span>Continue to Sign In</span>
+                    <svg
+                      className="h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
                   </button>
                 </div>
               </div>
             ) : (
               <form onSubmit={handleSignUpSubmit} noValidate className="space-y-3.5">
+                {/* General Error Alert from Register API */}
+                {signUpErrors.general && (
+                  <div
+                    className="mb-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-400 font-mono flex items-start gap-2 animate-fadeIn"
+                    role="alert"
+                  >
+                    <span className="shrink-0 text-rose-400 mt-0.5">⚠</span>
+                    <span>{signUpErrors.general}</span>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label
@@ -764,7 +879,7 @@ export default function AuthCard() {
                       type="button"
                       onClick={() => setShowSignUpPassword(!showSignUpPassword)}
                       aria-label={showSignUpPassword ? "Hide password" : "Show password"}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-accent-sky focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-accent-sky focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded cursor-pointer"
                     >
                       {showSignUpPassword ? (
                         <svg
@@ -807,7 +922,7 @@ export default function AuthCard() {
                     </p>
                   ) : (
                     <p className="mt-1 text-[10px] text-text-muted">
-                      Must be at least 8 characters
+                      Must be at least 4 characters
                     </p>
                   )}
                 </div>
@@ -855,7 +970,7 @@ export default function AuthCard() {
                           ? "Hide confirm password"
                           : "Show confirm password"
                       }
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-accent-sky focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-text-muted hover:text-accent-sky focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded cursor-pointer"
                     >
                       {showSignUpConfirmPassword ? (
                         <svg
@@ -903,7 +1018,7 @@ export default function AuthCard() {
                   <button
                     type="submit"
                     disabled={isSubmittingSignUp}
-                    className="btn-primary w-full h-10 text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)] disabled:opacity-75 disabled:cursor-not-allowed"
+                    className="btn-primary w-full h-10 text-xs sm:text-sm font-semibold uppercase tracking-wider shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)] disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {isSubmittingSignUp ? (
                       <span className="inline-flex items-center justify-center gap-2">
@@ -944,7 +1059,7 @@ export default function AuthCard() {
                 <button
                   type="button"
                   onClick={() => handleModeChange("signin")}
-                  className="font-semibold text-accent-sky hover:text-accent-sky-light hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded px-1"
+                  className="font-semibold text-accent-sky hover:text-accent-sky-light hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky rounded px-1 cursor-pointer"
                 >
                   Sign in
                 </button>
