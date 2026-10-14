@@ -18,7 +18,7 @@ async def create_chat(request: ChatRequest, db: Annotated[Session, Depends(get_d
                       authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
     if request.user_id != authenticated_user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-    chat= Chat(chat_title= "New Chat", user_id= request.user_id)
+    chat= Chat(chat_title= request.chat_title or "New Chat", user_id= request.user_id)
     if chat is None:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail="Internal Server Error"

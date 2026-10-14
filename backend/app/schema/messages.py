@@ -4,6 +4,7 @@ class MessageResponse(BaseModel):
     message_content: str
     chat_id: int
     message_id: int = Field(validation_alias="id")
+    sent_by: str | None = None
 
 class MessageRequest(BaseModel):
     message_content: str
