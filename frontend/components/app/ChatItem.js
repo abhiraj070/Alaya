@@ -113,7 +113,7 @@ export default function ChatItem({
   if (isEditing) {
     return (
       <div
-        className="flex items-center gap-1 w-full px-2 py-1 rounded-lg border border-accent-sky/60 bg-surface-secondary shadow-xs animate-fadeIn"
+        className="flex items-center gap-1.5 w-full px-2.5 py-1.5 rounded-lg border border-accent-sky/60 bg-surface-secondary shadow-xs animate-fadeIn"
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -131,7 +131,7 @@ export default function ChatItem({
               handleCancelEdit();
             }
           }}
-          className="flex-1 min-w-0 bg-transparent text-[13px] leading-snug text-text-primary px-1 py-0.5 focus:outline-none placeholder:text-text-muted"
+          className="flex-1 min-w-0 bg-transparent text-[15px] leading-normal text-text-primary px-1 py-0.5 focus:outline-none placeholder:text-text-muted"
           placeholder="Chat title..."
           maxLength={60}
           aria-label="Edit chat title"
@@ -204,12 +204,12 @@ export default function ChatItem({
         type="button"
         onClick={onSelect}
         disabled={isDeleting}
-        className="flex-1 min-w-0 text-left text-[13px] leading-snug px-2 py-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate disabled:cursor-not-allowed flex items-center gap-1.5"
+        className="flex-1 min-w-0 text-left text-[15px] leading-normal px-2.5 py-2 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate disabled:cursor-not-allowed flex items-center gap-2"
         title={chat.title || "New chat"}
       >
         {isPinned && (
           <svg
-            className="h-3 w-3 shrink-0 text-accent-sky/80"
+            className="h-3.5 w-3.5 shrink-0 text-accent-sky/80"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -222,13 +222,13 @@ export default function ChatItem({
             <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
           </svg>
         )}
-        <span className={`truncate block text-[13px] leading-snug ${isDeleting ? "opacity-50" : ""}`}>
+        <span className={`truncate block text-[15px] leading-normal ${isDeleting ? "opacity-50" : ""}`}>
           {chat.title || "New chat"}
         </span>
       </button>
 
       {/* 3-dots Actions Menu Trigger OR Deleting Buffering Circle */}
-      <div className="relative shrink-0 pr-1 flex items-center">
+      <div className="relative shrink-0 pr-1.5 flex items-center">
         {isDeleting ? (
           <div
             className="h-6 w-6 flex items-center justify-center text-rose-400"
@@ -249,7 +249,7 @@ export default function ChatItem({
             aria-label="Chat options"
             aria-haspopup="menu"
             aria-expanded={isMenuOpen}
-            className={`h-6 w-6 flex items-center justify-center rounded-md transition-all cursor-pointer ${
+            className={`h-6.5 w-6.5 flex items-center justify-center rounded-md transition-all cursor-pointer ${
               isMenuOpen
                 ? "opacity-100 bg-surface-secondary text-text-primary"
                 : "opacity-0 group-hover:opacity-100 md:opacity-0 focus-visible:opacity-100 text-text-muted hover:text-text-primary hover:bg-surface-secondary max-md:opacity-80"
