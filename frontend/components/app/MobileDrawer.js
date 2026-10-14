@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 import UserAvatar from "@/components/ui/UserAvatar";
+import ChatItem from "@/components/app/ChatItem";
 
 export default function MobileDrawer({
   isOpen = false,
@@ -14,6 +15,8 @@ export default function MobileDrawer({
   activeChatId,
   onNewChat,
   onSelectChat,
+  onUpdateChatTitle,
+  onDeleteChat,
   user,
 }) {
   const mobileChatListRef = useRef(null);
@@ -256,28 +259,20 @@ export default function MobileDrawer({
                   No chats yet
                 </div>
               ) : (
-                chats.map((chat) => {
-                  const isCurrent = activeChatId === chat.id && activeTab === "chat";
-                  return (
-                    <button
-                      key={chat.id}
-                      type="button"
-                      onClick={() => {
-                        onSelectChat(chat.id);
-                        onSelectTab("chat");
-                        onClose();
-                      }}
-                      className={`group flex items-center justify-between w-full px-2.5 py-2 rounded-lg text-left text-xs transition-all duration-150 cursor-pointer ${
-                        isCurrent
-                          ? "bg-accent-sky/15 text-accent-sky font-medium border border-accent-sky/30 shadow-xs"
-                          : "text-text-secondary hover:text-text-primary hover:bg-surface-tertiary/70 border border-transparent"
-                      }`}
-                      style={{ touchAction: "pan-y" }}
-                    >
-                      <span className="truncate flex-1">{chat.title || "New chat"}</span>
-                    </button>
-                  );
-                })
+                chats.map((chat) => (
+                  <ChatItem
+                    key={chat.id}
+                    chat={chat}
+                    isCurrent={activeChatId === chat.id && activeTab === "chat"}
+                    onSelect={() => {
+                      onSelectChat(chat.id);
+                      onSelectTab("chat");
+                      onClose();
+                    }}
+                    onUpdateTitle={onUpdateChatTitle}
+                    onDelete={onDeleteChat}
+                  />
+                ))
               )}
             </div>
           </div>

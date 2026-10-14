@@ -270,6 +270,26 @@ export default function AppShell() {
     setActiveTab("chat");
   };
 
+  // Update chat title dynamically via PUT /api/chat/update_chat/{chat_id}
+  const handleUpdateChatTitle = async (chatId, newTitle) => {
+    const trimmed = (newTitle || "").trim();
+    if (!trimmed) return;
+
+    if (typeof chatId === "number" && typeof user?.id === "number" && user?.isAuthenticated) {
+      try {
+        await chatApi.updateChatTitle(chatId, trimmed);
+      } catch (err) {
+        if (err?.status !== 401) {
+          console.error("Failed to update chat title in backend:", err);
+        }
+      }
+    }
+
+    setChats((prev) =>
+      prev.map((c) => (c.id === chatId ? { ...c, title: trimmed } : c))
+    );
+  };
+
   // Delete chat session dynamically via DELETE /api/chat/delete_chat/{chat_id}
   const handleDeleteChat = async (chatId) => {
     if (typeof chatId === "number" && typeof user?.id === "number" && user?.isAuthenticated) {
@@ -283,6 +303,15 @@ export default function AppShell() {
     }
     setChats((prev) => {
       const updated = prev.filter((c) => c.id !== chatId);
+      if (updated.length === 0) {
+        const freshChat = {
+          id: `chat-${Date.now()}`,
+          title: "New chat",
+          messages: [],
+        };
+        setActiveChatId(freshChat.id);
+        return [freshChat];
+      }
       if (activeChatId === chatId) {
         setActiveChatId(updated[0]?.id || null);
       }
@@ -332,6 +361,7 @@ export default function AppShell() {
           activeChatId={activeChatId}
           onNewChat={handleNewChat}
           onSelectChat={handleSelectChat}
+          onUpdateChatTitle={handleUpdateChatTitle}
           onDeleteChat={handleDeleteChat}
           user={user}
           isLoadingChats={isLoadingChats}
@@ -347,6 +377,7 @@ export default function AppShell() {
           activeChatId={activeChatId}
           onNewChat={handleNewChat}
           onSelectChat={handleSelectChat}
+          onUpdateChatTitle={handleUpdateChatTitle}
           onDeleteChat={handleDeleteChat}
           user={user}
           isLoadingChats={isLoadingChats}
