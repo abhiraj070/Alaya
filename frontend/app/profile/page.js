@@ -7,6 +7,7 @@ import AlayaWordmark from "@/components/ui/AlayaWordmark";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/lib/auth-context";
 import { mockUser } from "@/mock/users";
+import DeleteAccountModal from "@/components/profile/DeleteAccountModal";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -698,99 +699,15 @@ export default function ProfilePage() {
 
       {/* Delete Account Permanently Confirmation Modal */}
       {showDeleteModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-modal-backdrop motion-reduce:animate-none"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !isDeletingAccount) {
-              setShowDeleteModal(false);
-            }
+        <DeleteAccountModal
+          username={currentUsername}
+          isDeleting={isDeletingAccount}
+          error={deleteAccountError}
+          onClose={() => {
+            if (!isDeletingAccount) setShowDeleteModal(false);
           }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-account-title"
-            aria-describedby="delete-account-desc"
-            className="w-full max-w-[450px] rounded-2xl border border-white/[0.08] bg-[#0D1014] p-5 sm:p-6 shadow-2xl shadow-black/80 animate-modal-content motion-reduce:animate-none motion-reduce:transform-none select-none text-left"
-          >
-            {/* Header: Trash Icon & Title */}
-            <div className="flex items-start gap-3.5">
-              <div
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-[#F87171]"
-                aria-hidden="true"
-              >
-                <svg
-                  className="h-4.5 w-4.5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  <line x1="10" y1="11" x2="10" y2="17" />
-                  <line x1="14" y1="11" x2="14" y2="17" />
-                </svg>
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <h3
-                  id="delete-account-title"
-                  className="text-base font-semibold text-[#F5F7FA] tracking-tight leading-snug"
-                >
-                  Delete account permanently?
-                </h3>
-
-                <div className="mt-1.5 flex items-center">
-                  <span className="truncate max-w-full text-xs font-mono font-medium text-[#F5F7FA]/90 bg-[#11161B] border border-white/[0.06] px-2.5 py-0.5 rounded-md">
-                    @{currentUsername}
-                  </span>
-                </div>
-
-                <p
-                  id="delete-account-desc"
-                  className="mt-2.5 text-xs text-[#A1AAB5] leading-relaxed"
-                >
-                  This action cannot be undone. All your conversations, knowledge base documents, and profile details will be permanently deleted from Alaya.
-                </p>
-
-                {deleteAccountError && (
-                  <p className="mt-2.5 text-xs text-rose-400 font-mono">
-                    ⚠ {deleteAccountError}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Actions: Keep Account vs Delete Account Permanently */}
-            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-4 border-t border-white/[0.06]">
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeletingAccount}
-                className="inline-flex h-9 items-center justify-center rounded-xl bg-[#11161B] hover:bg-[#161C22] border border-white/[0.08] px-4 text-xs font-semibold uppercase tracking-wider text-[#F5F7FA] transition-all cursor-pointer disabled:opacity-50"
-              >
-                Keep account
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteAccount}
-                disabled={isDeletingAccount}
-                className="inline-flex h-9 items-center justify-center rounded-xl bg-red-500/20 hover:bg-red-500/30 text-[#F87171] border border-red-500/30 px-4 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50 gap-2"
-              >
-                {isDeletingAccount && (
-                  <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                )}
-                <span>{isDeletingAccount ? "Deleting account..." : "Delete account permanently"}</span>
-              </button>
-            </div>
-          </div>
-        </div>
+          onConfirm={handleConfirmDeleteAccount}
+        />
       )}
 
       {/* Minimal Footer */}
