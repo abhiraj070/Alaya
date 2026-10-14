@@ -1,3 +1,4 @@
+import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 
@@ -15,7 +16,9 @@ export default function RootLayout({ children }) {
       suppressHydrationWarning
     >
       <head>
-        <script
+        <Script
+          id="alaya-theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('alaya_theme');if(t==='light'){document.documentElement.classList.add('light');document.documentElement.classList.remove('dark');}}catch(e){}})();`,
           }}

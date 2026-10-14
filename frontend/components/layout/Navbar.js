@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/lib/auth-context";
 
+const emptySubscribe = () => () => {};
+
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const { user, logout } = useAuth();
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
@@ -48,7 +51,7 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           <ThemeToggle />
 
-          {user?.isAuthenticated ? (
+          {isClient && user?.isAuthenticated ? (
             <div className="flex items-center gap-3">
               <Link
                 href="/profile"
@@ -160,7 +163,7 @@ export default function Navbar() {
               FAQ
             </a>
             <div className="pt-2 border-t border-border-subtle flex flex-col gap-2">
-              {user?.isAuthenticated ? (
+              {isClient && user?.isAuthenticated ? (
                 <>
                   <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surface-secondary/70">
                     <UserAvatar name={user.name} size="sm" />

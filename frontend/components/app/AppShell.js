@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AppHeader from "@/components/app/AppHeader";
 import Sidebar from "@/components/app/Sidebar";
@@ -23,98 +23,143 @@ export default function AppShell() {
 
   const { user } = useAuth();
 
-  // Load user chats dynamically from backend API
-  const loadChats = useCallback(async (userId) => {
-    if (!userId) {
-      setChats([]);
-      setActiveChatId(null);
-      setIsLoadingChats(false);
-      return;
-    }
-
-    try {
-      const data = await chatApi.getChats(userId);
-      const normalized = (Array.isArray(data) ? data : []).map((c) => ({
-        id: c.id,
-        title: c.chat_title || "New chat",
-        userId: c.user_id,
-        messages: [],
-      }));
-
-      setChats(normalized);
-      if (normalized.length > 0) {
-        setActiveChatId((prev) =>
-          prev && normalized.some((c) => c.id === prev) ? prev : normalized[0].id
-        );
-      } else {
-        setActiveChatId(null);
-      }
-    } catch (err) {
-      console.error("Failed to load user chats from backend:", err);
-      setChats([]);
-      setActiveChatId(null);
-    } finally {
-      setIsLoadingChats(false);
-    }
-  }, []);
-
-  // Sync chats on user change
+  // Initialize workspace chats whenever /app route opens or user changes
   useEffect(() => {
     let isMounted = true;
 
-    if (!user?.id) {
-      Promise.resolve().then(() => {
+    async function initializeWorkspaceChats() {
+      setIsLoadingChats(true);
+
+      // If no authenticated backend user (id must be number), provide a local new chat session immediately
+      if (!user?.id || typeof user.id !== "number" || !user?.isAuthenticated) {
+        const localNewChat = {
+          id: `chat-${Date.now()}`,
+          title: "New chat",
+          messages: [],
+        };
         if (isMounted) {
-          setChats([]);
-          setActiveChatId(null);
+          setChats([localNewChat]);
+          setActiveChatId(localNewChat.id);
+          setActiveTab("chat");
           setIsLoadingChats(false);
         }
-      });
-      return () => {
-        isMounted = false;
-      };
+        return;
+      }
+
+      try {
+        // 1. Fetch user's existing chats from backend
+        let existingChats = [];
+        let authExpired = false;
+        try {
+          const data = await chatApi.getChats(user.id);
+          existingChats = (Array.isArray(data) ? data : []).map((c) => ({
+            id: c.id,
+            title: c.chat_title || "New chat",
+            userId: c.user_id,
+            messages: [],
+          }));
+          existingChats.sort((a, b) =>
+            typeof b.id === "number" && typeof a.id === "number" ? b.id - a.id : 0
+          );
+        } catch (err) {
+          if (err?.status === 401) {
+            authExpired = true;
+          } else {
+            console.error("Failed to load existing chats from backend:", err);
+          }
+        }
+
+        // If backend session has no access token or is expired, fall back to local chat session
+        if (authExpired) {
+          const localNewChat = {
+            id: `chat-${Date.now()}`,
+            title: "New chat",
+            messages: [],
+          };
+          if (isMounted) {
+            setChats([localNewChat]);
+            setActiveChatId(localNewChat.id);
+            setActiveTab("chat");
+          }
+          return;
+        }
+
+        // 2. Check if the top chat is already an unused/empty "New chat"
+        let canReuseTopChat = false;
+        if (
+          existingChats.length > 0 &&
+          existingChats[0].title?.toLowerCase() === "new chat"
+        ) {
+          try {
+            const msgs = await messagesApi.getMessages(existingChats[0].id);
+            if (!Array.isArray(msgs) || msgs.length === 0) {
+              canReuseTopChat = true;
+            }
+          } catch {
+            canReuseTopChat = true;
+          }
+        }
+
+        if (canReuseTopChat) {
+          if (!isMounted) return;
+          setChats(existingChats);
+          setActiveChatId(existingChats[0].id);
+          setActiveTab("chat");
+          return;
+        }
+
+        // 3. Otherwise create a brand new chat session for this visit
+        let newChat = null;
+        try {
+          const created = await chatApi.createChat(user.id, "New chat");
+          newChat = {
+            id: created.id,
+            title: created.chat_title || "New chat",
+            userId: created.user_id,
+            messages: [],
+          };
+        } catch (err) {
+          if (err?.status !== 401) {
+            console.error("Failed to create new chat in backend, falling back to local chat:", err);
+          }
+          newChat = {
+            id: `chat-${Date.now()}`,
+            title: "New chat",
+            userId: user.id,
+            messages: [],
+          };
+        }
+
+        if (!isMounted) return;
+        setChats([newChat, ...existingChats]);
+        setActiveChatId(newChat.id);
+        setActiveTab("chat");
+      } catch (err) {
+        console.error("Error initializing workspace chats:", err);
+      } finally {
+        if (isMounted) {
+          setIsLoadingChats(false);
+        }
+      }
     }
 
-    chatApi
-      .getChats(user.id)
-      .then((data) => {
-        if (!isMounted) return;
-        const normalized = (Array.isArray(data) ? data : []).map((c) => ({
-          id: c.id,
-          title: c.chat_title || "New chat",
-          userId: c.user_id,
-          messages: [],
-        }));
-
-        setChats(normalized);
-        if (normalized.length > 0) {
-          setActiveChatId((prev) =>
-            prev && normalized.some((c) => c.id === prev) ? prev : normalized[0].id
-          );
-        } else {
-          setActiveChatId(null);
-        }
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        console.error("Failed to load user chats from backend:", err);
-        setChats([]);
-        setActiveChatId(null);
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoadingChats(false);
-        }
-      });
+    initializeWorkspaceChats();
 
     return () => {
       isMounted = false;
     };
-  }, [user?.id]);
+  }, [user?.id, user?.isAuthenticated]);
 
   // Load messages whenever activeChatId changes
   useEffect(() => {
-    if (!activeChatId || typeof activeChatId !== "number") return;
+    if (
+      !activeChatId ||
+      typeof activeChatId !== "number" ||
+      typeof user?.id !== "number" ||
+      !user?.isAuthenticated
+    ) {
+      return;
+    }
 
     let isMounted = true;
     messagesApi
@@ -134,13 +179,15 @@ export default function AppShell() {
         );
       })
       .catch((err) => {
-        console.error("Failed to load chat messages:", err);
+        if (err?.status !== 401) {
+          console.error("Failed to load chat messages:", err);
+        }
       });
 
     return () => {
       isMounted = false;
     };
-  }, [activeChatId]);
+  }, [activeChatId, user?.id, user?.isAuthenticated]);
 
   const activeChat = chats.find((c) => c.id === activeChatId) || chats[0];
   const activeChatMessages = activeChat?.messages || [];
@@ -154,14 +201,16 @@ export default function AppShell() {
               ? newMessagesOrUpdater(c.messages)
               : newMessagesOrUpdater;
           let updatedTitle = c.title;
-          if (c.title === "New chat" && updatedMessages.length > 0) {
+          if (c.title?.toLowerCase() === "new chat" && updatedMessages.length > 0) {
             const firstUserMsg = updatedMessages.find((m) => m.sender === "user");
             if (firstUserMsg?.text) {
               updatedTitle =
                 firstUserMsg.text.length > 28
                   ? `${firstUserMsg.text.slice(0, 28)}...`
                   : firstUserMsg.text;
-              chatApi.updateChatTitle(c.id, updatedTitle).catch(() => {});
+              if (typeof c.id === "number") {
+                chatApi.updateChatTitle(c.id, updatedTitle).catch(() => {});
+              }
             }
           }
           return {
@@ -177,8 +226,15 @@ export default function AppShell() {
 
   // Create chat session dynamically via POST /api/chat/create_chat
   const handleNewChat = async () => {
-    if (!user?.id) {
-      router.push("/auth?mode=signin");
+    if (!user?.id || typeof user.id !== "number" || !user?.isAuthenticated) {
+      const localChat = {
+        id: `chat-${Date.now()}`,
+        title: "New chat",
+        messages: [],
+      };
+      setChats((prev) => [localChat, ...prev]);
+      setActiveChatId(localChat.id);
+      setActiveTab("chat");
       return;
     }
 
@@ -194,7 +250,18 @@ export default function AppShell() {
       setActiveChatId(newChat.id);
       setActiveTab("chat");
     } catch (err) {
-      console.error("Failed to create chat in backend:", err);
+      if (err?.status !== 401) {
+        console.error("Failed to create chat in backend, using local chat fallback:", err);
+      }
+      const fallbackChat = {
+        id: `chat-${Date.now()}`,
+        title: "New chat",
+        userId: user.id,
+        messages: [],
+      };
+      setChats((prev) => [fallbackChat, ...prev]);
+      setActiveChatId(fallbackChat.id);
+      setActiveTab("chat");
     }
   };
 
@@ -205,18 +272,22 @@ export default function AppShell() {
 
   // Delete chat session dynamically via DELETE /api/chat/delete_chat/{chat_id}
   const handleDeleteChat = async (chatId) => {
-    try {
-      await chatApi.deleteChat(chatId);
-      setChats((prev) => {
-        const updated = prev.filter((c) => c.id !== chatId);
-        if (activeChatId === chatId) {
-          setActiveChatId(updated[0]?.id || null);
+    if (typeof chatId === "number" && typeof user?.id === "number" && user?.isAuthenticated) {
+      try {
+        await chatApi.deleteChat(chatId);
+      } catch (err) {
+        if (err?.status !== 401) {
+          console.error("Failed to delete chat in backend:", err);
         }
-        return updated;
-      });
-    } catch (err) {
-      console.error("Failed to delete chat in backend:", err);
+      }
     }
+    setChats((prev) => {
+      const updated = prev.filter((c) => c.id !== chatId);
+      if (activeChatId === chatId) {
+        setActiveChatId(updated[0]?.id || null);
+      }
+      return updated;
+    });
   };
 
   // Automatically close mobile drawer when viewport expands to desktop

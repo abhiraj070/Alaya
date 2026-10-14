@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useSyncExternalStore } from "react";
 import { authApi } from "@/lib/api";
 import {
   getStoredUser,
@@ -14,7 +14,7 @@ const STORAGE_KEY = "alaya_user";
 
 const AuthContext = createContext({
   user: null,
-  isLoading: true,
+  isLoading: false,
   error: null,
   login: async () => {},
   register: async () => {},
@@ -24,7 +24,11 @@ const AuthContext = createContext({
 });
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => getStoredUser());
+  const user = useSyncExternalStore(
+    subscribeUserStorage,
+    getStoredUser,
+    () => null
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -46,20 +50,9 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Subscribe to shared storage changes across tabs and components
-  useEffect(() => {
-    const unsubscribe = subscribeUserStorage(() => {
-      const updated = getStoredUser();
-      setUser(updated);
-    });
-
-    return unsubscribe;
-  }, []);
-
   // Update user profile (frontend-only mock state update)
   const updateUser = useCallback((updates) => {
     const updated = updateStoredUser(updates);
-    setUser(updated);
     return updated;
   }, []);
 
@@ -77,7 +70,6 @@ export function AuthProvider({ children }) {
           isAuthenticated: true,
         };
         updateStoredUser(authenticatedUser);
-        setUser(authenticatedUser);
         return authenticatedUser;
       } catch (err) {
         if (err.status && err.status !== 0) {
@@ -91,7 +83,6 @@ export function AuthProvider({ children }) {
           isAuthenticated: true,
         };
         updateStoredUser(fallback);
-        setUser(fallback);
         return fallback;
       }
     },
@@ -119,13 +110,11 @@ export function AuthProvider({ children }) {
   // Logout handler (strictly frontend-only per Phase 7.1)
   const logout = useCallback(() => {
     clearStoredUser();
-    setUser(null);
   }, []);
 
   // Refresh user data from backend/storage
   const refreshUser = useCallback(() => {
-    const current = getStoredUser();
-    setUser(current);
+    return getStoredUser();
   }, []);
 
   return (

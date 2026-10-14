@@ -1,10 +1,15 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 
+const emptySubscribe = () => () => {};
+
 export default function FinalCtaSection() {
   const { user } = useAuth();
+  const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const isAuth = isClient && Boolean(user?.isAuthenticated);
 
   return (
     <section className="relative py-20 md:py-28 overflow-hidden bg-bg-primary border-t border-border-subtle">
@@ -19,7 +24,7 @@ export default function FinalCtaSection() {
 
       <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface-secondary px-3 py-1 text-xs font-semibold tracking-wider text-accent-sky uppercase">
-          <span>{user?.isAuthenticated ? "WELCOME BACK" : "GET STARTED TODAY"}</span>
+          <span>{isAuth ? "WELCOME BACK" : "GET STARTED TODAY"}</span>
         </div>
 
         {/* Required Headline */}
@@ -39,10 +44,10 @@ export default function FinalCtaSection() {
         {/* Primary CTA Button */}
         <div className="mt-8 flex justify-center">
           <Link
-            href={user?.isAuthenticated ? "/app" : "/auth?mode=signup"}
+            href={isAuth ? "/app" : "/auth?mode=signup"}
             className="btn-primary group h-12 px-8 text-sm font-semibold tracking-wide uppercase inline-flex items-center"
           >
-            <span>{user?.isAuthenticated ? "Open Workspace" : "Get Started"}</span>
+            <span>{isAuth ? "Open Workspace" : "Get Started"}</span>
             <svg
               className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1"
               viewBox="0 0 24 24"
