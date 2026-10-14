@@ -6,17 +6,16 @@ import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/lib/auth-context";
-import { mockUser } from "@/mock/users";
 import DeleteAccountModal from "@/components/profile/DeleteAccountModal";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, updateUser, logout, deleteAccount, refreshUser } = useAuth();
 
-  // Active user data with mockUser fallbacks
-  const currentName = user?.name || mockUser.name;
-  const currentUsername = (user?.username || mockUser.username).replace(/^@/, "");
-  const currentEmail = user?.email || mockUser.email;
+  // Active user data
+  const currentName = user?.name || "Guest User";
+  const currentUsername = (user?.username || "guest").replace(/^@/, "");
+  const currentEmail = user?.email || "";
 
   // Editing state for Full Name
   const [isEditingName, setIsEditingName] = useState(false);
@@ -44,9 +43,9 @@ export default function ProfilePage() {
     if (typeof refreshUser === "function") {
       refreshUser().then((fresh) => {
         if (!isMounted || !fresh) return;
-        if (!isEditingName) setNameDraft(fresh.name || mockUser.name);
+        if (!isEditingName) setNameDraft(fresh.name || "Guest User");
         if (!isEditingUsername)
-          setUsernameDraft((fresh.username || mockUser.username).replace(/^@/, ""));
+          setUsernameDraft((fresh.username || "guest").replace(/^@/, ""));
       });
     }
     return () => {

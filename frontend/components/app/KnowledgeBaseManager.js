@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import ChatInput from "@/components/app/ChatInput";
-import { mockKnowledgeItems, mockImages } from "@/mock/knowledge";
 import { useAuth } from "@/lib/auth-context";
 import { messagesApi, uploadedDataApi } from "@/lib/api";
 
@@ -80,7 +79,8 @@ function generateId(prefix = "kb") {
 export default function KnowledgeBaseManager() {
   const { user } = useAuth();
   // Knowledge Base items state (persisted locally in React state)
-  const [items, setItems] = useState(mockKnowledgeItems);
+  const [items, setItems] = useState([]);
+  const [isLoadingUploads, setIsLoadingUploads] = useState(false);
 
   // Active input mode: "files" | "images" | "text"
   const [activeInputMode, setActiveInputMode] = useState("files");
@@ -106,14 +106,20 @@ export default function KnowledgeBaseManager() {
   // Fetch real uploaded items from backend if user is authenticated
   useEffect(() => {
     if (!user?.id || typeof user.id !== "number" || !user?.isAuthenticated) {
+      setItems([]);
       return;
     }
 
     let isMounted = true;
+    setIsLoadingUploads(true);
     uploadedDataApi
       .getUploads(user.id)
       .then((uploads) => {
-        if (!isMounted || !Array.isArray(uploads) || uploads.length === 0) return;
+        if (!isMounted) return;
+        if (!Array.isArray(uploads) || uploads.length === 0) {
+          setItems([]);
+          return;
+        }
 
         const backendItems = uploads.map((up) => {
           if (up.data_type === "docs") {
@@ -164,6 +170,10 @@ export default function KnowledgeBaseManager() {
         if (err?.status !== 401 && err?.status !== 403) {
           console.warn("Could not load backend uploads, using local state:", err);
         }
+        if (isMounted) setItems([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingUploads(false);
       });
 
     return () => {
@@ -331,7 +341,7 @@ export default function KnowledgeBaseManager() {
         fileType: stagedImage.fileType,
         fileSize: stagedImage.size,
         dimensions: stagedImage.dimensions || "1920 × 1080",
-        previewUrl: stagedImage.previewUrl || (mockImages[0] ? mockImages[0].previewUrl : ""),
+        previewUrl: stagedImage.previewUrl || "",
         createdAt: new Date().toISOString(),
         status: "Indexed",
         tags: ["#image", `#${stagedImage.fileType}`, "#multimodal"],
@@ -1009,8 +1019,22 @@ export default function KnowledgeBaseManager() {
           </div>
         </div>
 
+        {/* Loading State */}
+        {isLoadingUploads && (
+          <div className="rounded-xl border border-border-subtle bg-surface-primary/40 p-12 text-center flex flex-col items-center justify-center gap-3">
+            <div
+              className="h-6 w-6 animate-spin rounded-full border-2 border-accent-sky border-t-transparent"
+              role="status"
+              aria-label="Loading knowledge base..."
+            />
+            <p className="text-xs text-text-muted font-medium tracking-wide">
+              Loading your Knowledge Base...
+            </p>
+          </div>
+        )}
+
         {/* Empty State */}
-        {filteredItems.length === 0 && (
+        {!isLoadingUploads && filteredItems.length === 0 && (
           <div className="rounded-xl border border-border-subtle bg-surface-primary/40 p-8 text-center space-y-2">
             <p className="text-sm font-semibold text-text-primary">
               No knowledge items found
@@ -1018,7 +1042,7 @@ export default function KnowledgeBaseManager() {
             <p className="text-xs text-text-muted">
               {searchQuery
                 ? `No items matched your search query "${searchQuery}".`
-                : "No items recorded in this category yet."}
+                : "No items recorded in this category yet. Upload a document, image, or note above to add knowledge to Alaya."}
             </p>
             {(searchQuery || activeFilter !== "all") && (
               <button
@@ -1027,7 +1051,7 @@ export default function KnowledgeBaseManager() {
                   setSearchQuery("");
                   setActiveFilter("all");
                 }}
-                className="mt-3 text-xs text-accent-sky underline underline-offset-4"
+                className="mt-3 text-xs text-accent-sky underline underline-offset-4 cursor-pointer"
               >
                 Clear filters
               </button>

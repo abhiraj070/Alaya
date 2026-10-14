@@ -7,7 +7,6 @@ import {
   updateStoredUser,
   clearStoredUser,
   subscribeUserStorage,
-  mockUser,
 } from "@/mock/users";
 
 const STORAGE_KEY = "alaya_user";
@@ -88,10 +87,10 @@ export function AuthProvider({ children }) {
         const token = cleanToken(candidateToken);
 
         const authenticatedUser = {
-          ...mockUser,
           id: res.id,
           name: res.name,
           username: res.username,
+          email: res.email || "",
           isAuthenticated: true,
           ...(token ? { access_token: token } : {}),
         };
@@ -106,18 +105,7 @@ export function AuthProvider({ children }) {
         updateStoredUser(authenticatedUser);
         return authenticatedUser;
       } catch (err) {
-        if (err.status && err.status !== 0) {
-          throw err;
-        }
-        // Fallback for offline frontend prototype
-        const fallback = {
-          ...mockUser,
-          name: username,
-          username: username.replace(/^@/, ""),
-          isAuthenticated: true,
-        };
-        updateStoredUser(fallback);
-        return fallback;
+        throw err;
       }
     },
     []
@@ -126,19 +114,7 @@ export function AuthProvider({ children }) {
   // Register handler
   const register = useCallback(async ({ name, username, password }) => {
     setError(null);
-    try {
-      return await authApi.register({ name, username, password });
-    } catch (err) {
-      if (err.status && err.status !== 0) {
-        throw err;
-      }
-      // Fallback for offline frontend prototype
-      return {
-        id: Date.now(),
-        name,
-        username: username.replace(/^@/, ""),
-      };
-    }
+    return await authApi.register({ name, username, password });
   }, []);
 
   // Logout handler: asynchronously clears backend session, cookies, and local storage tokens

@@ -6,22 +6,23 @@
 
 import { clearAllAuthTokens, cleanToken } from "@/lib/api";
 
-export const mockUser = {
-  id: "usr_mock_01",
-  name: "Abhiraj Sharma",
-  username: "abhiraj",
-  email: "abhiraj@example.com",
+export const defaultGuestUser = {
+  id: null,
+  name: "Guest User",
+  username: "guest",
+  email: "",
   avatarUrl: null,
-  createdAt: "2026-01-01T00:00:00.000Z",
+  isAuthenticated: false,
 };
 
-export const mockUsers = [mockUser];
+export const mockUser = defaultGuestUser;
+export const mockUsers = [defaultGuestUser];
 
 let cachedUser = null;
 let lastStoredRaw = null;
 
 export function getStoredUser() {
-  if (typeof window === "undefined") return mockUser;
+  if (typeof window === "undefined") return defaultGuestUser;
   try {
     const raw =
       sessionStorage.getItem("alaya_user") ||
@@ -32,29 +33,30 @@ export function getStoredUser() {
     lastStoredRaw = raw;
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed?.name) {
+      if (parsed?.id && typeof parsed.id === "number") {
         const token = cleanToken(
           parsed?.access_token ||
           localStorage.getItem("access_token") ||
           sessionStorage.getItem("access_token")
         );
         cachedUser = {
-          ...mockUser,
+          ...defaultGuestUser,
           ...parsed,
+          isAuthenticated: true,
           ...(token ? { access_token: token } : {}),
         };
         return cachedUser;
       }
     }
   } catch {
-    // Fallback to mockUser
+    // Fallback to defaultGuestUser
   }
-  cachedUser = mockUser;
-  return mockUser;
+  cachedUser = defaultGuestUser;
+  return defaultGuestUser;
 }
 
 export function updateStoredUser(updates) {
-  if (typeof window === "undefined") return { ...mockUser, ...updates };
+  if (typeof window === "undefined") return { ...defaultGuestUser, ...updates };
   try {
     const current = getStoredUser();
 
@@ -68,9 +70,10 @@ export function updateStoredUser(updates) {
     const existingToken = cleanToken(candidateToken);
 
     const updated = {
+      ...defaultGuestUser,
       ...current,
       ...updates,
-      isAuthenticated: true,
+      isAuthenticated: Boolean(updates?.id || current?.id),
       ...(existingToken ? { access_token: existingToken } : {}),
     };
 
@@ -89,7 +92,7 @@ export function updateStoredUser(updates) {
     window.dispatchEvent(new Event("storage"));
     return updated;
   } catch {
-    return { ...mockUser, ...updates };
+    return { ...defaultGuestUser, ...updates };
   }
 }
 
@@ -98,7 +101,7 @@ export function clearStoredUser() {
   try {
     sessionStorage.removeItem("alaya_user");
     localStorage.removeItem("alaya_user");
-    cachedUser = { ...mockUser, isAuthenticated: false };
+    cachedUser = { ...defaultGuestUser };
     lastStoredRaw = null;
     clearAllAuthTokens();
     window.dispatchEvent(new Event("storage"));
