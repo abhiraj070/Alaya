@@ -936,150 +936,26 @@ export default function KnowledgeBaseManager() {
           </div>
         )}
 
-        {/* Knowledge Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Knowledge Grid - Symmetrical Equal-Size Boxes */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
           {filteredItems.map((item) => {
             // ==========================================
-            // 1. DOCUMENT ITEM CARD (Uploaded Data)
-            // No tags or bottom hr line per user request
+            // 1. DOCUMENT ITEM CARD (Equal Size Box)
             // ==========================================
             if (item.type === "document") {
               return (
                 <div
                   key={item.id}
-                  className="rounded-xl border border-border-subtle bg-surface-primary p-4 sm:p-5 hover:border-accent-sky/30 transition-all flex flex-col justify-between group"
+                  className="group relative flex flex-col justify-between h-[210px] rounded-xl border border-border-subtle bg-surface-primary p-4 hover:border-accent-sky/40 transition-all duration-200 shadow-sm overflow-hidden"
                 >
-                  <div>
-                    {/* Header: Type Badge & Date */}
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`rounded px-2 py-0.5 text-[10px] font-mono font-semibold uppercase border ${getExtBadgeStyle(
-                          item.fileType
-                        )}`}
-                      >
-                        Document · {item.fileType}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-text-muted" suppressHydrationWarning>
-                          {formatItemDate(item.createdAt)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setItemToDelete(item)}
-                          className="text-text-muted hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Delete item"
-                          aria-label={`Delete ${item.title}`}
-                        >
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Content Display */}
-                    <div className="mt-3 flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-strong bg-surface-secondary text-xs font-bold uppercase text-accent-sky font-mono">
-                        {item.fileType}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-semibold text-text-primary truncate" title={item.title}>
-                          {item.title}
-                        </h3>
-                        <p className="text-xs text-text-muted mt-0.5">
-                          {item.fileSize} • {item.meta}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            // ==========================================
-            // 2. IMAGE ITEM CARD (Uploaded Data)
-            // No tags or bottom hr line per user request
-            // ==========================================
-            if (item.type === "image") {
-              return (
-                <div
-                  key={item.id}
-                  className="rounded-xl border border-border-subtle bg-surface-primary p-4 sm:p-5 hover:border-accent-sky/30 transition-all flex flex-col justify-between group"
-                >
-                  <div>
-                    {/* Header: Type Badge & Date */}
-                    <div className="flex items-center justify-between">
-                      <span className="rounded px-2 py-0.5 text-[10px] font-mono font-semibold uppercase border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
-                        Image · {item.fileType}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-text-muted" suppressHydrationWarning>
-                          {formatItemDate(item.createdAt)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setItemToDelete(item)}
-                          className="text-text-muted hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Delete item"
-                          aria-label={`Delete ${item.title}`}
-                        >
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Image Preview Thumbnail */}
-                    <div className="mt-3 overflow-hidden rounded-lg border border-border-subtle bg-surface-secondary aspect-video relative">
-                      {item.previewUrl ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={item.previewUrl}
-                          alt={item.title}
-                          className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-text-muted text-xs font-mono">
-                          Image
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Details */}
-                    <div className="mt-2.5">
-                      <h3 className="text-sm font-semibold text-text-primary truncate" title={item.title}>
-                        {item.title}
-                      </h3>
-                      <p className="text-xs text-text-muted mt-0.5 font-mono">
-                        {item.dimensions || "1920 × 1080"} • {item.fileSize}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            // ==========================================
-            // 3. WRITTEN MEMORY CARD (Text Data Feed)
-            // No tags or bottom hr line per user request
-            // ==========================================
-            return (
-              <div
-                key={item.id}
-                className="rounded-xl border border-border-strong bg-surface-secondary/80 p-4 sm:p-5 hover:border-accent-sky/50 transition-all flex flex-col justify-between group shadow-sm"
-              >
-                <div>
-                  {/* Header: Category Badge & Date */}
-                  <div className="flex items-center justify-between">
+                  {/* Header: Type Badge, Date & Delete Button */}
+                  <div className="flex items-center justify-between shrink-0">
                     <span
-                      className={`rounded px-2 py-0.5 text-[10px] font-mono font-semibold uppercase border ${getCategoryBadgeStyle(
-                        item.category
+                      className={`rounded px-2 py-0.5 text-[10px] font-mono font-semibold uppercase border ${getExtBadgeStyle(
+                        item.fileType
                       )}`}
                     >
-                      {item.category || "Memory"}
+                      Document · {item.fileType}
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-mono text-text-muted" suppressHydrationWarning>
@@ -1100,15 +976,143 @@ export default function KnowledgeBaseManager() {
                     </div>
                   </div>
 
-                  {/* Quoted Content Presentation */}
-                  <div className="mt-3 border-l-2 border-accent-sky/60 pl-3">
-                    <h3 className="text-xs font-semibold text-accent-sky font-mono">
-                      {item.title}
-                    </h3>
-                    <p className="mt-1 text-xs text-text-primary leading-relaxed italic">
-                      &ldquo;{item.content}&rdquo;
-                    </p>
+                  {/* Middle Content */}
+                  <div className="flex items-center gap-3 my-auto min-h-0">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border-strong bg-surface-secondary text-xs font-bold uppercase text-accent-sky font-mono">
+                      {item.fileType}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-text-primary line-clamp-2 leading-snug" title={item.title}>
+                        {item.title}
+                      </h3>
+                      <p className="text-[11px] text-text-muted mt-1 font-mono">
+                        {item.fileSize} • {item.meta}
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Bottom Metadata Bar */}
+                  <div className="flex items-center justify-between text-[10px] font-mono text-text-muted pt-2 border-t border-border-subtle/50 shrink-0">
+                    <span>{item.fileSize}</span>
+                    <span className="uppercase">{item.fileType} file</span>
+                  </div>
+                </div>
+              );
+            }
+
+            // ==========================================
+            // 2. IMAGE ITEM CARD (Equal Size Box)
+            // ==========================================
+            if (item.type === "image") {
+              return (
+                <div
+                  key={item.id}
+                  className="group relative flex flex-col justify-between h-[210px] rounded-xl border border-border-subtle bg-surface-primary p-4 hover:border-accent-sky/40 transition-all duration-200 shadow-sm overflow-hidden"
+                >
+                  {/* Header: Type Badge, Date & Delete Button */}
+                  <div className="flex items-center justify-between shrink-0">
+                    <span className="rounded px-2 py-0.5 text-[10px] font-mono font-semibold uppercase border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
+                      Image · {item.fileType}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono text-text-muted" suppressHydrationWarning>
+                        {formatItemDate(item.createdAt)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setItemToDelete(item)}
+                        className="text-text-muted hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Delete item"
+                        aria-label={`Delete ${item.title}`}
+                      >
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Middle Thumbnail Preview */}
+                  <div className="relative h-24 w-full overflow-hidden rounded-lg border border-border-subtle bg-surface-secondary my-auto shrink-0">
+                    {item.previewUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={item.previewUrl}
+                        alt={item.title}
+                        className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-text-muted text-xs font-mono">
+                        Image
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bottom Details Bar */}
+                  <div className="flex items-center justify-between text-[10px] font-mono text-text-muted pt-2 border-t border-border-subtle/50 shrink-0">
+                    <span className="truncate max-w-[160px] font-medium text-text-primary" title={item.title}>
+                      {item.title}
+                    </span>
+                    <span>{item.fileSize}</span>
+                  </div>
+                </div>
+              );
+            }
+
+            // ==========================================
+            // 3. WRITTEN MEMORY CARD (Equal Size Box)
+            // ==========================================
+            return (
+              <div
+                key={item.id}
+                className="group relative flex flex-col justify-between h-[210px] rounded-xl border border-border-strong bg-surface-secondary/80 p-4 hover:border-accent-sky/50 transition-all duration-200 shadow-sm overflow-hidden"
+              >
+                {/* Header: Category Badge, Date & Delete Button */}
+                <div className="flex items-center justify-between shrink-0">
+                  <span
+                    className={`rounded px-2 py-0.5 text-[10px] font-mono font-semibold uppercase border ${getCategoryBadgeStyle(
+                      item.category
+                    )}`}
+                  >
+                    {item.category || "Memory"}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-text-muted" suppressHydrationWarning>
+                      {formatItemDate(item.createdAt)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setItemToDelete(item)}
+                      className="text-text-muted hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete item"
+                      aria-label={`Delete ${item.title}`}
+                    >
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Middle Content: Quoted Text with Line Clamping */}
+                <div className="my-auto min-h-0 border-l-2 border-accent-sky/60 pl-3 overflow-hidden">
+                  <h3 className="text-xs font-semibold text-accent-sky font-mono truncate mb-1">
+                    {item.title}
+                  </h3>
+                  <p
+                    className="text-xs text-text-primary/90 leading-relaxed italic line-clamp-3 overflow-hidden"
+                    title={item.content}
+                  >
+                    &ldquo;{item.content}&rdquo;
+                  </p>
+                </div>
+
+                {/* Bottom Details Bar */}
+                <div className="flex items-center justify-between text-[10px] font-mono text-text-muted pt-2 border-t border-border-subtle/50 shrink-0">
+                  <span>{item.category || "Personal"}</span>
+                  <span className="text-accent-sky/80">Text Entry</span>
                 </div>
               </div>
             );
