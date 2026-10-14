@@ -20,16 +20,188 @@ export class ApiError extends Error {
 }
 
 /**
- * Core fetch wrapper with JSON handling and cookie forwarding
+ * Validate and clean a potential token string.
+ * Strips 'Bearer ' prefix and rejects invalid placeholder values like 'undefined', 'null', etc.
+ */
+export function cleanToken(val) {
+  if (!val || typeof val !== "string") return null;
+  let trimmed = val.trim();
+  if (trimmed.startsWith("Bearer ") || trimmed.startsWith("bearer ")) {
+    trimmed = trimmed.slice(7).trim();
+  }
+  if (
+    trimmed.length === 0 ||
+    trimmed === "undefined" ||
+    trimmed === "null" ||
+    trimmed === "false" ||
+    trimmed === "true" ||
+    trimmed === "[object Object]"
+  ) {
+    return null;
+  }
+  return trimmed;
+}
+
+/**
+ * Retrieve the current access token from localStorage, sessionStorage, alaya_user, or cookies.
+ * Checks all common keys to ensure tokens are never lost.
+ */
+export function getStoredAccessToken() {
+  if (typeof window === "undefined") return null;
+  try {
+    // 1. Check direct token keys in storage
+    const directKeys = [
+      "access_token",
+      "token",
+      "accessToken",
+      "auth_token",
+      "jwt",
+      "alaya_access_token",
+      "alaya_token",
+    ];
+
+    for (const key of directKeys) {
+      const val = localStorage.getItem(key) || sessionStorage.getItem(key);
+      const cleaned = cleanToken(val);
+      if (cleaned) {
+        return cleaned;
+      }
+    }
+
+    // 2. Check inside alaya_user object in storage
+    const rawUser =
+      localStorage.getItem("alaya_user") || sessionStorage.getItem("alaya_user");
+    if (rawUser) {
+      try {
+        const parsed = JSON.parse(rawUser);
+        const token =
+          parsed?.access_token ||
+          parsed?.accessToken ||
+          parsed?.token ||
+          parsed?.authToken ||
+          parsed?.jwt;
+        const cleaned = cleanToken(token);
+        if (cleaned) {
+          return cleaned;
+        }
+      } catch {}
+    }
+
+    // 3. Check document.cookie in case access_token was set non-httpOnly
+    if (typeof document !== "undefined") {
+      const match = document.cookie.match(/(?:^|;\s*)(?:access_token|token)=([^;]*)/);
+      if (match && match[1]) {
+        const decoded = decodeURIComponent(match[1]);
+        const cleaned = cleanToken(decoded);
+        if (cleaned) {
+          try {
+            localStorage.setItem("access_token", cleaned);
+          } catch {}
+          return cleaned;
+        }
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Completely clear all access tokens, refresh tokens, auth sessions from localStorage, sessionStorage, and cookies.
+ */
+export function clearAllAuthTokens() {
+  if (typeof window === "undefined") return;
+
+  const storageKeys = [
+    "access_token",
+    "token",
+    "accessToken",
+    "refresh_token",
+    "refreshToken",
+    "auth_token",
+    "jwt",
+    "alaya_access_token",
+    "alaya_refresh_token",
+    "alaya_token",
+    "alaya_user",
+    "user",
+  ];
+
+  storageKeys.forEach((key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+    try {
+      sessionStorage.removeItem(key);
+    } catch {}
+  });
+
+  if (typeof document !== "undefined") {
+    const cookieNames = [
+      "access_token",
+      "refresh_token",
+      "token",
+      "accessToken",
+      "refreshToken",
+      "session",
+      "session_id",
+      "jwt",
+      "auth_token",
+      "alaya_access_token",
+      "alaya_refresh_token",
+    ];
+
+    const hostname = window.location.hostname;
+    const domains = [
+      "",
+      hostname,
+      `.${hostname}`,
+      hostname.startsWith("www.") ? hostname.replace(/^www\./, "") : `www.${hostname}`,
+      "localhost",
+      "127.0.0.1",
+    ];
+
+    const paths = ["/", "/api", "/auth", "/app", "/profile"];
+
+    cookieNames.forEach((name) => {
+      paths.forEach((path) => {
+        domains.forEach((domain) => {
+          const domainPart = domain ? `; domain=${domain}` : "";
+          const pathPart = path ? `; path=${path}` : "; path=/";
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT${pathPart}${domainPart}; SameSite=Lax`;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT${pathPart}${domainPart}; SameSite=Strict`;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT${pathPart}${domainPart}; SameSite=None; Secure`;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT${pathPart}${domainPart}`;
+          document.cookie = `${name}=; max-age=0${pathPart}${domainPart}`;
+        });
+      });
+    });
+  }
+
+  try {
+    window.dispatchEvent(new Event("storage"));
+  } catch {}
+}
+
+/**
+ * Core fetch wrapper with JSON handling, cookie forwarding, and Bearer token authorization
  */
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
+
+  const token = getStoredAccessToken();
+  const authHeaders = {};
+  if (token && !options.headers?.Authorization && !options.headers?.authorization) {
+    authHeaders["Authorization"] = `Bearer ${token}`;
+  }
 
   const config = {
     ...options,
     credentials: "include", // Required for httpOnly JWT access_token and refresh_token cookies
     headers: {
       ...(options.isFormData ? {} : { "Content-Type": "application/json" }),
+      ...authHeaders,
       ...(options.headers || {}),
     },
   };
@@ -112,13 +284,33 @@ export const authApi = {
    * @returns {Promise<{ id: number, name: string, username: string }>}
    */
   async login({ username, password }) {
-    return request("/api/user/login", {
+    const data = await request("/api/user/login", {
       method: "POST",
       body: JSON.stringify({
         username: username.trim().replace(/^@/, ""),
         password,
       }),
     });
+
+    // If backend returns tokens, store them safely in localStorage so they are never lost
+    if (data && typeof window !== "undefined") {
+      const token = cleanToken(data.access_token || data.token || data.accessToken);
+      if (token) {
+        try {
+          localStorage.setItem("access_token", token);
+          sessionStorage.setItem("access_token", token);
+        } catch {}
+      }
+      const refreshToken = cleanToken(data.refresh_token || data.refreshToken);
+      if (refreshToken) {
+        try {
+          localStorage.setItem("refresh_token", refreshToken);
+          sessionStorage.setItem("refresh_token", refreshToken);
+        } catch {}
+      }
+    }
+
+    return data;
   },
 
   /**
@@ -159,15 +351,24 @@ export const authApi = {
   },
 
   /**
-   * Logout user, clearing backend session and HTTP-only cookies
+   * Logout user, clearing backend session, cookies, and local storage tokens
    * PUT /api/user/logout/{user_id}
-   * @param {number} userId
-   * @returns {Promise<{ message: string }>}
+   * @param {number} [userId]
+   * @returns {Promise<{ message: string } | null>}
    */
   async logout(userId) {
-    return request(`/api/user/logout/${userId}`, {
-      method: "PUT",
-    });
+    let result = null;
+    if (userId && typeof userId === "number") {
+      try {
+        result = await request(`/api/user/logout/${userId}`, {
+          method: "PUT",
+        });
+      } catch {
+        // Backend logout failed or unreachable, continue to clean local tokens
+      }
+    }
+    clearAllAuthTokens();
+    return result;
   },
 
   /**
@@ -287,6 +488,9 @@ export const messagesApi = {
    */
   async sendNewMessage(chatId, content, userId, onChunk, signal) {
     const url = `${API_BASE}/api/messages/new_messages/${chatId}`;
+    const token = getStoredAccessToken();
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
     let response;
     try {
       response = await fetch(url, {
@@ -294,6 +498,7 @@ export const messagesApi = {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
+          ...authHeaders,
         },
         body: JSON.stringify({
           message_content: content,
@@ -366,6 +571,9 @@ export const messagesApi = {
     }
 
     const url = `${API_BASE}/api/messages/update_message/${chatId}/${messageId}`;
+    const token = getStoredAccessToken();
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
     let response;
     try {
       response = await fetch(url, {
@@ -373,6 +581,7 @@ export const messagesApi = {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
+          ...authHeaders,
         },
         body: JSON.stringify({ message_content: content }),
         signal,

@@ -4,6 +4,8 @@
  * No credentials or passwords are stored on the frontend.
  */
 
+import { clearAllAuthTokens, cleanToken } from "@/lib/api";
+
 export const mockUser = {
   id: "usr_mock_01",
   name: "Abhiraj Sharma",
@@ -31,7 +33,16 @@ export function getStoredUser() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed?.name) {
-        cachedUser = { ...mockUser, ...parsed };
+        const token = cleanToken(
+          parsed?.access_token ||
+          localStorage.getItem("access_token") ||
+          sessionStorage.getItem("access_token")
+        );
+        cachedUser = {
+          ...mockUser,
+          ...parsed,
+          ...(token ? { access_token: token } : {}),
+        };
         return cachedUser;
       }
     }
@@ -46,11 +57,30 @@ export function updateStoredUser(updates) {
   if (typeof window === "undefined") return { ...mockUser, ...updates };
   try {
     const current = getStoredUser();
+
+    // Preserve any existing access token from updates, current user, or storage
+    const candidateToken =
+      updates?.access_token ||
+      updates?.token ||
+      current?.access_token ||
+      localStorage.getItem("access_token") ||
+      sessionStorage.getItem("access_token");
+    const existingToken = cleanToken(candidateToken);
+
     const updated = {
       ...current,
       ...updates,
       isAuthenticated: true,
+      ...(existingToken ? { access_token: existingToken } : {}),
     };
+
+    if (existingToken) {
+      try {
+        localStorage.setItem("access_token", existingToken);
+        sessionStorage.setItem("access_token", existingToken);
+      } catch {}
+    }
+
     cachedUser = updated;
     const json = JSON.stringify(updated);
     sessionStorage.setItem("alaya_user", json);
@@ -70,6 +100,7 @@ export function clearStoredUser() {
     localStorage.removeItem("alaya_user");
     cachedUser = { ...mockUser, isAuthenticated: false };
     lastStoredRaw = null;
+    clearAllAuthTokens();
     window.dispatchEvent(new Event("storage"));
   } catch {}
 }

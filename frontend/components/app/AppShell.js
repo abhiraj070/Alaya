@@ -33,6 +33,22 @@ export default function AppShell() {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [chatToDelete, setChatToDelete] = useState(null);
   const [isDeletingChat, setIsDeletingChat] = useState(false);
+  const [pinnedChatIds, setPinnedChatIds] = useState([]);
+
+  // Load pinned chats from localStorage after mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("alaya_pinned_chats");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          requestAnimationFrame(() => {
+            setPinnedChatIds(parsed);
+          });
+        }
+      }
+    } catch {}
+  }, []);
 
   const { user } = useAuth();
 
@@ -346,6 +362,29 @@ export default function AppShell() {
       }
       return updated;
     });
+
+    // Remove from pinned chats if pinned
+    setPinnedChatIds((prev) => {
+      const next = prev.filter((id) => id !== chatId);
+      try {
+        localStorage.setItem("alaya_pinned_chats", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Toggle pinned status of a chat
+  const handleTogglePinChat = (chatId) => {
+    setPinnedChatIds((prev) => {
+      const isPinned = prev.includes(chatId);
+      const next = isPinned
+        ? prev.filter((id) => id !== chatId)
+        : [chatId, ...prev];
+      try {
+        localStorage.setItem("alaya_pinned_chats", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   // Close delete chat modal on Escape key
@@ -487,6 +526,8 @@ export default function AppShell() {
         user={user}
         isLoadingChats={isLoadingChats}
         deletingChatId={isDeletingChat ? chatToDelete?.id : null}
+        pinnedChatIds={pinnedChatIds}
+        onTogglePinChat={handleTogglePinChat}
       />
 
       {/* Mobile Navigation Drawer (Overlay on mobile) */}
@@ -505,6 +546,8 @@ export default function AppShell() {
         user={user}
         isLoadingChats={isLoadingChats}
         deletingChatId={isDeletingChat ? chatToDelete?.id : null}
+        pinnedChatIds={pinnedChatIds}
+        onTogglePinChat={handleTogglePinChat}
       />
 
       {/* Main Workspace Column (Header + Main Content) */}

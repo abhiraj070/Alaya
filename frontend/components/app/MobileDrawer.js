@@ -21,6 +21,8 @@ export default function MobileDrawer({
   user,
   isLoadingChats = false,
   deletingChatId = null,
+  pinnedChatIds = [],
+  onTogglePinChat,
 }) {
   const mobileChatListRef = useRef(null);
   // Close on Escape key and lock background scroll while drawer is open
@@ -45,6 +47,9 @@ export default function MobileDrawer({
 
   const userName = user?.name || "Abhiraj Sharma";
   const userUsername = user?.username ? `@${user.username.replace(/^@/, "")}` : "@abhiraj";
+
+  const pinnedChats = chats.filter((c) => pinnedChatIds.includes(c.id));
+  const unpinnedChats = chats.filter((c) => !pinnedChatIds.includes(c.id));
 
   const askIcon = (
     <svg
@@ -121,7 +126,7 @@ export default function MobileDrawer({
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto chat-scrollbar pr-0.5 space-y-2.5">
           {/* Drawer Header: Brand + Close Button */}
           <div className="flex items-center justify-between pb-4 border-b border-border-subtle shrink-0">
             <Link
@@ -156,7 +161,7 @@ export default function MobileDrawer({
           </div>
 
           {/* New Chat Button (Positioned above Ask) */}
-          <div className="mt-3 shrink-0">
+          <div className="shrink-0">
             <button
               type="button"
               disabled={isCreatingChat}
@@ -181,7 +186,7 @@ export default function MobileDrawer({
           </div>
 
           {/* Navigation Items */}
-          <nav className="mt-2.5 space-y-1.5 shrink-0" aria-label="Mobile navigation">
+          <nav className="space-y-1.5 shrink-0" aria-label="Mobile navigation">
             <button
               type="button"
               onClick={() => {
@@ -236,17 +241,59 @@ export default function MobileDrawer({
           </nav>
 
           {/* Horizontal Line Below Knowledge Base */}
-          <div className="my-3 mx-1 border-t border-border-subtle shrink-0" role="separator" />
+          <div className="my-1 mx-1 border-t border-border-subtle shrink-0" role="separator" />
+
+          {/* Pinned Chats Section (Displayed above and out of All Chats box) */}
+          {pinnedChats.length > 0 && (
+            <div className="flex flex-col shrink-0 rounded-xl border border-accent-sky/25 bg-surface-secondary/70 p-2 shadow-xs">
+              {/* Header: Pinned Chats with Pin Icon */}
+              <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] font-semibold tracking-wider text-accent-sky uppercase shrink-0">
+                <span className="flex items-center gap-1.5">
+                  <svg
+                    className="h-3 w-3 text-accent-sky"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <line x1="12" y1="17" x2="12" y2="22" />
+                    <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+                  </svg>
+                  Pinned Chats
+                </span>
+                <span className="text-[10px] font-mono font-normal text-accent-sky/80">
+                  {pinnedChats.length}
+                </span>
+              </div>
+
+              {/* List of Pinned Chats */}
+              <div className="space-y-1">
+                {pinnedChats.map((chat) => (
+                  <ChatItem
+                    key={`pinned-${chat.id}`}
+                    chat={chat}
+                    isPinned={true}
+                    isCurrent={activeChatId === chat.id && activeTab === "chat"}
+                    isDeleting={deletingChatId === chat.id}
+                    onSelect={() => {
+                      onSelectChat(chat.id);
+                      onSelectTab("chat");
+                      onClose();
+                    }}
+                    onUpdateTitle={onUpdateChatTitle}
+                    onDelete={onDeleteChat}
+                    onTogglePin={onTogglePinChat}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* All Chats Container */}
-          <div
-            className="flex-1 flex flex-col min-h-0 rounded-xl border border-border-strong/40 bg-surface-secondary/70 p-2 shadow-xs mb-2"
-            onWheel={(e) => {
-              if (mobileChatListRef.current && !mobileChatListRef.current.contains(e.target)) {
-                mobileChatListRef.current.scrollTop += e.deltaY;
-              }
-            }}
-          >
+          <div className="flex-1 flex flex-col min-h-[140px] rounded-xl border border-border-strong/40 bg-surface-secondary/70 p-2 shadow-xs mb-2">
             <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] font-semibold tracking-wider text-text-muted uppercase shrink-0">
               <span className="flex items-center gap-1.5">
                 <svg className="h-3 w-3 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -254,7 +301,7 @@ export default function MobileDrawer({
                 </svg>
                 All Chats
               </span>
-              <span className="text-[10px] font-mono font-normal text-text-muted/80">{chats.length}</span>
+              <span className="text-[10px] font-mono font-normal text-text-muted/80">{unpinnedChats.length}</span>
             </div>
 
             <div
@@ -273,15 +320,16 @@ export default function MobileDrawer({
                     Loading chats...
                   </span>
                 </div>
-              ) : chats.length === 0 ? (
+              ) : unpinnedChats.length === 0 ? (
                 <div className="px-2 py-3 text-center text-xs text-text-muted italic">
-                  No chats yet
+                  {pinnedChats.length > 0 ? "No other chats" : "No chats yet"}
                 </div>
               ) : (
-                chats.map((chat) => (
+                unpinnedChats.map((chat) => (
                   <ChatItem
                     key={chat.id}
                     chat={chat}
+                    isPinned={false}
                     isCurrent={activeChatId === chat.id && activeTab === "chat"}
                     isDeleting={deletingChatId === chat.id}
                     onSelect={() => {
@@ -291,6 +339,7 @@ export default function MobileDrawer({
                     }}
                     onUpdateTitle={onUpdateChatTitle}
                     onDelete={onDeleteChat}
+                    onTogglePin={onTogglePinChat}
                   />
                 ))
               )}

@@ -111,10 +111,13 @@ export default function ProfilePage() {
     }
   };
 
-  // Frontend-only Logout Handler
-  const handleLogout = () => {
-    logout();
-    router.push("/auth?mode=signin");
+  // Logout Handler: clears backend session, cookies, and local tokens, then navigates to signin
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      router.push("/auth?mode=signin");
+    }
   };
 
   return (

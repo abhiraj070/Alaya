@@ -288,7 +288,10 @@ export default function AuthCard() {
               </Link>
               <button
                 type="button"
-                onClick={logout}
+                onClick={async () => {
+                  await logout();
+                  handleModeChange("signin");
+                }}
                 className="w-full text-center py-2 text-xs font-medium text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
               >
                 Sign out of this account

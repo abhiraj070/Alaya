@@ -74,7 +74,9 @@ export default function Navbar() {
               </Link>
               <button
                 type="button"
-                onClick={logout}
+                onClick={async () => {
+                  await logout();
+                }}
                 className="text-xs font-medium text-text-muted hover:text-rose-400 transition-colors px-2 py-1 rounded cursor-pointer"
                 title="Sign Out"
               >
@@ -195,9 +197,9 @@ export default function Navbar() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       closeMobileMenu();
-                      logout();
+                      await logout();
                     }}
                     className="w-full text-center rounded-md px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/10 cursor-pointer"
                   >

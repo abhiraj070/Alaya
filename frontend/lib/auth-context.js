@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, useSyncExternalStore } from "react";
-import { authApi } from "@/lib/api";
+import { authApi, getStoredAccessToken, clearAllAuthTokens, cleanToken } from "@/lib/api";
 import {
   getStoredUser,
   updateStoredUser,
@@ -18,7 +18,7 @@ const AuthContext = createContext({
   error: null,
   login: async () => {},
   register: async () => {},
-  logout: () => {},
+  logout: async () => {},
   updateUser: () => {},
   refreshUser: async () => {},
 });
@@ -39,9 +39,15 @@ export function AuthProvider({ children }) {
       if (userData) {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+        const token = cleanToken(userData.access_token || userData.token);
+        if (token) {
+          localStorage.setItem("access_token", token);
+          sessionStorage.setItem("access_token", token);
+        }
       } else {
         sessionStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(STORAGE_KEY);
+        clearAllAuthTokens();
       }
       // Dispatch storage event so other tabs and external stores update
       window.dispatchEvent(new Event("storage"));
@@ -62,13 +68,29 @@ export function AuthProvider({ children }) {
       setError(null);
       try {
         const res = await authApi.login({ username, password });
+        const candidateToken =
+          res?.access_token ||
+          res?.token ||
+          res?.accessToken ||
+          getStoredAccessToken();
+        const token = cleanToken(candidateToken);
+
         const authenticatedUser = {
           ...mockUser,
           id: res.id,
           name: res.name,
           username: res.username,
           isAuthenticated: true,
+          ...(token ? { access_token: token } : {}),
         };
+
+        if (token) {
+          try {
+            localStorage.setItem("access_token", token);
+            sessionStorage.setItem("access_token", token);
+          } catch {}
+        }
+
         updateStoredUser(authenticatedUser);
         return authenticatedUser;
       } catch (err) {
@@ -107,9 +129,19 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Logout handler (strictly frontend-only per Phase 7.1)
-  const logout = useCallback(() => {
-    clearStoredUser();
+  // Logout handler: asynchronously clears backend session, cookies, and local storage tokens
+  const logout = useCallback(async () => {
+    try {
+      const current = getStoredUser();
+      const currentUserId =
+        current?.id && typeof current.id === "number" ? current.id : null;
+      await authApi.logout(currentUserId);
+    } catch {
+      // Backend logout failed or server offline
+    } finally {
+      clearAllAuthTokens();
+      clearStoredUser();
+    }
   }, []);
 
   // Refresh user data from backend/storage

@@ -6,9 +6,11 @@ export default function ChatItem({
   chat,
   isCurrent = false,
   isDeleting = false,
+  isPinned = false,
   onSelect,
   onUpdateTitle,
   onDelete,
+  onTogglePin,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(chat.title || "New chat");
@@ -89,6 +91,14 @@ export default function ChatItem({
       console.error("Failed to update chat title:", err);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleTogglePin = (e) => {
+    e.stopPropagation();
+    setIsMenuOpen(false);
+    if (onTogglePin) {
+      onTogglePin(chat.id);
     }
   };
 
@@ -194,9 +204,24 @@ export default function ChatItem({
         type="button"
         onClick={onSelect}
         disabled={isDeleting}
-        className="flex-1 min-w-0 text-left text-xs px-2.5 py-2 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate disabled:cursor-not-allowed"
+        className="flex-1 min-w-0 text-left text-xs px-2.5 py-2 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate disabled:cursor-not-allowed flex items-center gap-1.5"
         title={chat.title || "New chat"}
       >
+        {isPinned && (
+          <svg
+            className="h-3 w-3 shrink-0 text-accent-sky/80"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="17" x2="12" y2="22" />
+            <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+          </svg>
+        )}
         <span className={`truncate block ${isDeleting ? "opacity-50" : ""}`}>
           {chat.title || "New chat"}
         </span>
@@ -247,7 +272,29 @@ export default function ChatItem({
             aria-orientation="vertical"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 1. Edit Title Option */}
+            {/* 1. Pin / Unpin Option (First Place) */}
+            <button
+              type="button"
+              onClick={handleTogglePin}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors cursor-pointer text-left"
+              role="menuitem"
+            >
+              <svg
+                className={`h-3.5 w-3.5 ${isPinned ? "text-accent-sky" : "text-text-muted"}`}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="12" y1="17" x2="12" y2="22" />
+                <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+              </svg>
+              <span>{isPinned ? "Unpin" : "Pin"}</span>
+            </button>
+
+            {/* 2. Edit Title Option (Second Place) */}
             <button
               type="button"
               onClick={handleStartEdit}
@@ -269,7 +316,7 @@ export default function ChatItem({
               <span>Edit title</span>
             </button>
 
-            {/* 2. Delete Chat Option */}
+            {/* 3. Delete Chat Option (Third Place) */}
             <button
               type="button"
               onClick={handleDelete}
