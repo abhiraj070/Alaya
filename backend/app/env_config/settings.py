@@ -8,8 +8,8 @@ class Settings(BaseSettings):
     )
 
     DATABASE_URL: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int
-    REFRESH_TOKEN_EXPIRE_DAYS: int
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     SECRET_KEY: str
     OPENAI_API_KEY: str
     REDIS_HOST: str = "localhost"

@@ -35,11 +35,14 @@ def get_user_from_id(user_id: int, db: Session):
     return user
 
 def generate_tokens(user_id: int):
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+
     access_token = jwt.encode(
         {
             "user_id": user_id,
             "type": "access",
-            "exp": datetime.now(timezone.utc) + timedelta(minutes=15),
+            "exp": datetime.now(timezone.utc) + access_token_expires,
         },
         settings.SECRET_KEY,
         algorithm="HS256",
@@ -48,7 +51,7 @@ def generate_tokens(user_id: int):
         {
             "user_id": user_id,
             "type": "refresh",
-            "exp": datetime.now(timezone.utc) + timedelta(days=30),
+            "exp": datetime.now(timezone.utc) + refresh_token_expires,
         },
         settings.SECRET_KEY,
         algorithm="HS256",
@@ -145,13 +148,16 @@ async def login(request: LoginRequest, db: Annotated[Session, Depends(get_db)], 
     user.refreshToken=refresh_token
     db.commit()
 
+    access_token_max_age = int(settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    refresh_token_max_age = int(settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
+
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=False,
         samesite="lax",
-        max_age=15 * 60,
+        max_age=access_token_max_age,
     )
 
     response.set_cookie(
@@ -160,7 +166,7 @@ async def login(request: LoginRequest, db: Annotated[Session, Depends(get_db)], 
         httponly=True,
         secure=False,
         samesite="lax",
-        max_age=30 * 24 * 60 * 60,
+        max_age=refresh_token_max_age,
     )
 
     return user
