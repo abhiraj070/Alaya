@@ -5,8 +5,9 @@ import ChatEmptyState from "@/components/app/ChatEmptyState";
 import ChatMessages from "@/components/app/ChatMessages";
 import ChatInput from "@/components/app/ChatInput";
 import { findMockResponse } from "@/mock/chat";
+import { messagesApi } from "@/lib/api";
 
-export default function Chat({ messages = [], setMessages }) {
+export default function Chat({ chatId, messages = [], setMessages }) {
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -52,47 +53,20 @@ export default function Chat({ messages = [], setMessages }) {
     }
   }, [messages, isThinking, isStreaming]);
 
-  // Core message submission handler
-  const handleSendMessage = (textOverride) => {
-    const rawText = typeof textOverride === "string" ? textOverride : inputValue;
-    const trimmed = rawText.trim();
+  // Generates and progressively streams assistant response for a given prompt
+  const triggerAssistantResponse = useCallback((promptText) => {
+    const matched = findMockResponse(promptText);
 
-    // Guard against empty input or concurrent submission while processing
-    if (!trimmed || isThinking || isStreaming) return;
-
-    // Clear input
-    setInputValue("");
-    userScrolledUpRef.current = false;
-
-    // 1. Append user message immediately
-    const userMsg = {
-      id: `usr_${Date.now()}`,
-      sender: "user",
-      text: trimmed,
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-
-    // 2. Select response from local mock knowledge engine
-    const matched = findMockResponse(trimmed);
-
-    // 3. Initiate simulated thinking state
     setIsThinking(true);
 
     const thinkTimer = setTimeout(() => {
       setIsThinking(false);
 
-      // Check prefers-reduced-motion
       const prefersReducedMotion =
         typeof window !== "undefined" &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
       if (prefersReducedMotion) {
-        // Immediate response without progressive animation for reduced motion
         const assistantMsg = {
           id: `asst_${Date.now()}`,
           sender: "alaya",
@@ -104,14 +78,12 @@ export default function Chat({ messages = [], setMessages }) {
         return;
       }
 
-      // 4. Batched simulated streaming
       setIsStreaming(true);
       const assistantMsgId = `asst_${Date.now()}`;
       const words = matched.text.split(" ");
       let currentWordIndex = 0;
-      const batchSize = 3; // 3 words per tick (~45ms) for smooth, non-laggy progressive reveal
+      const batchSize = 3;
 
-      // Add assistant placeholder message
       setMessages((prev) => [
         ...prev,
         {
@@ -149,6 +121,71 @@ export default function Chat({ messages = [], setMessages }) {
     }, 700);
 
     activeTimersRef.current.push(thinkTimer);
+  }, [setMessages]);
+
+  // Core message submission handler
+  const handleSendMessage = (textOverride) => {
+    const rawText = typeof textOverride === "string" ? textOverride : inputValue;
+    const trimmed = rawText.trim();
+
+    if (!trimmed || isThinking || isStreaming) return;
+
+    setInputValue("");
+    userScrolledUpRef.current = false;
+
+    // 1. Append user message immediately
+    const userMsg = {
+      id: `usr_${Date.now()}`,
+      sender: "user",
+      text: trimmed,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    triggerAssistantResponse(trimmed);
+  };
+
+  // Edit user message handler
+  const handleEditMessage = async (messageId, newContent) => {
+    const trimmed = newContent.trim();
+    if (!trimmed || isThinking || isStreaming) return;
+
+    // 1. Persist update to backend if this is a stored message in a backend chat
+    if (typeof messageId === "number" && typeof chatId === "number") {
+      try {
+        await messagesApi.updateMessage(chatId, messageId, trimmed);
+      } catch (err) {
+        console.error("Failed to update message in backend:", err);
+      }
+    }
+
+    // 2. Treat as new message: update user message text & remove trailing stale assistant reply
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === messageId);
+      if (idx === -1) return prev;
+      const truncated = prev.slice(0, idx + 1);
+      truncated[idx] = { ...truncated[idx], text: trimmed };
+      return truncated;
+    });
+
+    // 3. Trigger new assistant response for the updated prompt
+    triggerAssistantResponse(trimmed);
+  };
+
+  // Delete message handler
+  const handleDeleteMessage = async (messageId) => {
+    if (typeof messageId === "number") {
+      try {
+        await messagesApi.deleteMessage(messageId);
+      } catch (err) {
+        console.error("Failed to delete message in backend:", err);
+      }
+    }
+
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
   };
 
   const isBusy = isThinking || isStreaming;
@@ -176,6 +213,8 @@ export default function Chat({ messages = [], setMessages }) {
             messages={messages}
             isThinking={isThinking}
             bottomRef={bottomRef}
+            onEditMessage={handleEditMessage}
+            onDeleteMessage={handleDeleteMessage}
           />
         )}
       </div>

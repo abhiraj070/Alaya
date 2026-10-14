@@ -6,11 +6,18 @@ export default function ChatMessages({
   messages = [],
   isThinking = false,
   bottomRef,
+  onEditMessage,
+  onDeleteMessage,
 }) {
   return (
     <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
       {messages.map((message) => (
-        <ChatMessage key={message.id} message={message} />
+        <ChatMessage
+          key={message.id}
+          message={message}
+          onEditMessage={onEditMessage}
+          onDeleteMessage={onDeleteMessage}
+        />
       ))}
 
       {/* Subtle Alaya Thinking Indicator */}

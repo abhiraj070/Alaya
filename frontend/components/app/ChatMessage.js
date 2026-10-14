@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
+
 /**
  * Safely parses and renders multiline Alaya responses into paragraphs,
  * numbered lists, and bulleted lists without using dangerouslySetInnerHTML.
@@ -91,14 +93,194 @@ function renderAlayaResponse(text, isStreaming) {
   );
 }
 
-export default function ChatMessage({ message }) {
+export default function ChatMessage({
+  message,
+  onEditMessage,
+  onDeleteMessage,
+}) {
   const isUser = message.sender === "user";
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(message.text || "");
+  const [copied, setCopied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const textareaRef = useRef(null);
+
+  // Sync edit text when message text changes
+  useEffect(() => {
+    if (!isEditing) {
+      setEditText(message.text || "");
+    }
+  }, [message.text, isEditing]);
+
+  // Focus and select textarea on edit open
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.text || "");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard unavailable
+    }
+  };
+
+  const handleStartEdit = () => {
+    setEditText(message.text || "");
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditText(message.text || "");
+  };
+
+  const handleSaveEdit = async () => {
+    const trimmed = editText.trim();
+    if (!trimmed) return;
+
+    if (trimmed === message.text) {
+      setIsEditing(false);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (onEditMessage) {
+        await onEditMessage(message.id, trimmed);
+      }
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Failed to edit message:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (onDeleteMessage) {
+      onDeleteMessage(message.id);
+    }
+  };
+
   if (isUser) {
+    if (isEditing) {
+      return (
+        <div className="flex justify-end mb-6 w-full animate-fadeIn motion-reduce:animate-none">
+          <div className="w-full max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-br-sm p-3.5 bg-surface-secondary border border-accent-sky/50 shadow-lg">
+            <textarea
+              ref={textareaRef}
+              value={editText}
+              disabled={isSubmitting}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSaveEdit();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  handleCancelEdit();
+                }
+              }}
+              rows={Math.min(6, Math.max(2, editText.split("\n").length))}
+              className="w-full bg-transparent text-text-primary text-sm sm:text-base leading-relaxed resize-none focus:outline-none placeholder:text-text-muted select-text"
+              placeholder="Edit your message..."
+            />
+            <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-border-subtle">
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                disabled={isSubmitting}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-tertiary transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={isSubmitting || !editText.trim()}
+                className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-accent-sky text-bg-primary hover:bg-accent-sky/90 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
+              >
+                {isSubmitting ? (
+                  <span>Sending...</span>
+                ) : (
+                  <>
+                    <span>Send</span>
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="22" y1="2" x2="11" y2="13" />
+                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
-      <div className="flex justify-end mb-6 animate-fadeIn motion-reduce:animate-none">
+      <div className="group flex flex-col items-end mb-6 animate-fadeIn motion-reduce:animate-none">
+        {/* User Message Bubble */}
         <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-br-sm px-4 py-3 bg-surface-secondary/90 border border-border-strong text-text-primary text-sm sm:text-base leading-relaxed shadow-sm whitespace-pre-wrap break-words select-text">
           {message.text}
+        </div>
+
+        {/* 3 Horizontal Action Icons below message (Copy, Edit, Delete) with premium spacing */}
+        <div className="flex items-center justify-end gap-2 mt-1.5 pr-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150">
+          {/* 1. Copy Icon Button */}
+          <button
+            type="button"
+            onClick={handleCopy}
+            title={copied ? "Copied!" : "Copy"}
+            aria-label="Copy"
+            className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-secondary/80 transition-colors cursor-pointer"
+          >
+            {copied ? (
+              <svg className="h-3.5 w-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+            )}
+          </button>
+
+          {/* 2. Edit Icon Button */}
+          <button
+            type="button"
+            onClick={handleStartEdit}
+            title="Edit"
+            aria-label="Edit"
+            className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-secondary/80 transition-colors cursor-pointer"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+          </button>
+
+          {/* 3. Delete Icon Button */}
+          <button
+            type="button"
+            onClick={handleDelete}
+            title="Delete"
+            aria-label="Delete"
+            className="p-1.5 rounded-lg text-text-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
         </div>
       </div>
     );

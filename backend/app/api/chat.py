@@ -28,15 +28,6 @@ async def create_chat(request: ChatRequest, db: Annotated[Session, Depends(get_d
     db.refresh(chat)
     return chat
 
-@router.get("/get_chat/{chat_id}", response_model=ChatResponse)
-async def get_chat(chat_id: int, db: Annotated[Session, Depends(get_db)],
-                   authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
-    stmt= select(Chat).where(Chat.id==chat_id, Chat.user_id==authenticated_user_id)
-    chat= db.execute(stmt).scalar()
-    if chat is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
-    return chat
-
 @router.get("/get_chats/{user_id}", response_model=list[ChatResponse])
 async def get_chats(user_id: int, db: Annotated[Session, Depends(get_db)],
                     authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):

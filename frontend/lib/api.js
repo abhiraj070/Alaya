@@ -272,6 +272,33 @@ export const messagesApi = {
   },
 
   /**
+   * Update message content and trigger AI answer regeneration
+   * PUT /api/messages/update_message/{chat_id}/{message_id}
+   * @param {number} chatId
+   * @param {number} messageId
+   * @param {string} content
+   * @returns {Promise<any>}
+   */
+  async updateMessage(chatId, messageId, content) {
+    return request(`/api/messages/update_message/${chatId}/${messageId}`, {
+      method: "PUT",
+      body: JSON.stringify({ message_content: content }),
+    });
+  },
+
+  /**
+   * Delete a message by ID
+   * DELETE /api/messages/delete_message/{message_id}
+   * @param {number} messageId
+   * @returns {Promise<{ detail: string }>}
+   */
+  async deleteMessage(messageId) {
+    return request(`/api/messages/delete_message/${messageId}`, {
+      method: "DELETE",
+    });
+  },
+
+  /**
    * Feed raw text knowledge into vector index
    * POST /api/messages/feed_knowledge
    * @param {{ textContent: string, tag?: string }} data

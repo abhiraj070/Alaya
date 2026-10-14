@@ -272,7 +272,7 @@ async def handle_new_message(chat_id: int,
 
     #stream final response
     return StreamingResponse(
-        send_prompt_for_response(search_results, user_id, chat_id, db),
+        send_prompt_for_response(search_results, chat_id, user_id, db),
         media_type="text/plain"
     )
 
@@ -296,7 +296,7 @@ async def get_messages(chat_id: int, db: Annotated[Session, Depends(get_db)],
     messages= db.execute(stmt).scalars().all()
     return messages
 
-@router.put("/update_message/{chat_id}/{message_id}", response_model=MessageResponse)
+@router.put("/update_message/{chat_id}/{message_id}")
 async def update_message(chat_id: int,
                          message_id: int,
                          request: MessageUpdateRequest,
@@ -351,8 +351,8 @@ async def update_message(chat_id: int,
 
     # search
     try:
-        search_results = retrieve_queries(db, user_id, embeddable_queries, decisions,
-                                          embeddings, message.id, send_prompt_to_plan)
+        search_results = await retrieve_queries(db, user_id, embeddable_queries, decisions,
+                                                embeddings, message.id, send_prompt_to_plan)
     except SQLAlchemyError:
         raise HTTPException(status_code=500, detail="Search could not be completed")
     except Exception:
@@ -360,7 +360,7 @@ async def update_message(chat_id: int,
 
     # stream final response
     return StreamingResponse(
-        send_prompt_for_response(search_results),
+        send_prompt_for_response(search_results, chat_id, user_id, db),
         media_type="text/plain"
     )
 
