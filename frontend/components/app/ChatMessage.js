@@ -106,8 +106,6 @@ export default function ChatMessage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef(null);
 
-
-
   // Focus and select textarea on edit open
   useEffect(() => {
     if (isEditing && textareaRef.current) {

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import AlayaWordmark from "@/components/ui/AlayaWordmark";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import UserAvatar from "@/components/ui/UserAvatar";
 
@@ -9,31 +8,30 @@ export default function AppHeader({
   isSidebarCollapsed = false,
   isMobileDrawerOpen = false,
   onToggleSidebar,
+  onNewChat,
+  activeTab = "chat",
   user,
 }) {
   const userName = user?.name || "Abhiraj Sharma";
 
   return (
     <header className="relative z-20 flex h-14 shrink-0 items-center justify-between border-b border-border-subtle bg-bg-secondary/90 px-3 sm:px-4 backdrop-blur-md select-none">
-      {/* Left side: Toggle button and ALAYA Wordmark */}
-      <div className="flex items-center gap-3 sm:gap-4">
-        {/* Sidebar / Mobile Drawer Toggle Button */}
+      {/* Left side: Navigation Toggle Buttons and Active Section Title */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Mobile Drawer Toggle Button (Visible only on mobile) */}
         <button
           type="button"
           onClick={onToggleSidebar}
-          aria-expanded={isMobileDrawerOpen || !isSidebarCollapsed}
-          aria-controls="app-sidebar mobile-nav-drawer"
+          aria-expanded={isMobileDrawerOpen}
+          aria-controls="mobile-nav-drawer"
           aria-label={
             isMobileDrawerOpen
               ? "Close navigation drawer"
-              : isSidebarCollapsed
-              ? "Expand sidebar"
-              : "Collapse sidebar"
+              : "Open navigation drawer"
           }
           title="Toggle navigation"
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-secondary hover:text-accent-sky hover:border-accent-sky/30 transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky"
+          className="flex md:hidden h-9 w-9 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-secondary hover:text-accent-sky hover:border-accent-sky/30 transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky"
         >
-          {/* Panel toggle icon */}
           <svg
             className="h-4.5 w-4.5"
             viewBox="0 0 24 24"
@@ -44,24 +42,70 @@ export default function AppHeader({
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <line x1="9" y1="3" x2="9" y2="21" />
-            {isSidebarCollapsed ? (
-              <polyline points="13 10 15 12 13 14" />
-            ) : (
-              <polyline points="15 10 13 12 15 14" />
-            )}
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
 
-        {/* ALAYA Brand Wordmark Link */}
-        <Link
-          href="/"
-          className="flex items-center group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky rounded-lg py-1 px-1.5"
-          aria-label="Alaya Homepage"
-        >
-          <AlayaWordmark className="text-lg sm:text-xl font-extrabold tracking-[0.22em] select-none" />
-        </Link>
+        {/* Desktop Expand Sidebar & New Chat Buttons (Visible only when sidebar is collapsed) */}
+        {isSidebarCollapsed && (
+          <div className="hidden md:flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              aria-label="Open sidebar"
+              title="Open sidebar"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-secondary hover:text-accent-sky hover:border-accent-sky/30 hover:bg-surface-secondary transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky"
+            >
+              <svg
+                className="h-4.5 w-4.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect width="18" height="18" x="3" y="3" rx="2" />
+                <path d="M9 3v18" />
+                <path d="m11 9 3 3-3 3" />
+              </svg>
+            </button>
+
+            {onNewChat && (
+              <button
+                type="button"
+                onClick={onNewChat}
+                aria-label="New chat"
+                title="New chat"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-secondary hover:text-accent-sky hover:border-accent-sky/30 hover:bg-surface-secondary transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky"
+              >
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Active Workspace / Section Indicator */}
+        <div className="flex items-center gap-2 px-1">
+          <span className="text-sm font-semibold tracking-wide text-text-primary">
+            {activeTab === "chat" ? "Ask" : "Knowledge Base"}
+          </span>
+        </div>
       </div>
 
       {/* Right side: Theme Toggle & Profile Navigation */}

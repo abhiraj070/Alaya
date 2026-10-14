@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import AppHeader from "@/components/app/AppHeader";
 import Sidebar from "@/components/app/Sidebar";
@@ -11,11 +11,19 @@ import KnowledgeBaseManager from "@/components/app/KnowledgeBaseManager";
 import { useAuth } from "@/lib/auth-context";
 import { chatApi, messagesApi } from "@/lib/api";
 
+const DEFAULT_SIDEBAR_WIDTH = 260;
+const MIN_SIDEBAR_WIDTH = 220;
+const MAX_SIDEBAR_WIDTH = 460;
+
 export default function AppShell() {
   const router = useRouter();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("chat"); // Chat (Ask) active by default
+
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarWidthRef = useRef(DEFAULT_SIDEBAR_WIDTH);
 
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
@@ -319,6 +327,68 @@ export default function AppShell() {
     });
   };
 
+  // Initialize sidebar width from localStorage after mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("alaya_sidebar_width");
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= MIN_SIDEBAR_WIDTH && parsed <= MAX_SIDEBAR_WIDTH) {
+          requestAnimationFrame(() => {
+            setSidebarWidth(parsed);
+          });
+          sidebarWidthRef.current = parsed;
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Drag-to-resize handlers inspired by ChatGPT web
+  const handleStartResize = (e) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  const handleResetSidebarWidth = () => {
+    setSidebarWidth(DEFAULT_SIDEBAR_WIDTH);
+    sidebarWidthRef.current = DEFAULT_SIDEBAR_WIDTH;
+    try {
+      localStorage.setItem("alaya_sidebar_width", String(DEFAULT_SIDEBAR_WIDTH));
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e) => {
+      const newWidth = Math.min(
+        MAX_SIDEBAR_WIDTH,
+        Math.max(MIN_SIDEBAR_WIDTH, e.clientX)
+      );
+      sidebarWidthRef.current = newWidth;
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      try {
+        localStorage.setItem("alaya_sidebar_width", String(sidebarWidthRef.current));
+      } catch {}
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+  }, [isResizing]);
+
   // Automatically close mobile drawer when viewport expands to desktop
   useEffect(() => {
     const handleResize = () => {
@@ -341,46 +411,53 @@ export default function AppShell() {
   };
 
   return (
-    <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-bg-primary text-text-primary selection:bg-accent-sky/25 selection:text-text-primary">
-      {/* Top Application Header */}
-      <AppHeader
-        isSidebarCollapsed={isSidebarCollapsed}
-        isMobileDrawerOpen={isMobileDrawerOpen}
-        onToggleSidebar={handleToggleSidebar}
+    <div className="relative flex h-screen w-screen overflow-hidden bg-bg-primary text-text-primary selection:bg-accent-sky/25 selection:text-text-primary">
+      {/* Desktop & Tablet Sidebar (Touches the top edge, full viewport height, draggable width) */}
+      <Sidebar
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={handleToggleSidebar}
+        sidebarWidth={sidebarWidth}
+        isResizing={isResizing}
+        onStartResize={handleStartResize}
+        onResetWidth={handleResetSidebarWidth}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        chats={chats}
+        activeChatId={activeChatId}
+        onNewChat={handleNewChat}
+        onSelectChat={handleSelectChat}
+        onUpdateChatTitle={handleUpdateChatTitle}
+        onDeleteChat={handleDeleteChat}
         user={user}
+        isLoadingChats={isLoadingChats}
       />
 
-      {/* Main Workspace Area (Sidebar + Main Content Container) */}
-      <div className="relative flex flex-1 overflow-hidden">
-        {/* Desktop & Tablet Sidebar (Hidden on mobile) */}
-        <Sidebar
-          isCollapsed={isSidebarCollapsed}
-          activeTab={activeTab}
-          onSelectTab={setActiveTab}
-          chats={chats}
-          activeChatId={activeChatId}
-          onNewChat={handleNewChat}
-          onSelectChat={handleSelectChat}
-          onUpdateChatTitle={handleUpdateChatTitle}
-          onDeleteChat={handleDeleteChat}
-          user={user}
-          isLoadingChats={isLoadingChats}
-        />
+      {/* Mobile Navigation Drawer (Overlay on mobile) */}
+      <MobileDrawer
+        isOpen={isMobileDrawerOpen}
+        onClose={() => setIsMobileDrawerOpen(false)}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        chats={chats}
+        activeChatId={activeChatId}
+        onNewChat={handleNewChat}
+        onSelectChat={handleSelectChat}
+        onUpdateChatTitle={handleUpdateChatTitle}
+        onDeleteChat={handleDeleteChat}
+        user={user}
+        isLoadingChats={isLoadingChats}
+      />
 
-        {/* Mobile Navigation Drawer (Overlay on mobile) */}
-        <MobileDrawer
-          isOpen={isMobileDrawerOpen}
-          onClose={() => setIsMobileDrawerOpen(false)}
-          activeTab={activeTab}
-          onSelectTab={setActiveTab}
-          chats={chats}
-          activeChatId={activeChatId}
+      {/* Main Workspace Column (Header + Main Content) */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-bg-primary">
+        {/* Top Application Header */}
+        <AppHeader
+          isSidebarCollapsed={isSidebarCollapsed}
+          isMobileDrawerOpen={isMobileDrawerOpen}
+          onToggleSidebar={handleToggleSidebar}
           onNewChat={handleNewChat}
-          onSelectChat={handleSelectChat}
-          onUpdateChatTitle={handleUpdateChatTitle}
-          onDeleteChat={handleDeleteChat}
+          activeTab={activeTab}
           user={user}
-          isLoadingChats={isLoadingChats}
         />
 
         {/* Resizing Main Content Area */}

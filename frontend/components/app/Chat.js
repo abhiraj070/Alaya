@@ -154,14 +154,17 @@ export default function Chat({ chatId, messages = [], setMessages }) {
 
     setMessages((prev) => [...prev, userMsg]);
 
-    const isRealBackendChat =
-      typeof chatId === "number" &&
-      typeof user?.id === "number" &&
-      user?.isAuthenticated;
-
-    // If unauthenticated or local mock chat, use simulation
-    if (!isRealBackendChat) {
-      triggerAssistantResponse(trimmed);
+    // Check if user is authenticated with a backend user account
+    if (!user?.id || typeof user.id !== "number" || !user?.isAuthenticated) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `asst_${Date.now()}`,
+          sender: "alaya",
+          text: "You are not logged in. Please sign in at /auth with your account to send messages to the backend and access your knowledge base.",
+          isStreaming: false,
+        },
+      ]);
       return;
     }
 
@@ -183,9 +186,15 @@ export default function Chat({ chatId, messages = [], setMessages }) {
     abortControllerRef.current = controller;
 
     try {
+      let targetChatId = chatId;
+      if (typeof targetChatId !== "number") {
+        const created = await chatApi.createChat(user.id, "New chat");
+        targetChatId = created.id;
+      }
+
       let hasReceivedFirstChunk = false;
       await messagesApi.sendNewMessage(
-        chatId,
+        targetChatId,
         trimmed,
         user.id,
         (accumulatedText) => {
@@ -215,7 +224,7 @@ export default function Chat({ chatId, messages = [], setMessages }) {
 
       // Re-sync messages from backend to get official database IDs
       try {
-        const syncedMessages = await messagesApi.getMessages(chatId);
+        const syncedMessages = await messagesApi.getMessages(targetChatId);
         if (Array.isArray(syncedMessages) && syncedMessages.length > 0) {
           const normalized = syncedMessages.map((m) => ({
             id: m.message_id || m.id,
@@ -229,12 +238,20 @@ export default function Chat({ chatId, messages = [], setMessages }) {
       }
     } catch (err) {
       if (err.name === "AbortError") return;
-      console.warn("Backend stream error, falling back to simulation:", err);
+      console.error("Backend stream error:", err);
       setIsThinking(false);
       setIsStreaming(false);
-      // Remove empty assistant placeholder and fallback to simulated response
-      setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId));
-      triggerAssistantResponse(trimmed);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMsgId
+            ? {
+                ...msg,
+                text: `Backend Error: ${err.message || "Failed to generate response from backend"}`,
+                isStreaming: false,
+              }
+            : msg
+        )
+      );
     } finally {
       abortControllerRef.current = null;
     }
@@ -245,12 +262,6 @@ export default function Chat({ chatId, messages = [], setMessages }) {
     const trimmed = newContent.trim();
     if (!trimmed || isThinking || isStreaming) return;
 
-    const isRealBackendChat =
-      typeof chatId === "number" &&
-      typeof user?.id === "number" &&
-      user?.isAuthenticated &&
-      typeof messageId === "number";
-
     // 1. Treat as new message: update user message text & remove trailing stale assistant reply
     setMessages((prev) => {
       const idx = prev.findIndex((m) => m.id === messageId);
@@ -260,8 +271,16 @@ export default function Chat({ chatId, messages = [], setMessages }) {
       return truncated;
     });
 
-    if (!isRealBackendChat) {
-      triggerAssistantResponse(trimmed);
+    if (!user?.id || typeof user.id !== "number" || !user?.isAuthenticated) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `asst_${Date.now()}`,
+          sender: "alaya",
+          text: "You are not logged in. Please sign in at /auth with your account to edit messages and query the backend.",
+          isStreaming: false,
+        },
+      ]);
       return;
     }
 
@@ -326,11 +345,20 @@ export default function Chat({ chatId, messages = [], setMessages }) {
       } catch {}
     } catch (err) {
       if (err.name === "AbortError") return;
-      console.warn("Backend update message failed, falling back to simulated response:", err);
+      console.error("Backend update message failed:", err);
       setIsThinking(false);
       setIsStreaming(false);
-      setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId));
-      triggerAssistantResponse(trimmed);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMsgId
+            ? {
+                ...msg,
+                text: `Backend Error: ${err.message || "Failed to update message on backend"}`,
+                isStreaming: false,
+              }
+            : msg
+        )
+      );
     } finally {
       abortControllerRef.current = null;
     }

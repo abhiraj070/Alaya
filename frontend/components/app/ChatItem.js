@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MoreHorizontal, Pencil, Trash2, Check, X } from "lucide-react";
 
 export default function ChatItem({
   chat,
@@ -13,14 +12,11 @@ export default function ChatItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(chat.title || "New chat");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [openUpward, setOpenUpward] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
   const menuRef = useRef(null);
   const inputRef = useRef(null);
   const menuButtonRef = useRef(null);
-
-
 
   // Focus input when starting inline edit
   useEffect(() => {
@@ -30,7 +26,7 @@ export default function ChatItem({
     }
   }, [isEditing]);
 
-  // Close dropdown menu on click outside or escape
+  // Close dropdown menu on click outside
   useEffect(() => {
     if (!isMenuOpen) return;
 
@@ -58,16 +54,6 @@ export default function ChatItem({
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isMenuOpen]);
-
-  const handleToggleMenu = (e) => {
-    e.stopPropagation();
-    if (!isMenuOpen && menuButtonRef.current) {
-      const rect = menuButtonRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      setOpenUpward(spaceBelow < 120);
-    }
-    setIsMenuOpen((prev) => !prev);
-  };
 
   const handleStartEdit = () => {
     setIsMenuOpen(false);
@@ -116,7 +102,7 @@ export default function ChatItem({
   if (isEditing) {
     return (
       <div
-        className="flex items-center gap-1.5 w-full h-9 px-2 rounded-[10px] border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs animate-fadeIn"
+        className="flex items-center gap-1 w-full px-2 py-1 rounded-lg border border-accent-sky/60 bg-surface-secondary shadow-xs animate-fadeIn"
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -134,7 +120,7 @@ export default function ChatItem({
               handleCancelEdit();
             }
           }}
-          className="flex-1 min-w-0 bg-transparent text-xs text-slate-800 dark:text-slate-100 px-1 py-0.5 focus:outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+          className="flex-1 min-w-0 bg-transparent text-xs text-text-primary px-1 py-0.5 focus:outline-none placeholder:text-text-muted"
           placeholder="Chat title..."
           maxLength={60}
           aria-label="Edit chat title"
@@ -147,9 +133,19 @@ export default function ChatItem({
           disabled={isUpdating}
           title="Save title"
           aria-label="Save title"
-          className="h-6 w-6 flex items-center justify-center rounded-[6px] text-accent-sky hover:bg-accent-sky/15 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+          className="p-1 rounded text-accent-sky hover:bg-accent-sky/20 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
         >
-          <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+          <svg
+            className="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
         </button>
 
         {/* Cancel Button */}
@@ -159,9 +155,20 @@ export default function ChatItem({
           disabled={isUpdating}
           title="Cancel"
           aria-label="Cancel"
-          className="h-6 w-6 flex items-center justify-center rounded-[6px] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+          className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface-tertiary transition-colors cursor-pointer shrink-0"
         >
-          <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+          <svg
+            className="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
         </button>
       </div>
     );
@@ -170,10 +177,10 @@ export default function ChatItem({
   // Standard chat item view with 3-dots action menu
   return (
     <div
-      className={`group relative flex items-center justify-between w-full h-9 px-2 rounded-[10px] transition-colors duration-150 ${
+      className={`group relative flex items-center justify-between w-full rounded-lg transition-all duration-150 ${
         isCurrent
-          ? "bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium"
-          : "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-800 dark:hover:text-slate-200"
+          ? "bg-accent-sky/15 text-accent-sky font-medium border border-accent-sky/30 shadow-xs"
+          : "text-text-secondary hover:text-text-primary hover:bg-surface-tertiary/70 border border-transparent"
       }`}
       style={{ touchAction: "pan-y" }}
     >
@@ -181,78 +188,88 @@ export default function ChatItem({
       <button
         type="button"
         onClick={onSelect}
-        className="flex-1 min-w-0 text-left text-xs py-1.5 px-1 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-400 dark:focus-visible:ring-slate-500 rounded-md truncate"
+        className="flex-1 min-w-0 text-left text-xs px-2.5 py-2 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate"
         title={chat.title || "New chat"}
       >
         <span className="truncate block">{chat.title || "New chat"}</span>
       </button>
 
       {/* 3-dots Actions Menu Trigger */}
-      <div className="relative shrink-0 pl-1">
+      <div className="relative shrink-0 pr-1">
         <button
           ref={menuButtonRef}
           type="button"
-          onClick={handleToggleMenu}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsMenuOpen((prev) => !prev);
+          }}
           title="Chat options"
           aria-label="Chat options"
           aria-haspopup="menu"
           aria-expanded={isMenuOpen}
-          className={`h-7 w-7 flex items-center justify-center rounded-[8px] transition-all cursor-pointer text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-400 ${
-            isMenuOpen || isCurrent
-              ? "opacity-100"
-              : "opacity-0 group-hover:opacity-100 md:opacity-0 focus-visible:opacity-100 max-md:opacity-100"
+          className={`h-6 w-6 flex items-center justify-center rounded-md transition-all cursor-pointer ${
+            isMenuOpen
+              ? "opacity-100 bg-surface-secondary text-text-primary"
+              : "opacity-0 group-hover:opacity-100 md:opacity-0 focus-visible:opacity-100 text-text-muted hover:text-text-primary hover:bg-surface-secondary max-md:opacity-80"
           }`}
         >
-          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="1.5" />
+            <circle cx="6" cy="12" r="1.5" />
+            <circle cx="18" cy="12" r="1.5" />
+          </svg>
         </button>
 
         {/* Floating 3-dots Dropdown Menu */}
         {isMenuOpen && (
           <div
             ref={menuRef}
-            className={`absolute right-0 z-50 min-w-[148px] rounded-xl border border-slate-200/90 dark:border-border-strong bg-white/95 dark:bg-surface-primary/95 backdrop-blur-md p-1.5 shadow-lg shadow-black/10 dark:shadow-[0_8px_24px_rgba(0,0,0,0.45)] space-y-1 animate-fadeIn ${
-              openUpward ? "bottom-full mb-1.5" : "top-full mt-1.5"
-            }`}
+            className="absolute right-0 top-full mt-1 z-50 min-w-[130px] rounded-xl border border-border-strong bg-surface-secondary p-1 shadow-xl backdrop-blur-md animate-fadeIn"
             role="menu"
             aria-orientation="vertical"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 1. Edit / Rename Button */}
+            {/* 1. Edit Title Option */}
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleStartEdit();
-              }}
-              className="group/btn flex w-full h-9 items-center gap-2.5 rounded-lg px-3 text-xs font-medium text-slate-700 dark:text-text-secondary hover:text-slate-900 dark:hover:text-text-primary bg-transparent hover:bg-slate-100 dark:hover:bg-surface-secondary border border-transparent hover:border-slate-200/60 dark:hover:border-border-subtle transition-all duration-150 cursor-pointer text-left select-none focus-visible:outline-none focus-visible:ring-1.5 focus-visible:ring-slate-400 dark:focus-visible:ring-accent-sky/50"
+              onClick={handleStartEdit}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-text-secondary hover:bg-surface-tertiary hover:text-text-primary transition-colors cursor-pointer text-left"
               role="menuitem"
             >
-              <Pencil
-                className="h-4 w-4 text-slate-500 dark:text-text-muted group-hover/btn:text-slate-800 dark:group-hover/btn:text-text-primary transition-colors shrink-0"
-                strokeWidth={1.75}
-                aria-hidden="true"
-              />
-              <span>Rename</span>
+              <svg
+                className="h-3.5 w-3.5 text-text-muted"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+              </svg>
+              <span>Edit title</span>
             </button>
 
-            {/* Subtle Separator */}
-            <div className="border-t border-slate-100 dark:border-border-subtle/80 my-0.5" role="separator" />
-
-            {/* 2. Delete Chat Button */}
+            {/* 2. Delete Chat Option */}
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete();
-              }}
-              className="group/btn flex w-full h-9 items-center gap-2.5 rounded-lg px-3 text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 bg-transparent hover:bg-rose-50 dark:hover:bg-rose-500/10 border border-transparent hover:border-rose-200/70 dark:hover:border-rose-500/20 transition-all duration-150 cursor-pointer text-left select-none focus-visible:outline-none focus-visible:ring-1.5 focus-visible:ring-rose-400"
+              onClick={handleDelete}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-rose-400 hover:bg-rose-500/15 hover:text-rose-300 transition-colors cursor-pointer text-left"
               role="menuitem"
             >
-              <Trash2
-                className="h-4 w-4 text-rose-500 dark:text-rose-400 group-hover/btn:text-rose-600 dark:group-hover/btn:text-rose-300 transition-colors shrink-0"
-                strokeWidth={1.75}
-                aria-hidden="true"
-              />
+              <svg
+                className="h-3.5 w-3.5 text-rose-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
               <span>Delete</span>
             </button>
           </div>
