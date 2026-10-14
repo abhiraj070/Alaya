@@ -67,7 +67,7 @@ export default function HeroChatDemo() {
   };
 
   return (
-    <div className="relative w-full rounded-2xl border border-border-strong bg-surface-primary/90 p-3 sm:p-5 shadow-2xl backdrop-blur-xl min-h-[500px] flex flex-col justify-between overflow-hidden">
+    <div className="relative w-full rounded-2xl border border-border-strong bg-surface-primary/90 p-3 sm:p-5 shadow-2xl backdrop-blur-xl h-[620px] sm:h-[580px] lg:h-[490px] flex flex-col justify-between overflow-hidden">
       {/* Window Title Bar */}
       <div className="flex shrink-0 items-center justify-between border-b border-border-subtle pb-3">
         <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export default function HeroChatDemo() {
             {/* Alaya Response Message */}
             {(statePhase === "responding" || statePhase === "idle") && (
               <div className="flex justify-start animate-fadeIn">
-                <div className="max-w-[95%] rounded-2xl rounded-tl-sm bg-surface-primary border border-accent-sky/30 p-3.5 shadow-md text-xs sm:text-[13px]">
+                <div className="w-full max-w-[95%] rounded-2xl rounded-tl-sm bg-surface-primary border border-accent-sky/30 p-3.5 shadow-md text-xs sm:text-[13px] min-h-[175px] flex flex-col justify-between">
                   <div className="flex items-center gap-2 text-xs mb-2">
                     <AlayaWordmark className="font-bold text-xs" />
                     <span className="text-text-muted">· Grounded Answer</span>
