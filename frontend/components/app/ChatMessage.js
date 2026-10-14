@@ -106,12 +106,7 @@ export default function ChatMessage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef(null);
 
-  // Sync edit text when message text changes
-  useEffect(() => {
-    if (!isEditing) {
-      setEditText(message.text || "");
-    }
-  }, [message.text, isEditing]);
+
 
   // Focus and select textarea on edit open
   useEffect(() => {

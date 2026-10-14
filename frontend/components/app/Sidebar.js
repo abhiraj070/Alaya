@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
+import { SquarePen } from "lucide-react";
 import SidebarItem from "@/components/app/SidebarItem";
 import UserAvatar from "@/components/ui/UserAvatar";
 import ChatItem from "@/components/app/ChatItem";
@@ -52,22 +53,6 @@ export default function Sidebar({
     </svg>
   );
 
-  const plusIcon = (
-    <svg
-      className="h-4.5 w-4.5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-
   const userName = user?.name || "Abhiraj Sharma";
   const userUsername = user?.username ? `@${user.username.replace(/^@/, "")}` : "@abhiraj";
 
@@ -75,7 +60,7 @@ export default function Sidebar({
     <aside
       id="app-sidebar"
       aria-label="Application navigation"
-      className={`relative hidden md:flex flex-col justify-between shrink-0 h-full border-r border-border-subtle bg-bg-secondary select-none transition-[width] duration-300 ease-in-out motion-reduce:transition-none z-10 ${
+      className={`relative hidden md:flex flex-col justify-between shrink-0 h-full border-r border-slate-200/80 dark:border-border-subtle bg-slate-50 dark:bg-bg-secondary select-none transition-[width] duration-300 ease-in-out motion-reduce:transition-none z-10 ${
         isCollapsed ? "w-16" : "w-64"
       }`}
     >
@@ -96,21 +81,19 @@ export default function Sidebar({
               onClick={onNewChat}
               title="New chat"
               aria-label="New chat"
-              className="flex h-10 w-full items-center justify-center rounded-xl border border-dashed border-border-strong hover:border-accent-sky/50 bg-surface-secondary/70 hover:bg-surface-secondary text-text-secondary hover:text-accent-sky transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky"
+              className="flex h-10 w-full items-center justify-center rounded-[10px] bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
             >
-              {plusIcon}
+              <SquarePen className="h-4 w-4" aria-hidden="true" />
             </button>
           ) : (
             <button
               type="button"
               onClick={onNewChat}
-              className="group flex h-10 w-full items-center gap-3 px-3 py-2 rounded-xl border border-dashed border-border-strong hover:border-accent-sky/50 bg-surface-secondary/70 hover:bg-surface-secondary text-text-primary hover:text-accent-sky transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky"
+              className="flex h-10 w-full items-center gap-2.5 px-3 rounded-[10px] bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 font-medium transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
               aria-label="New chat"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-accent-sky/15 text-accent-sky group-hover:bg-accent-sky group-hover:text-bg-primary transition-all">
-                {plusIcon}
-              </span>
-              <span className="truncate text-xs sm:text-sm font-semibold tracking-wide">
+              <SquarePen className="h-4 w-4 text-slate-500 dark:text-slate-400 shrink-0" aria-hidden="true" />
+              <span className="truncate text-sm font-medium">
                 New chat
               </span>
             </button>
@@ -144,24 +127,24 @@ export default function Sidebar({
         {/* All Chats Container with Rounded Borders and Slightly Lighter Background */}
         {isCollapsed ? (
           <div
-            className="flex flex-col items-center py-2 px-1 rounded-xl bg-surface-secondary/70 border border-border-subtle"
+            className="flex flex-col items-center py-2 px-1 rounded-xl bg-white/80 dark:bg-surface-secondary/70 border border-slate-200/80 dark:border-border-subtle"
             title={`All Chats (${chats.length})`}
           >
             <button
               type="button"
               onClick={() => onSelectTab("chat")}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:text-accent-sky hover:bg-surface-tertiary transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 dark:text-text-muted hover:text-slate-900 dark:hover:text-accent-sky hover:bg-slate-100 dark:hover:bg-surface-tertiary transition-colors"
               aria-label={`All Chats (${chats.length})`}
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
             </button>
-            <span className="text-[10px] font-mono text-text-muted mt-0.5">{chats.length}</span>
+            <span className="text-[10px] font-mono text-slate-500 dark:text-text-muted mt-0.5">{chats.length}</span>
           </div>
         ) : (
           <div
-            className="flex-1 flex flex-col min-h-0 rounded-xl border border-border-strong/40 bg-surface-secondary/70 p-2 shadow-xs"
+            className="flex-1 flex flex-col min-h-0 rounded-xl border border-slate-200/80 dark:border-border-strong/40 bg-white/80 dark:bg-surface-secondary/70 p-2 shadow-xs"
             onWheel={(e) => {
               if (chatListRef.current && !chatListRef.current.contains(e.target)) {
                 chatListRef.current.scrollTop += e.deltaY;
@@ -169,14 +152,14 @@ export default function Sidebar({
             }}
           >
             {/* Header: All Chats */}
-            <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] font-semibold tracking-wider text-text-muted uppercase shrink-0">
+            <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] font-semibold tracking-wider text-slate-500 dark:text-text-muted uppercase shrink-0">
               <span className="flex items-center gap-1.5">
-                <svg className="h-3 w-3 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg className="h-3 w-3 text-slate-400 dark:text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
                 All Chats
               </span>
-              <span className="text-[10px] font-mono font-normal text-text-muted/80">{chats.length}</span>
+              <span className="text-[10px] font-mono font-normal text-slate-400 dark:text-text-muted/80">{chats.length}</span>
             </div>
 
             {/* List of Chats */}

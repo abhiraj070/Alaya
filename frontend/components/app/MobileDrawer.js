@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { SquarePen } from "lucide-react";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 import UserAvatar from "@/components/ui/UserAvatar";
 import ChatItem from "@/components/app/ChatItem";
@@ -76,21 +77,7 @@ export default function MobileDrawer({
     </svg>
   );
 
-  const plusIcon = (
-    <svg
-      className="h-4.5 w-4.5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
+
 
   return (
     <div
@@ -114,7 +101,7 @@ export default function MobileDrawer({
         id="mobile-nav-drawer"
         aria-modal="true"
         aria-label="Navigation drawer"
-        className={`relative z-10 flex h-full w-72 max-w-[85vw] flex-col justify-between border-r border-border-strong bg-bg-secondary p-4 shadow-[0_0_50px_rgba(0,0,0,0.85)] transition-transform duration-300 ease-in-out motion-reduce:transition-none select-none ${
+        className={`relative z-10 flex h-full w-72 max-w-[85vw] flex-col justify-between border-r border-slate-200/80 dark:border-border-strong bg-slate-50 dark:bg-bg-secondary p-4 shadow-[0_0_50px_rgba(0,0,0,0.85)] transition-transform duration-300 ease-in-out motion-reduce:transition-none select-none ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -160,13 +147,11 @@ export default function MobileDrawer({
                 onNewChat();
                 onClose();
               }}
-              className="group flex h-10 w-full items-center gap-3 px-3 py-2 rounded-xl border border-dashed border-border-strong hover:border-accent-sky/50 bg-surface-secondary/70 hover:bg-surface-secondary text-text-primary hover:text-accent-sky transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky"
+              className="flex h-10 w-full items-center gap-2.5 px-3 rounded-[10px] bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 font-medium transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
               aria-label="New chat"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-accent-sky/15 text-accent-sky group-hover:bg-accent-sky group-hover:text-bg-primary transition-all">
-                {plusIcon}
-              </span>
-              <span className="truncate text-sm font-semibold tracking-wide">
+              <SquarePen className="h-4 w-4 text-slate-500 dark:text-slate-400 shrink-0" aria-hidden="true" />
+              <span className="truncate text-sm font-medium">
                 New chat
               </span>
             </button>
@@ -232,21 +217,21 @@ export default function MobileDrawer({
 
           {/* All Chats Container */}
           <div
-            className="flex-1 flex flex-col min-h-0 rounded-xl border border-border-strong/40 bg-surface-secondary/70 p-2 shadow-xs mb-2"
+            className="flex-1 flex flex-col min-h-0 rounded-xl border border-slate-200/80 dark:border-border-strong/40 bg-white/80 dark:bg-surface-secondary/70 p-2 shadow-xs mb-2"
             onWheel={(e) => {
               if (mobileChatListRef.current && !mobileChatListRef.current.contains(e.target)) {
                 mobileChatListRef.current.scrollTop += e.deltaY;
               }
             }}
           >
-            <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] font-semibold tracking-wider text-text-muted uppercase shrink-0">
+            <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] font-semibold tracking-wider text-slate-500 dark:text-text-muted uppercase shrink-0">
               <span className="flex items-center gap-1.5">
-                <svg className="h-3 w-3 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg className="h-3 w-3 text-slate-400 dark:text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
                 All Chats
               </span>
-              <span className="text-[10px] font-mono font-normal text-text-muted/80">{chats.length}</span>
+              <span className="text-[10px] font-mono font-normal text-slate-400 dark:text-text-muted/80">{chats.length}</span>
             </div>
 
             <div
