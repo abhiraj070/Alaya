@@ -5,10 +5,10 @@
  * Examples: "Abhiraj Sharma" -> "AS", "Alex Mercer" -> "AM", "Alaya" -> "AL"
  */
 export function getInitials(name) {
-  if (!name || typeof name !== "string") return "AL";
+  if (!name || typeof name !== "string") return "A";
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "AL";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  if (parts.length === 0) return "A";
+  if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
@@ -25,7 +25,8 @@ export default function UserAvatar({
   const sizeClasses = {
     sm: "h-8 w-8 text-[11px]",
     md: "h-9 w-9 text-xs",
-    lg: "h-11 w-11 text-sm",
+    lg: "h-12 w-12 text-base",
+    xl: "h-20 w-20 text-2xl",
   };
 
   const selectedSize = sizeClasses[size] || sizeClasses.md;

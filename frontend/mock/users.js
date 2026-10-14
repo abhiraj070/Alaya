@@ -42,6 +42,38 @@ export function getStoredUser() {
   return mockUser;
 }
 
+export function updateStoredUser(updates) {
+  if (typeof window === "undefined") return { ...mockUser, ...updates };
+  try {
+    const current = getStoredUser();
+    const updated = {
+      ...current,
+      ...updates,
+      isAuthenticated: true,
+    };
+    cachedUser = updated;
+    const json = JSON.stringify(updated);
+    sessionStorage.setItem("alaya_user", json);
+    localStorage.setItem("alaya_user", json);
+    lastStoredRaw = json;
+    window.dispatchEvent(new Event("storage"));
+    return updated;
+  } catch {
+    return { ...mockUser, ...updates };
+  }
+}
+
+export function clearStoredUser() {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem("alaya_user");
+    localStorage.removeItem("alaya_user");
+    cachedUser = { ...mockUser, isAuthenticated: false };
+    lastStoredRaw = null;
+    window.dispatchEvent(new Event("storage"));
+  } catch {}
+}
+
 export function subscribeUserStorage(callback) {
   if (typeof window === "undefined") return () => {};
   window.addEventListener("storage", callback);

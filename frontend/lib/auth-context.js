@@ -2,6 +2,13 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { authApi } from "@/lib/api";
+import {
+  getStoredUser,
+  updateStoredUser,
+  clearStoredUser,
+  subscribeUserStorage,
+  mockUser,
+} from "@/mock/users";
 
 const STORAGE_KEY = "alaya_user";
 
@@ -11,13 +18,14 @@ const AuthContext = createContext({
   error: null,
   login: async () => {},
   register: async () => {},
-  logout: async () => {},
+  logout: () => {},
+  updateUser: () => {},
   refreshUser: async () => {},
 });
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(() => getStoredUser());
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Sync user state to browser storage
@@ -38,84 +46,56 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Check initial authentication status from storage and verify with backend
+  // Subscribe to shared storage changes across tabs and components
   useEffect(() => {
-    let isMounted = true;
+    const unsubscribe = subscribeUserStorage(() => {
+      const updated = getStoredUser();
+      setUser(updated);
+    });
 
-    async function initializeAuth() {
-      if (typeof window === "undefined") return;
+    return unsubscribe;
+  }, []);
 
-      let storedUserData = null;
-      try {
-        const raw = sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          storedUserData = JSON.parse(raw);
-        }
-      } catch {
-        storedUserData = null;
-      }
-
-      if (storedUserData && storedUserData.id) {
-        if (isMounted) {
-          setUser({ ...storedUserData, isAuthenticated: true });
-        }
-
-        // Validate session with backend
-        try {
-          const freshUser = await authApi.getUser(storedUserData.id);
-          if (isMounted && freshUser) {
-            const updated = {
-              id: freshUser.id,
-              name: freshUser.name,
-              username: freshUser.username,
-              isAuthenticated: true,
-            };
-            setUser(updated);
-            persistUser(updated);
-          }
-        } catch (err) {
-          // If session expired or invalid on backend (401), clear local session
-          if (err?.status === 401 || err?.status === 404) {
-            if (isMounted) {
-              setUser(null);
-              persistUser(null);
-            }
-          }
-        }
-      } else {
-        if (isMounted) {
-          setUser(null);
-        }
-      }
-
-      if (isMounted) {
-        setIsLoading(false);
-      }
-    }
-
-    initializeAuth();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [persistUser]);
+  // Update user profile (frontend-only mock state update)
+  const updateUser = useCallback((updates) => {
+    const updated = updateStoredUser(updates);
+    setUser(updated);
+    return updated;
+  }, []);
 
   // Login handler
   const login = useCallback(
     async (username, password) => {
       setError(null);
-      const res = await authApi.login({ username, password });
-      const authenticatedUser = {
-        id: res.id,
-        name: res.name,
-        username: res.username,
-        isAuthenticated: true,
-      };
-      setUser(authenticatedUser);
-      persistUser(authenticatedUser);
-      return authenticatedUser;
+      try {
+        const res = await authApi.login({ username, password });
+        const authenticatedUser = {
+          ...mockUser,
+          id: res.id,
+          name: res.name,
+          username: res.username,
+          isAuthenticated: true,
+        };
+        updateStoredUser(authenticatedUser);
+        setUser(authenticatedUser);
+        return authenticatedUser;
+      } catch (err) {
+        if (err.status) {
+          throw err;
+        }
+        // Fallback for offline frontend prototype
+        const fallback = {
+          ...mockUser,
+          name: username,
+          username: username.replace(/^@/, ""),
+          isAuthenticated: true,
+        };
+        updateStoredUser(fallback);
+        setUser(fallback);
+        return fallback;
+      }
     },
-    [persistUser]
+    []
   );
 
   // Register handler
@@ -124,39 +104,17 @@ export function AuthProvider({ children }) {
     return await authApi.register({ name, username, password });
   }, []);
 
-  // Logout handler
-  const logout = useCallback(async () => {
-    try {
-      if (user?.id) {
-        await authApi.logout(user.id);
-      }
-    } catch {
-      // Ignore network errors on logout to allow clean client logout
-    } finally {
-      setUser(null);
-      persistUser(null);
-    }
-  }, [user, persistUser]);
+  // Logout handler (strictly frontend-only per Phase 7.1)
+  const logout = useCallback(() => {
+    clearStoredUser();
+    setUser(null);
+  }, []);
 
-  // Refresh user data from backend
-  const refreshUser = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const freshUser = await authApi.getUser(user.id);
-      if (freshUser) {
-        const updated = {
-          id: freshUser.id,
-          name: freshUser.name,
-          username: freshUser.username,
-          isAuthenticated: true,
-        };
-        setUser(updated);
-        persistUser(updated);
-      }
-    } catch {
-      // Ignore refresh failure
-    }
-  }, [user, persistUser]);
+  // Refresh user data from backend/storage
+  const refreshUser = useCallback(() => {
+    const current = getStoredUser();
+    setUser(current);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -167,6 +125,7 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
+        updateUser,
         refreshUser,
       }}
     >
