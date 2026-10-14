@@ -133,7 +133,8 @@ export default function DeleteAccountModal({
             {/* Dynamic Account Handle */}
             <div className="mt-1.5 flex items-center">
               <span
-                className="truncate max-w-full text-xs font-mono font-medium text-[#F5F7FA]/90 bg-[#11161B] border border-white/[0.06] px-2.5 py-0.5 rounded-md"
+                className="truncate max-w-full text-xs font-mono font-medium text-white bg-[#11161B] border border-white/[0.1] px-2.5 py-0.5 rounded-md"
+                style={{ color: "#ffffff" }}
                 title={displayHandle}
               >
                 {displayHandle}
@@ -163,7 +164,8 @@ export default function DeleteAccountModal({
             type="button"
             disabled={isDeleting}
             onClick={onClose}
-            className="w-full sm:w-auto h-9 px-4 rounded-xl border border-white/[0.08] bg-[#11161B] hover:bg-[#161C23] text-xs font-medium text-[#A1AAB5] hover:text-[#F5F7FA] hover:border-white/[0.14] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky disabled:opacity-50 flex items-center justify-center"
+            className="w-full sm:w-auto h-9 px-4 rounded-xl border border-white/[0.12] bg-[#11161B] hover:bg-[#161C23] text-xs font-medium text-white hover:text-white hover:border-white/[0.2] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky disabled:opacity-50 flex items-center justify-center"
+            style={{ color: "#ffffff" }}
           >
             Keep account
           </button>
