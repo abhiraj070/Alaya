@@ -1,6 +1,9 @@
 export default function AlayaWordmark({ className = "" }) {
   return (
-    <span className={`inline-flex items-center uppercase ${className}`}>
+    <span
+      className={`inline-flex items-center uppercase font-garamond ${className}`}
+      style={{ fontFamily: '"EB Garamond", Garamond, "Baskerville", "Times New Roman", serif' }}
+    >
       <span className="text-accent-sky">
         A
       </span>

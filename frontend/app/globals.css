@@ -1,9 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap');
 @import "tailwindcss";
 
 /* ==========================================================================
    Alaya Design System - Design Tokens & Theme Configuration
    Theme: Black and Sky Blue (Futuristic, Minimal, Premium, Technically Sophisticated)
    ========================================================================== */
+
+.font-garamond {
+  font-family: "EB Garamond", Garamond, "Baskerville", "Baskerville Old Face", "Hoefler Text", "Times New Roman", serif;
+}
 
 @theme {
   /* Color Palette - Backgrounds */
