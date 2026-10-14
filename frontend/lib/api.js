@@ -272,18 +272,148 @@ export const messagesApi = {
   },
 
   /**
-   * Update message content and trigger AI answer regeneration
+   * Send a new message to chat and stream AI response chunks
+   * POST /api/messages/new_messages/{chat_id}
+   * @param {number} chatId
+   * @param {string} content
+   * @param {number} userId
+   * @param {(accumulated: string, chunk: string) => void} [onChunk]
+   * @param {AbortSignal} [signal]
+   * @returns {Promise<string>} Full response text
+   */
+  async sendNewMessage(chatId, content, userId, onChunk, signal) {
+    const url = `${API_BASE}/api/messages/new_messages/${chatId}`;
+    let response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message_content: content,
+          user_id: userId,
+        }),
+        signal,
+      });
+    } catch (networkError) {
+      throw new ApiError(
+        "Unable to connect to backend server. Please verify the backend is running.",
+        0,
+        networkError.message
+      );
+    }
+
+    if (!response.ok) {
+      const contentType = response.headers.get("content-type") || "";
+      let detail = null;
+      if (contentType.includes("application/json")) {
+        const json = await response.json().catch(() => ({}));
+        detail = json?.detail || (typeof json === "string" ? json : null);
+      } else {
+        detail = await response.text().catch(() => "");
+      }
+      throw new ApiError(
+        typeof detail === "string" && detail ? detail : `Request failed with status ${response.status}`,
+        response.status,
+        detail
+      );
+    }
+
+    if (!response.body) {
+      return "";
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let accumulated = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      accumulated += chunk;
+      if (typeof onChunk === "function") {
+        onChunk(accumulated, chunk);
+      }
+    }
+
+    return accumulated;
+  },
+
+  /**
+   * Update message content and trigger AI answer regeneration (with streaming support)
    * PUT /api/messages/update_message/{chat_id}/{message_id}
    * @param {number} chatId
    * @param {number} messageId
    * @param {string} content
-   * @returns {Promise<any>}
+   * @param {(accumulated: string, chunk: string) => void} [onChunk]
+   * @param {AbortSignal} [signal]
+   * @returns {Promise<string>}
    */
-  async updateMessage(chatId, messageId, content) {
-    return request(`/api/messages/update_message/${chatId}/${messageId}`, {
-      method: "PUT",
-      body: JSON.stringify({ message_content: content }),
-    });
+  async updateMessage(chatId, messageId, content, onChunk, signal) {
+    if (typeof onChunk !== "function") {
+      return request(`/api/messages/update_message/${chatId}/${messageId}`, {
+        method: "PUT",
+        body: JSON.stringify({ message_content: content }),
+        signal,
+      });
+    }
+
+    const url = `${API_BASE}/api/messages/update_message/${chatId}/${messageId}`;
+    let response;
+    try {
+      response = await fetch(url, {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message_content: content }),
+        signal,
+      });
+    } catch (networkError) {
+      throw new ApiError(
+        "Unable to connect to backend server. Please verify the backend is running.",
+        0,
+        networkError.message
+      );
+    }
+
+    if (!response.ok) {
+      const contentType = response.headers.get("content-type") || "";
+      let detail = null;
+      if (contentType.includes("application/json")) {
+        const json = await response.json().catch(() => ({}));
+        detail = json?.detail || (typeof json === "string" ? json : null);
+      } else {
+        detail = await response.text().catch(() => "");
+      }
+      throw new ApiError(
+        typeof detail === "string" && detail ? detail : `Request failed with status ${response.status}`,
+        response.status,
+        detail
+      );
+    }
+
+    if (!response.body) {
+      return "";
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let accumulated = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      accumulated += chunk;
+      onChunk(accumulated, chunk);
+    }
+
+    return accumulated;
   },
 
   /**

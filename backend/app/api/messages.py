@@ -379,9 +379,6 @@ async def delete_message(message_id: int, db: Annotated[Session, Depends(get_db)
     db.commit()
     return {"detail": "Message deleted successfully"}
 
-
-# TODO: add a bg process here.
-# TODO: add chunking for large inputs.
 @router.post("/feed_knowledge")
 async def feed_knowledge(
         request: Request,

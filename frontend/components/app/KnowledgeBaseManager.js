@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import ChatInput from "@/components/app/ChatInput";
 import { mockKnowledgeItems, mockImages } from "@/mock/knowledge";
+import { useAuth } from "@/lib/auth-context";
+import { messagesApi, uploadedDataApi } from "@/lib/api";
 
 // Format date in friendly human-readable format
 function formatItemDate(dateStr) {
@@ -76,6 +78,7 @@ function generateId(prefix = "kb") {
 }
 
 export default function KnowledgeBaseManager() {
+  const { user } = useAuth();
   // Knowledge Base items state (persisted locally in React state)
   const [items, setItems] = useState(mockKnowledgeItems);
 
@@ -99,6 +102,74 @@ export default function KnowledgeBaseManager() {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
   }, []);
+
+  // Fetch real uploaded items from backend if user is authenticated
+  useEffect(() => {
+    if (!user?.id || typeof user.id !== "number" || !user?.isAuthenticated) {
+      return;
+    }
+
+    let isMounted = true;
+    uploadedDataApi
+      .getUploads(user.id)
+      .then((uploads) => {
+        if (!isMounted || !Array.isArray(uploads) || uploads.length === 0) return;
+
+        const backendItems = uploads.map((up) => {
+          if (up.data_type === "docs") {
+            const ext = up.tag || "pdf";
+            return {
+              id: `up_doc_${up.id}`,
+              type: "document",
+              title: up.tag ? `${up.tag.toUpperCase()} Document` : "Uploaded Document",
+              fileType: ext,
+              fileSize: "Document",
+              meta: "Indexed Document",
+              createdAt: up.created_at,
+              tags: [up.tag ? `#${up.tag}` : "#document", "#uploaded"],
+            };
+          } else if (up.data_type === "img") {
+            return {
+              id: `up_img_${up.id}`,
+              type: "image",
+              title: "Uploaded Image",
+              fileType: up.tag || "png",
+              fileSize: "Image",
+              dimensions: "Multimodal",
+              previewUrl: up.data_source,
+              createdAt: up.created_at,
+              status: "Indexed",
+              tags: ["#image", up.tag ? `#${up.tag}` : "#multimodal"],
+            };
+          } else {
+            const words = (up.data_source || "").split(/\s+/);
+            const snippet = words.slice(0, 6).join(" ");
+            const autoTitle = words.length > 6 ? `${snippet}...` : snippet || "Saved Note";
+            return {
+              id: `up_mem_${up.id}`,
+              type: "memory",
+              title: autoTitle,
+              content: up.data_source,
+              category: up.tag || "Note",
+              createdAt: up.created_at,
+              status: "Grounded",
+              tags: [up.tag ? `#${up.tag.toLowerCase()}` : "#memory"],
+            };
+          }
+        });
+
+        setItems(backendItems);
+      })
+      .catch((err) => {
+        if (err?.status !== 401 && err?.status !== 403) {
+          console.warn("Could not load backend uploads, using local state:", err);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, user?.isAuthenticated]);
 
   // ==========================================
   // MODE 1: UPLOAD FILES (Single Document)
@@ -141,29 +212,26 @@ export default function KnowledgeBaseManager() {
     });
   };
 
-  const handleIngestFileSubmit = () => {
+  const handleIngestFileSubmit = async () => {
     if (!stagedFile || isFilesProcessing) return;
 
     setIsFilesProcessing(true);
-    setFileProcessingStep("Parsing document contents...");
+    setFileProcessingStep("Uploading document to backend...");
+    const fileName = stagedFile.name;
 
-    setTimeout(() => {
-      setFileProcessingStep("Splitting into semantic chunks...");
-    }, 450);
-
-    setTimeout(() => {
+    try {
+      if (user?.id && user?.isAuthenticated && stagedFile.fileObj) {
+        await messagesApi.uploadFile(stagedFile.fileObj);
+      }
       setFileProcessingStep("Generating vector embeddings...");
-    }, 900);
 
-    setTimeout(() => {
-      const fileName = stagedFile.name;
       const newDoc = {
         id: generateId("kb_doc"),
         type: "document",
         title: stagedFile.name,
         fileType: stagedFile.fileType,
         fileSize: stagedFile.size,
-        meta: `${Math.floor(Math.random() * 15) + 4} pages • ${Math.floor(Math.random() * 10) + 6} chunks`,
+        meta: `${Math.floor(Math.random() * 15) + 4} pages • Indexed`,
         createdAt: new Date().toISOString(),
         tags: ["#uploaded", `#${stagedFile.fileType}`, "#ingested"],
       };
@@ -174,12 +242,18 @@ export default function KnowledgeBaseManager() {
       setIsFilesProcessing(false);
       setFileProcessingStep("");
       showToast(`Successfully ingested "${fileName}" into your Knowledge Base.`);
-    }, 1400);
+    } catch (err) {
+      console.error("Document upload failed:", err);
+      setIsFilesProcessing(false);
+      setFileProcessingStep("");
+      setFileError(err.message || "Failed to upload document.");
+      showToast(`Upload failed: ${err.message || "Server error"}`, "error");
+    }
   };
 
   // ==========================================
   // MODE 2: UPLOAD IMAGES (Single Image)
-  // Backend endpoint supports only 1 image at a time
+  // Backend endpoint supports only 1 image at a time (Max 100 KB)
   // ==========================================
   const [stagedImage, setStagedImage] = useState(null);
   const [isImageDragging, setIsImageDragging] = useState(false);
@@ -207,6 +281,11 @@ export default function KnowledgeBaseManager() {
       return;
     }
 
+    if (file.size > 100 * 1024) {
+      setImageError(`"${file.name}" exceeds 100 KB (${formatBytes(file.size)}). Backend supports up to 100 KB.`);
+      return;
+    }
+
     // Generate local preview URL
     let previewUrl = "";
     try {
@@ -222,27 +301,29 @@ export default function KnowledgeBaseManager() {
       rawSize: file.size,
       fileType: ext || "png",
       previewUrl: previewUrl,
-      dimensions: "1920 × 1080",
+      dimensions: "Multimodal",
       fileObj: file,
     });
   };
 
-  const handleIndexImageSubmit = () => {
+  const handleIndexImageSubmit = async () => {
     if (!stagedImage || isImagesProcessing) return;
 
+    if (stagedImage.rawSize > 100 * 1024) {
+      setImageError("Image size must not exceed 100 KB.");
+      return;
+    }
+
     setIsImagesProcessing(true);
-    setImageProcessingStep("Analyzing image contents & visual layout...");
+    setImageProcessingStep("Uploading image to backend...");
+    const imageName = stagedImage.name;
 
-    setTimeout(() => {
-      setImageProcessingStep("Extracting visual metadata...");
-    }, 450);
-
-    setTimeout(() => {
+    try {
+      if (user?.id && user?.isAuthenticated && stagedImage.fileObj) {
+        await messagesApi.uploadImage(stagedImage.fileObj);
+      }
       setImageProcessingStep("Indexing into multimodal knowledge index...");
-    }, 900);
 
-    setTimeout(() => {
-      const imageName = stagedImage.name;
       const newItem = {
         id: generateId("kb_img"),
         type: "image",
@@ -262,7 +343,13 @@ export default function KnowledgeBaseManager() {
       setIsImagesProcessing(false);
       setImageProcessingStep("");
       showToast(`Successfully indexed "${imageName}" into your Knowledge Base.`);
-    }, 1400);
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      setIsImagesProcessing(false);
+      setImageProcessingStep("");
+      setImageError(err.message || "Failed to upload image.");
+      showToast(`Upload failed: ${err.message || "Server error"}`, "error");
+    }
   };
 
   // ==========================================
@@ -283,7 +370,7 @@ export default function KnowledgeBaseManager() {
     { id: "Note", label: "#note" },
   ];
 
-  const handleTextSubmit = () => {
+  const handleTextSubmit = async () => {
     const trimmed = textValue.trim();
     if (!trimmed) {
       setTextError("Please enter some knowledge or memory text before submitting.");
@@ -293,8 +380,14 @@ export default function KnowledgeBaseManager() {
     setIsTextSubmitting(true);
     setTextError("");
 
-    // Simulate brief local processing
-    setTimeout(() => {
+    try {
+      if (user?.id && user?.isAuthenticated) {
+        await messagesApi.feedKnowledge({
+          textContent: trimmed,
+          tag: selectedTag,
+        });
+      }
+
       // Derive a natural title from first 6-7 words
       const words = trimmed.split(/\s+/);
       const snippet = words.slice(0, 6).join(" ");
@@ -315,7 +408,12 @@ export default function KnowledgeBaseManager() {
       setTextValue("");
       setIsTextSubmitting(false);
       showToast(`Memory recorded: "${autoTitle}" is now grounded in your Knowledge Base.`);
-    }, 250);
+    } catch (err) {
+      console.error("Text knowledge ingestion failed:", err);
+      setIsTextSubmitting(false);
+      setTextError(err.message || "Failed to feed knowledge.");
+      showToast(`Submission failed: ${err.message || "Server error"}`, "error");
+    }
   };
 
   // ==========================================
@@ -627,7 +725,7 @@ export default function KnowledgeBaseManager() {
           <div className="mt-5 space-y-4 animate-fadeIn">
             <div className="flex items-center justify-between text-xs text-text-muted">
               <span>Supports PNG, JPG, JPEG, WebP</span>
-              <span className="font-mono">Max 15 MB</span>
+              <span className="font-mono">Max 100 KB</span>
             </div>
 
             {/* Error Message */}

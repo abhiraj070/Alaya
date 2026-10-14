@@ -6,30 +6,37 @@ import ChatMessages from "@/components/app/ChatMessages";
 import ChatInput from "@/components/app/ChatInput";
 import { findMockResponse } from "@/mock/chat";
 import { messagesApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 export default function Chat({ chatId, messages = [], setMessages }) {
+  const { user } = useAuth();
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
 
-  // Active timers tracker for clean cancellation & unmount handling
+  // Active timers tracker & abort controller for clean cancellation & unmount handling
   const activeTimersRef = useRef([]);
+  const abortControllerRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const bottomRef = useRef(null);
   const userScrolledUpRef = useRef(false);
 
-  // Cancel all pending thinking/streaming timers
+  // Cancel all pending thinking/streaming timers and active network streams
   const cancelAllSimulation = useCallback(() => {
     activeTimersRef.current.forEach((timer) => {
       clearTimeout(timer);
       clearInterval(timer);
     });
     activeTimersRef.current = [];
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     setIsThinking(false);
     setIsStreaming(false);
   }, []);
 
-  // Clean up timers on unmount
+  // Clean up timers & abort controller on unmount
   useEffect(() => {
     return () => {
       cancelAllSimulation();
@@ -53,7 +60,7 @@ export default function Chat({ chatId, messages = [], setMessages }) {
     }
   }, [messages, isThinking, isStreaming]);
 
-  // Generates and progressively streams assistant response for a given prompt
+  // Generates and progressively streams assistant response for a given prompt (offline/mock fallback)
   const triggerAssistantResponse = useCallback((promptText) => {
     const matched = findMockResponse(promptText);
 
@@ -123,8 +130,8 @@ export default function Chat({ chatId, messages = [], setMessages }) {
     activeTimersRef.current.push(thinkTimer);
   }, [setMessages]);
 
-  // Core message submission handler
-  const handleSendMessage = (textOverride) => {
+  // Core message submission handler - routes all messages to /api/messages/new_messages/{chat_id}
+  const handleSendMessage = async (textOverride) => {
     const rawText = typeof textOverride === "string" ? textOverride : inputValue;
     const trimmed = rawText.trim();
 
@@ -134,8 +141,9 @@ export default function Chat({ chatId, messages = [], setMessages }) {
     userScrolledUpRef.current = false;
 
     // 1. Append user message immediately
+    const tempUserMsgId = `usr_${Date.now()}`;
     const userMsg = {
-      id: `usr_${Date.now()}`,
+      id: tempUserMsgId,
       sender: "user",
       text: trimmed,
       timestamp: new Date().toLocaleTimeString([], {
@@ -145,7 +153,91 @@ export default function Chat({ chatId, messages = [], setMessages }) {
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    triggerAssistantResponse(trimmed);
+
+    const isRealBackendChat =
+      typeof chatId === "number" &&
+      typeof user?.id === "number" &&
+      user?.isAuthenticated;
+
+    // If unauthenticated or local mock chat, use simulation
+    if (!isRealBackendChat) {
+      triggerAssistantResponse(trimmed);
+      return;
+    }
+
+    // Connect to /api/messages/new_messages/{chat_id}
+    setIsThinking(true);
+    const assistantMsgId = `asst_${Date.now()}`;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMsgId,
+        sender: "alaya",
+        text: "",
+        isStreaming: true,
+      },
+    ]);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      let hasReceivedFirstChunk = false;
+      await messagesApi.sendNewMessage(
+        chatId,
+        trimmed,
+        user.id,
+        (accumulatedText) => {
+          if (!hasReceivedFirstChunk) {
+            hasReceivedFirstChunk = true;
+            setIsThinking(false);
+            setIsStreaming(true);
+          }
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMsgId
+                ? { ...msg, text: accumulatedText, isStreaming: true }
+                : msg
+            )
+          );
+        },
+        controller.signal
+      );
+
+      setIsStreaming(false);
+      setIsThinking(false);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMsgId ? { ...msg, isStreaming: false } : msg
+        )
+      );
+
+      // Re-sync messages from backend to get official database IDs
+      try {
+        const syncedMessages = await messagesApi.getMessages(chatId);
+        if (Array.isArray(syncedMessages) && syncedMessages.length > 0) {
+          const normalized = syncedMessages.map((m) => ({
+            id: m.message_id || m.id,
+            sender: m.sent_by === "USER" ? "user" : "alaya",
+            text: m.message_content,
+          }));
+          setMessages(normalized);
+        }
+      } catch {
+        // Optimistic state remains in place if sync fails
+      }
+    } catch (err) {
+      if (err.name === "AbortError") return;
+      console.warn("Backend stream error, falling back to simulation:", err);
+      setIsThinking(false);
+      setIsStreaming(false);
+      // Remove empty assistant placeholder and fallback to simulated response
+      setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId));
+      triggerAssistantResponse(trimmed);
+    } finally {
+      abortControllerRef.current = null;
+    }
   };
 
   // Edit user message handler
@@ -153,16 +245,13 @@ export default function Chat({ chatId, messages = [], setMessages }) {
     const trimmed = newContent.trim();
     if (!trimmed || isThinking || isStreaming) return;
 
-    // 1. Persist update to backend if this is a stored message in a backend chat
-    if (typeof messageId === "number" && typeof chatId === "number") {
-      try {
-        await messagesApi.updateMessage(chatId, messageId, trimmed);
-      } catch (err) {
-        console.error("Failed to update message in backend:", err);
-      }
-    }
+    const isRealBackendChat =
+      typeof chatId === "number" &&
+      typeof user?.id === "number" &&
+      user?.isAuthenticated &&
+      typeof messageId === "number";
 
-    // 2. Treat as new message: update user message text & remove trailing stale assistant reply
+    // 1. Treat as new message: update user message text & remove trailing stale assistant reply
     setMessages((prev) => {
       const idx = prev.findIndex((m) => m.id === messageId);
       if (idx === -1) return prev;
@@ -171,8 +260,80 @@ export default function Chat({ chatId, messages = [], setMessages }) {
       return truncated;
     });
 
-    // 3. Trigger new assistant response for the updated prompt
-    triggerAssistantResponse(trimmed);
+    if (!isRealBackendChat) {
+      triggerAssistantResponse(trimmed);
+      return;
+    }
+
+    // 2. Stream regenerated response from backend PUT /api/messages/update_message/{chat_id}/{message_id}
+    setIsThinking(true);
+    const assistantMsgId = `asst_${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMsgId,
+        sender: "alaya",
+        text: "",
+        isStreaming: true,
+      },
+    ]);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      let hasReceivedFirstChunk = false;
+      await messagesApi.updateMessage(
+        chatId,
+        messageId,
+        trimmed,
+        (accumulatedText) => {
+          if (!hasReceivedFirstChunk) {
+            hasReceivedFirstChunk = true;
+            setIsThinking(false);
+            setIsStreaming(true);
+          }
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMsgId
+                ? { ...msg, text: accumulatedText, isStreaming: true }
+                : msg
+            )
+          );
+        },
+        controller.signal
+      );
+
+      setIsStreaming(false);
+      setIsThinking(false);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMsgId ? { ...msg, isStreaming: false } : msg
+        )
+      );
+
+      // Re-sync messages from backend to get official message IDs
+      try {
+        const syncedMessages = await messagesApi.getMessages(chatId);
+        if (Array.isArray(syncedMessages) && syncedMessages.length > 0) {
+          const normalized = syncedMessages.map((m) => ({
+            id: m.message_id || m.id,
+            sender: m.sent_by === "USER" ? "user" : "alaya",
+            text: m.message_content,
+          }));
+          setMessages(normalized);
+        }
+      } catch {}
+    } catch (err) {
+      if (err.name === "AbortError") return;
+      console.warn("Backend update message failed, falling back to simulated response:", err);
+      setIsThinking(false);
+      setIsStreaming(false);
+      setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId));
+      triggerAssistantResponse(trimmed);
+    } finally {
+      abortControllerRef.current = null;
+    }
   };
 
   // Delete message handler
