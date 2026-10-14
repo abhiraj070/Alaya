@@ -7,7 +7,14 @@ from starlette import status
 from typing import Annotated
 
 userid_to_ws={}
-ALLOWED_WEBSOCKET_ORIGINS = {"http://localhost:3000"}
+ALLOWED_WEBSOCKET_ORIGINS = {
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+}
 
 @app.websocket("/ws")
 async def websocket_endpoint(

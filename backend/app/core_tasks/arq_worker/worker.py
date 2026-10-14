@@ -13,6 +13,7 @@ from app.utility.cloudinary import delete_file
 from app.db.model.chat import Embedding, EmbeddingKind, Knowledge
 from app.core_tasks.llm_setup.embeddings_llm import get_embedding
 from app.core_tasks.arq_worker.arqRedis_init import redis_settings
+from app.core_tasks.universe.projection_service import project_user_knowledge
 
 
 #inside arq_worker, we cannot use the websocket connection pool instance because here arq_worker is a whole separate process
@@ -28,6 +29,17 @@ async def publish_websocket_status(ctx, user_id: int, status: str, message: str)
                 },
             }),
         )
+    except Exception:
+        pass
+
+
+async def enqueue_universe_projection(ctx, user_id: int) -> None:
+    """Trigger debounced universe coordinate recalculation in background."""
+    try:
+        # Debounce using 15-second key lock in Redis
+        lock_acquired = await ctx["redis"].set(f"universe_lock:{user_id}", "1", ex=15, nx=True)
+        if lock_acquired:
+            await ctx["redis"].enqueue_job("calculate_universe_coordinates", user_id)
     except Exception:
         pass
 
@@ -128,6 +140,7 @@ async def create_knowledge_embedding(
             db.add(db_embeddings)
 
         db.commit()
+        await enqueue_universe_projection(ctx, user_id)
 
         await publish_websocket_status(
             ctx,
@@ -217,6 +230,7 @@ async def create_image_embeddings(
         )
         db.add(embed_table)
         db.commit()
+        await enqueue_universe_projection(ctx, user_id)
         await publish_websocket_status(
             ctx,
             user_id,
@@ -335,6 +349,7 @@ async def create_file_embeddings(
             db.add(db_embeddings)
 
         db.commit()
+        await enqueue_universe_projection(ctx, user_id)
         await publish_websocket_status(ctx, user_id, "completed", "Data stored successfully")
 
     except Exception:
@@ -371,6 +386,34 @@ async def create_file_embeddings(
 #     finally:
 #         db.close()
 
+async def calculate_universe_coordinates(ctx, user_id: int):
+    """Background job: project user's knowledge embeddings into 3D coordinates via UMAP."""
+    import asyncio
+    try:
+        # Run CPU-bound projection in separate thread to prevent event-loop starvation
+        result = await asyncio.to_thread(project_user_knowledge, user_id)
+        await publish_websocket_status(
+            ctx,
+            user_id,
+            "universe_completed",
+            result.get("message", "Universe coordinates updated successfully"),
+        )
+        return result
+    except Exception as exc:
+        await publish_websocket_status(
+            ctx,
+            user_id,
+            "universe_failed",
+            f"Unable to calculate universe coordinates: {str(exc)}",
+        )
+        raise
+
+
 class WorkerSettings:
-    functions= [create_knowledge_embedding, create_image_embeddings, create_file_embeddings]
+    functions= [
+        create_knowledge_embedding,
+        create_image_embeddings,
+        create_file_embeddings,
+        calculate_universe_coordinates,
+    ]
     redis_settings= redis_settings

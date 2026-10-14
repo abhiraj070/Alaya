@@ -7,6 +7,7 @@ from app.api.chat import router as chat_router
 from app.api.messages import router as messages_router
 from app.api.user import router as user_router
 from app.api.uploaded_data import router as uploaded_data_router
+from app.api.universe import router as universe_router
 from app.core_tasks.arq_worker.arqRedis_init import create_redis_pool
 from app.core_tasks.redis_pubsub.native_redis_init import create_redis_client
 
@@ -38,6 +39,8 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3001",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -48,3 +51,4 @@ app.include_router(chat_router, prefix="/api")
 app.include_router(messages_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 app.include_router(uploaded_data_router, prefix="/api")
+app.include_router(universe_router, prefix="/api")
