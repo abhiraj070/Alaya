@@ -131,7 +131,7 @@ export default function ChatItem({
               handleCancelEdit();
             }
           }}
-          className="flex-1 min-w-0 bg-transparent text-xs text-text-primary px-1 py-0.5 focus:outline-none placeholder:text-text-muted"
+          className="flex-1 min-w-0 bg-transparent text-[11.5px] leading-tight text-text-primary px-1 py-0.5 focus:outline-none placeholder:text-text-muted"
           placeholder="Chat title..."
           maxLength={60}
           aria-label="Edit chat title"
@@ -204,12 +204,12 @@ export default function ChatItem({
         type="button"
         onClick={onSelect}
         disabled={isDeleting}
-        className="flex-1 min-w-0 text-left text-xs px-2.5 py-2 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate disabled:cursor-not-allowed flex items-center gap-1.5"
+        className="flex-1 min-w-0 text-left text-[11.5px] leading-tight px-2 py-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate disabled:cursor-not-allowed flex items-center gap-1.5"
         title={chat.title || "New chat"}
       >
         {isPinned && (
           <svg
-            className="h-3 w-3 shrink-0 text-accent-sky/80"
+            className="h-2.5 w-2.5 shrink-0 text-accent-sky/80"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -222,7 +222,7 @@ export default function ChatItem({
             <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
           </svg>
         )}
-        <span className={`truncate block ${isDeleting ? "opacity-50" : ""}`}>
+        <span className={`truncate block text-[11.5px] leading-tight ${isDeleting ? "opacity-50" : ""}`}>
           {chat.title || "New chat"}
         </span>
       </button>

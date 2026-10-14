@@ -15,7 +15,6 @@ export default function ProfilePage() {
   // Active user data
   const currentName = user?.name || "Guest User";
   const currentUsername = (user?.username || "guest").replace(/^@/, "");
-  const currentEmail = user?.email || "";
 
   // Editing state for Full Name
   const [isEditingName, setIsEditingName] = useState(false);
@@ -598,40 +597,6 @@ export default function ProfilePage() {
                     </p>
                   </div>
                 )}
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-border-subtle/50" />
-
-              {/* Row 3: Email Address (Read-Only) */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="block text-xs font-semibold text-text-secondary uppercase tracking-wider font-mono">
-                    Email Address
-                  </span>
-                  {/* Enhanced, Aligned Read-only badge */}
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-medium text-text-muted bg-surface-secondary border border-border-subtle">
-                    <svg
-                      className="h-3 w-3 text-text-muted"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <span>Read-only</span>
-                  </span>
-                </div>
-                <div className="rounded-xl border border-border-subtle/70 bg-surface-secondary/40 px-4 py-3">
-                  <p className="text-sm sm:text-base font-mono text-text-secondary">
-                    {currentEmail}
-                  </p>
-                </div>
               </div>
             </div>
           </section>
