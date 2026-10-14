@@ -85,11 +85,16 @@ export default function AppShell() {
             id: c.id,
             title: c.chat_title || "New chat",
             userId: c.user_id,
+            updatedAt: c.updated_at,
+            createdAt: c.created_at,
             messages: [],
           }));
-          existingChats.sort((a, b) =>
-            typeof b.id === "number" && typeof a.id === "number" ? b.id - a.id : 0
-          );
+          existingChats.sort((a, b) => {
+            const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+            const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+            if (timeB !== timeA) return timeB - timeA;
+            return typeof b.id === "number" && typeof a.id === "number" ? b.id - a.id : 0;
+          });
         } catch (err) {
           if (err?.status === 401) {
             authExpired = true;
@@ -145,6 +150,8 @@ export default function AppShell() {
             id: created.id,
             title: created.chat_title || "New chat",
             userId: created.user_id,
+            updatedAt: created.updated_at || new Date().toISOString(),
+            createdAt: created.created_at || new Date().toISOString(),
             messages: [],
           };
         } catch (err) {
@@ -155,6 +162,8 @@ export default function AppShell() {
             id: `chat-${Date.now()}`,
             title: "New chat",
             userId: user.id,
+            updatedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
             messages: [],
           };
         }
@@ -232,35 +241,47 @@ export default function AppShell() {
   const activeChatMessages = activeChat?.messages || [];
 
   const handleSetMessages = (newMessagesOrUpdater) => {
-    setChats((prevChats) =>
-      prevChats.map((c) => {
-        if (c.id === (activeChat?.id || prevChats[0]?.id)) {
-          const updatedMessages =
-            typeof newMessagesOrUpdater === "function"
-              ? newMessagesOrUpdater(c.messages)
-              : newMessagesOrUpdater;
-          let updatedTitle = c.title;
-          if (c.title?.toLowerCase() === "new chat" && updatedMessages.length > 0) {
-            const firstUserMsg = updatedMessages.find((m) => m.sender === "user");
-            if (firstUserMsg?.text) {
-              updatedTitle =
-                firstUserMsg.text.length > 28
-                  ? `${firstUserMsg.text.slice(0, 28)}...`
-                  : firstUserMsg.text;
-              if (typeof c.id === "number") {
-                chatApi.updateChatTitle(c.id, updatedTitle).catch(() => {});
-              }
-            }
+    setChats((prevChats) => {
+      const activeId = activeChat?.id || prevChats[0]?.id;
+      const targetIndex = prevChats.findIndex((c) => c.id === activeId);
+      if (targetIndex === -1) return prevChats;
+
+      const currentTargetChat = prevChats[targetIndex];
+      const updatedMessages =
+        typeof newMessagesOrUpdater === "function"
+          ? newMessagesOrUpdater(currentTargetChat.messages)
+          : newMessagesOrUpdater;
+
+      let updatedTitle = currentTargetChat.title;
+      if (currentTargetChat.title?.toLowerCase() === "new chat" && updatedMessages.length > 0) {
+        const firstUserMsg = updatedMessages.find((m) => m.sender === "user");
+        if (firstUserMsg?.text) {
+          updatedTitle =
+            firstUserMsg.text.length > 28
+              ? `${firstUserMsg.text.slice(0, 28)}...`
+              : firstUserMsg.text;
+          if (typeof currentTargetChat.id === "number") {
+            chatApi.updateChatTitle(currentTargetChat.id, updatedTitle).catch(() => {});
           }
-          return {
-            ...c,
-            title: updatedTitle,
-            messages: updatedMessages,
-          };
         }
-        return c;
-      })
-    );
+      }
+
+      const updatedChat = {
+        ...currentTargetChat,
+        title: updatedTitle,
+        messages: updatedMessages,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // When the user chats in any chat (especially an older chat),
+      // bring it to the top of the chat list immediately
+      if (targetIndex === 0) {
+        return [updatedChat, ...prevChats.slice(1)];
+      }
+
+      const otherChats = prevChats.filter((c) => c.id !== currentTargetChat.id);
+      return [updatedChat, ...otherChats];
+    });
   };
 
   // Create chat session dynamically via POST /api/chat/create_chat
@@ -287,6 +308,8 @@ export default function AppShell() {
         id: created.id,
         title: created.chat_title || "New chat",
         userId: created.user_id,
+        updatedAt: created.updated_at || new Date().toISOString(),
+        createdAt: created.created_at || new Date().toISOString(),
         messages: [],
       };
       setChats((prev) => [newChat, ...prev]);
@@ -300,6 +323,8 @@ export default function AppShell() {
         id: `chat-${Date.now()}`,
         title: "New chat",
         userId: user.id,
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         messages: [],
       };
       setChats((prev) => [fallbackChat, ...prev]);

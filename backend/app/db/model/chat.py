@@ -30,6 +30,8 @@ class Chat(Base):
     user_id = Column(Integer, ForeignKey('user.id'))
     user= relationship(User, back_populates='chats')
     messages = relationship("Message", back_populates='chat', cascade="all, delete-orphan")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
 
 class Message(Base):

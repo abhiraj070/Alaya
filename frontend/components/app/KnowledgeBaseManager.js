@@ -110,6 +110,7 @@ export default function KnowledgeBaseManager() {
       return;
     }
 
+    setIsLoadingUploads(true);
     try {
       const uploads = await uploadedDataApi.getUploads(user.id);
       if (!Array.isArray(uploads) || uploads.length === 0) {
@@ -167,14 +168,17 @@ export default function KnowledgeBaseManager() {
       if (err?.status !== 401 && err?.status !== 403) {
         console.warn("Could not load backend uploads:", err);
       }
+    } finally {
+      setIsLoadingUploads(false);
     }
-  }, [user?.id, user?.isAuthenticated]);
+  }, [user]);
 
   useEffect(() => {
     let isMounted = true;
-    setIsLoadingUploads(true);
-    fetchUploads().finally(() => {
-      if (isMounted) setIsLoadingUploads(false);
+    requestAnimationFrame(() => {
+      if (isMounted) {
+        fetchUploads().catch(() => {});
+      }
     });
 
     return () => {

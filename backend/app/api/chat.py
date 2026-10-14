@@ -33,8 +33,8 @@ async def get_chats(user_id: int, db: Annotated[Session, Depends(get_db)],
                     authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
     if user_id != authenticated_user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-    stmt= select(Chat).where(Chat.user_id==user_id).order_by(Chat.id.desc())
-    chats= db.execute(stmt).scalars().all()
+    stmt = select(Chat).where(Chat.user_id == user_id).order_by(Chat.updated_at.desc(), Chat.id.desc())
+    chats = db.execute(stmt).scalars().all()
     return chats
 
 @router.put("/update_chat/{chat_id}", response_model=ChatResponse)
