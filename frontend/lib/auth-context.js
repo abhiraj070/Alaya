@@ -19,7 +19,8 @@ const AuthContext = createContext({
   login: async () => {},
   register: async () => {},
   logout: async () => {},
-  updateUser: () => {},
+  updateUser: async () => {},
+  deleteAccount: async () => {},
   refreshUser: async () => {},
 });
 
@@ -56,10 +57,21 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Update user profile (frontend-only mock state update)
-  const updateUser = useCallback((updates) => {
-    const updated = updateStoredUser(updates);
-    return updated;
+  // Update user profile (persists to backend API and local storage)
+  const updateUser = useCallback(async (updates) => {
+    const current = getStoredUser();
+    if (current?.id && typeof current.id === "number" && current.isAuthenticated) {
+      const payload = {};
+      if (typeof updates.name === "string") payload.name = updates.name;
+      if (typeof updates.username === "string") payload.username = updates.username;
+
+      const updatedBackend = await authApi.updateUser(current.id, payload);
+      return updateStoredUser({
+        ...updates,
+        ...updatedBackend,
+      });
+    }
+    return updateStoredUser(updates);
   }, []);
 
   // Login handler
@@ -144,9 +156,37 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Delete account handler: deletes user from backend, then clears all tokens and storage
+  const deleteAccount = useCallback(async () => {
+    try {
+      const current = getStoredUser();
+      const currentUserId =
+        current?.id && typeof current.id === "number" ? current.id : null;
+      if (currentUserId) {
+        await authApi.deleteUser(currentUserId);
+      }
+    } catch {
+      // Continue to wipe local state even if backend error occurs
+    } finally {
+      clearAllAuthTokens();
+      clearStoredUser();
+    }
+  }, []);
+
   // Refresh user data from backend/storage
-  const refreshUser = useCallback(() => {
-    return getStoredUser();
+  const refreshUser = useCallback(async () => {
+    const current = getStoredUser();
+    if (current?.id && typeof current.id === "number" && current.isAuthenticated) {
+      try {
+        const fresh = await authApi.getUser(current.id);
+        if (fresh && fresh.id) {
+          return updateStoredUser(fresh);
+        }
+      } catch {
+        // Fallback to cached user
+      }
+    }
+    return current;
   }, []);
 
   return (
@@ -159,6 +199,7 @@ export function AuthProvider({ children }) {
         register,
         logout,
         updateUser,
+        deleteAccount,
         refreshUser,
       }}
     >

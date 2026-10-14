@@ -85,13 +85,6 @@ async def get_user(user_id: int, db: Annotated[Session, Depends(get_db)],
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
 
-@router.get("/get_users", response_model=list[AuthResponse])
-async def get_users(db: Annotated[Session, Depends(get_db)],
-                    authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
-    stmt= select(User).where(User.id == authenticated_user_id)
-    users= db.execute(stmt).scalars().all()
-    return users
-
 @router.put("/update_user/{user_id}", response_model=AuthResponse)
 async def update_user(user_id: int, request: UserUpdateRequest, db: Annotated[Session, Depends(get_db)],
                       authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
@@ -115,7 +108,7 @@ async def update_user(user_id: int, request: UserUpdateRequest, db: Annotated[Se
     return user
 
 @router.delete("/delete_user/{user_id}")
-async def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)],
+async def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)], response: Response,
                       authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
     if user_id != authenticated_user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
@@ -125,6 +118,8 @@ async def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)],
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     db.delete(user)
     db.commit()
+    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="refresh_token")
     return {"detail": "User deleted successfully"}
 
 @router.post("/login", response_model= AuthResponse)

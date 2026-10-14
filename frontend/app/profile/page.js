@@ -10,7 +10,7 @@ import { mockUser } from "@/mock/users";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser, logout, deleteAccount, refreshUser } = useAuth();
 
   // Active user data with mockUser fallbacks
   const currentName = user?.name || mockUser.name;
@@ -21,14 +21,37 @@ export default function ProfilePage() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(currentName);
   const [nameError, setNameError] = useState("");
+  const [isSavingName, setIsSavingName] = useState(false);
 
   // Editing state for Username
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [usernameDraft, setUsernameDraft] = useState(currentUsername);
   const [usernameError, setUsernameError] = useState("");
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
+
+  // Account deletion states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState("");
 
   // Subtle success notification
   const [successMessage, setSuccessMessage] = useState("");
+
+  // Fetch fresh user profile details on mount from backend GET /api/user/get_user/{user_id}
+  useEffect(() => {
+    let isMounted = true;
+    if (typeof refreshUser === "function") {
+      refreshUser().then((fresh) => {
+        if (!isMounted || !fresh) return;
+        if (!isEditingName) setNameDraft(fresh.name || mockUser.name);
+        if (!isEditingUsername)
+          setUsernameDraft((fresh.username || mockUser.username).replace(/^@/, ""));
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshUser, isEditingName, isEditingUsername]);
 
   // Auto-dismiss success notification
   useEffect(() => {
@@ -39,7 +62,7 @@ export default function ProfilePage() {
     return () => clearTimeout(timer);
   }, [successMessage]);
 
-  // Full Name Editing Handlers
+  // Full Name Editing Handlers (Calls PUT /api/user/update_user/{user_id})
   const handleStartEditName = () => {
     setNameDraft(currentName);
     setNameError("");
@@ -52,17 +75,33 @@ export default function ProfilePage() {
     setIsEditingName(false);
   };
 
-  const handleSaveName = (e) => {
+  const handleSaveName = async (e) => {
     if (e) e.preventDefault();
+    if (isSavingName) return;
     const trimmed = nameDraft.trim();
     if (!trimmed) {
       setNameError("Full name cannot be empty.");
       return;
     }
-    updateUser({ name: trimmed });
-    setIsEditingName(false);
+    if (trimmed === currentName) {
+      setIsEditingName(false);
+      setNameError("");
+      return;
+    }
+
+    setIsSavingName(true);
     setNameError("");
-    setSuccessMessage("Full name updated successfully");
+
+    try {
+      await updateUser({ name: trimmed });
+      setIsEditingName(false);
+      setNameError("");
+      setSuccessMessage("Full name updated successfully");
+    } catch (err) {
+      setNameError(err.detail || err.message || "Failed to update full name.");
+    } finally {
+      setIsSavingName(false);
+    }
   };
 
   const handleNameKeyDown = (e) => {
@@ -75,7 +114,7 @@ export default function ProfilePage() {
     }
   };
 
-  // Username Editing Handlers
+  // Username Editing Handlers (Calls PUT /api/user/update_user/{user_id})
   const handleStartEditUsername = () => {
     setUsernameDraft(currentUsername);
     setUsernameError("");
@@ -88,17 +127,34 @@ export default function ProfilePage() {
     setIsEditingUsername(false);
   };
 
-  const handleSaveUsername = (e) => {
+  const handleSaveUsername = async (e) => {
     if (e) e.preventDefault();
+    if (isSavingUsername) return;
     const trimmed = usernameDraft.trim().replace(/^@/, "");
     if (!trimmed) {
       setUsernameError("Username cannot be empty.");
       return;
     }
-    updateUser({ username: trimmed });
-    setIsEditingUsername(false);
+    if (trimmed === currentUsername) {
+      setIsEditingUsername(false);
+      setUsernameError("");
+      return;
+    }
+
+    setIsSavingUsername(true);
     setUsernameError("");
-    setSuccessMessage("Username updated successfully");
+
+    try {
+      await updateUser({ username: trimmed });
+      setIsEditingUsername(false);
+      setUsernameError("");
+      setSuccessMessage("Username updated successfully");
+    } catch (err) {
+      const msg = err.detail || err.message || "Failed to update username.";
+      setUsernameError(typeof msg === "string" ? msg : JSON.stringify(msg));
+    } finally {
+      setIsSavingUsername(false);
+    }
   };
 
   const handleUsernameKeyDown = (e) => {
@@ -117,6 +173,23 @@ export default function ProfilePage() {
       await logout();
     } finally {
       router.push("/auth?mode=signin");
+    }
+  };
+
+  // Delete Account Handler (Calls DELETE /api/user/delete_user/{user_id})
+  const handleConfirmDeleteAccount = async () => {
+    if (isDeletingAccount) return;
+    setIsDeletingAccount(true);
+    setDeleteAccountError("");
+
+    try {
+      await deleteAccount();
+      router.push("/auth?mode=signup");
+    } catch (err) {
+      setDeleteAccountError(
+        err.detail || err.message || "Failed to delete account. Please try again."
+      );
+      setIsDeletingAccount(false);
     }
   };
 
@@ -322,21 +395,34 @@ export default function ProfilePage() {
                       <button
                         type="button"
                         onClick={handleSaveName}
-                        className="btn-primary h-9 min-w-[100px] text-xs font-semibold uppercase tracking-wider rounded-xl cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm"
+                        disabled={isSavingName}
+                        className="btn-primary h-9 min-w-[100px] text-xs font-semibold uppercase tracking-wider rounded-xl cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
                       >
-                        <svg
-                          className="h-3.5 w-3.5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        <span>Save</span>
+                        {isSavingName ? (
+                          <>
+                            <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                            </svg>
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="h-3.5 w-3.5"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <span>Save</span>
+                          </>
+                        )}
                       </button>
                       <button
                         type="button"
@@ -454,21 +540,34 @@ export default function ProfilePage() {
                       <button
                         type="button"
                         onClick={handleSaveUsername}
-                        className="btn-primary h-9 min-w-[100px] text-xs font-semibold uppercase tracking-wider rounded-xl cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm"
+                        disabled={isSavingUsername}
+                        className="btn-primary h-9 min-w-[100px] text-xs font-semibold uppercase tracking-wider rounded-xl cursor-pointer inline-flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50"
                       >
-                        <svg
-                          className="h-3.5 w-3.5"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        <span>Save</span>
+                        {isSavingUsername ? (
+                          <>
+                            <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                            </svg>
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="h-3.5 w-3.5"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <span>Save</span>
+                          </>
+                        )}
                       </button>
                       <button
                         type="button"
@@ -541,13 +640,13 @@ export default function ProfilePage() {
           <div className="my-6" aria-hidden="true" />
 
           {/* ========================================================= */}
-          {/* 3. ACCOUNT ACTIONS: Log Out Action                         */}
+          {/* 3. ACCOUNT ACTIONS: Log Out & Delete Account Permanently   */}
           {/* ========================================================= */}
-          <section aria-label="Account actions">
+          <section aria-label="Account actions" className="space-y-3">
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full h-12 rounded-xl border border-rose-500/30 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 hover:border-rose-500/50 text-xs font-semibold tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 inline-flex items-center justify-center gap-2"
+              className="w-full h-12 rounded-xl border border-border-strong/70 bg-surface-secondary/40 text-text-secondary hover:text-text-primary hover:bg-surface-secondary/70 hover:border-border-strong text-xs font-semibold tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky inline-flex items-center justify-center gap-2"
               aria-label="Log out of Alaya"
             >
               <svg
@@ -566,9 +665,133 @@ export default function ProfilePage() {
               </svg>
               <span>Log Out</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteAccountError("");
+                setShowDeleteModal(true);
+              }}
+              className="w-full h-12 rounded-xl border border-rose-500/30 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 hover:border-rose-500/50 text-xs font-semibold tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 inline-flex items-center justify-center gap-2"
+              aria-label="Delete account permanently"
+            >
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+              <span>Delete Account Permanently</span>
+            </button>
           </section>
         </div>
       </main>
+
+      {/* Delete Account Permanently Confirmation Modal */}
+      {showDeleteModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-modal-backdrop motion-reduce:animate-none"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isDeletingAccount) {
+              setShowDeleteModal(false);
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+            aria-describedby="delete-account-desc"
+            className="w-full max-w-[450px] rounded-2xl border border-white/[0.08] bg-[#0D1014] p-5 sm:p-6 shadow-2xl shadow-black/80 animate-modal-content motion-reduce:animate-none motion-reduce:transform-none select-none text-left"
+          >
+            {/* Header: Trash Icon & Title */}
+            <div className="flex items-start gap-3.5">
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-[#F87171]"
+                aria-hidden="true"
+              >
+                <svg
+                  className="h-4.5 w-4.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3
+                  id="delete-account-title"
+                  className="text-base font-semibold text-[#F5F7FA] tracking-tight leading-snug"
+                >
+                  Delete account permanently?
+                </h3>
+
+                <div className="mt-1.5 flex items-center">
+                  <span className="truncate max-w-full text-xs font-mono font-medium text-[#F5F7FA]/90 bg-[#11161B] border border-white/[0.06] px-2.5 py-0.5 rounded-md">
+                    @{currentUsername}
+                  </span>
+                </div>
+
+                <p
+                  id="delete-account-desc"
+                  className="mt-2.5 text-xs text-[#A1AAB5] leading-relaxed"
+                >
+                  This action cannot be undone. All your conversations, knowledge base documents, and profile details will be permanently deleted from Alaya.
+                </p>
+
+                {deleteAccountError && (
+                  <p className="mt-2.5 text-xs text-rose-400 font-mono">
+                    ⚠ {deleteAccountError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Actions: Keep Account vs Delete Account Permanently */}
+            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-4 border-t border-white/[0.06]">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeletingAccount}
+                className="inline-flex h-9 items-center justify-center rounded-xl bg-[#11161B] hover:bg-[#161C22] border border-white/[0.08] px-4 text-xs font-semibold uppercase tracking-wider text-[#F5F7FA] transition-all cursor-pointer disabled:opacity-50"
+              >
+                Keep account
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteAccount}
+                disabled={isDeletingAccount}
+                className="inline-flex h-9 items-center justify-center rounded-xl bg-red-500/20 hover:bg-red-500/30 text-[#F87171] border border-red-500/30 px-4 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50 gap-2"
+              >
+                {isDeletingAccount && (
+                  <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                )}
+                <span>{isDeletingAccount ? "Deleting account..." : "Delete account permanently"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Minimal Footer */}
       <footer className="w-full py-5 text-center text-[11px] text-text-muted border-t border-border-subtle/50">

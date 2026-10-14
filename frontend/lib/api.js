@@ -326,17 +326,6 @@ export const authApi = {
   },
 
   /**
-   * List users
-   * GET /api/user/get_users
-   * @returns {Promise<Array<{ id: number, name: string, username: string }>>}
-   */
-  async getUsers() {
-    return request("/api/user/get_users", {
-      method: "GET",
-    });
-  },
-
-  /**
    * Update user details
    * PUT /api/user/update_user/{user_id}
    * @param {number} userId
