@@ -292,7 +292,7 @@ async def get_messages(chat_id: int, db: Annotated[Session, Depends(get_db)],
     ).scalar_one_or_none()
     if chat is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
-    stmt= select(Message).where(Message.chat_id==chat_id)
+    stmt= select(Message).where(Message.chat_id==chat_id).order_by(Message.created_at.asc())
     messages= db.execute(stmt).scalars().all()
     return messages
 
