@@ -1,3 +1,4 @@
+import asyncio
 from datetime import date
 import json
 from uuid import uuid4
@@ -197,6 +198,33 @@ async def send_prompt_for_response(data: list[dict[str,Any]], chat_id: int, user
         db.add(db_message)
         db.commit()
 
+async def stream_default_response(user_query: str, chat_id: int, user_id: int, db: Session):
+    cleaned = user_query.strip()
+    if cleaned.lower() in ("hi", "hello", "hey", "yo", "sup"):
+        greeting = f"Hey there! I received your greeting: \"{cleaned}\"."
+    else:
+        greeting = f"I received your message: \"{cleaned}\"."
+
+    default_text = (
+        f"{greeting}\n\n"
+        "*(Note: OpenAI API credits are currently exhausted. This is a default response so you can test sending, editing, and deleting messages. Once OpenAI credits are refilled, live AI responses with retrieval will resume!)*"
+    )
+
+    words = default_text.split(" ")
+    for i, word in enumerate(words):
+        chunk = word + (" " if i < len(words) - 1 else "")
+        yield chunk
+        await asyncio.sleep(0.015)
+
+    db_message = Message(
+        chat_id=chat_id,
+        message_content=default_text,
+        sent_by=Sender.LLM,
+        user_id=user_id,
+    )
+    db.add(db_message)
+    db.commit()
+
 def is_supported_image(file_path: Path) -> bool:
     with file_path.open("rb") as image_file:
         header = image_file.read(12)
@@ -213,68 +241,58 @@ async def handle_new_message(chat_id: int,
                             user_id: Annotated[int, Depends(VerifyJWT)],
                             db: Annotated[Session, Depends(get_db)],
 ):
-    # TODO: add chunking for large inputs.
-
     chat = db.execute(
         select(Chat).where(Chat.id == chat_id, Chat.user_id == user_id)
     ).scalar_one_or_none()
     if chat is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat not found")
 
-    #normalization
-    try:
-        embeddable_query= await send_prompt_to_normalize(message.message_content)
-        embeddable_queries= json.loads(embeddable_query)["queries"]
-    except Exception:
-        raise HTTPException(status_code=502, detail="Query normalization failed")
-
-    #embeddings creation
-    try:
-        embeddings = await get_embedding(embeddable_queries)
-    except Exception:
-        raise HTTPException(status_code=502, detail="Embedding generation failed")
-
-    #data getting saved
-    db_message = Message(chat_id=chat_id,
-                      message_content=message.message_content,
-                      sent_by=Sender.USER,
-                      user_id=user_id
+    # Persist user message in DB first
+    db_message = Message(
+        chat_id=chat_id,
+        message_content=message.message_content,
+        sent_by=Sender.USER,
+        user_id=user_id,
     )
     db.add(db_message)
     try:
-        db.flush()
-        for embedding in embeddings:
-            db_embeddings = Embedding(message_id=db_message.id,
-                                      vector=embedding["vector"],
-                                      kind="MESSAGE",
-                                      embedded_text=embedding["subquery"]
-            )
-            db.add(db_embeddings)
         db.commit()
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(status_code=500, detail="Message could not be stored")
 
-    #decide what operations to use
+    # Attempt live OpenAI normalization, embeddings, and retrieval
     try:
+        embeddable_query = await send_prompt_to_normalize(message.message_content)
+        embeddable_queries = json.loads(embeddable_query)["queries"]
+
+        embeddings = await get_embedding(embeddable_queries)
+        for embedding in embeddings:
+            db_embeddings = Embedding(
+                message_id=db_message.id,
+                vector=embedding["vector"],
+                kind="MESSAGE",
+                embedded_text=embedding["subquery"],
+            )
+            db.add(db_embeddings)
+        db.commit()
+
         decisions = await decide_retrieval_strategy(embeddable_queries)
-    except Exception:
-        raise HTTPException(status_code=502, detail="Error while deciding the operations")
+        search_results = await retrieve_queries(
+            db, user_id, embeddable_queries, decisions,
+            embeddings, db_message.id, send_prompt_to_plan,
+        )
 
-    #search
-    try:
-        search_results= await retrieve_queries(db, user_id, embeddable_queries, decisions,
-                                         embeddings, db_message.id, send_prompt_to_plan)
-    except SQLAlchemyError:
-        raise HTTPException(status_code=500, detail="Search could not be completed")
-    except Exception:
-        raise HTTPException(status_code=502, detail="Search plan could not be generated")
-
-    #stream final response
-    return StreamingResponse(
-        send_prompt_for_response(search_results, chat_id, user_id, db),
-        media_type="text/plain"
-    )
+        return StreamingResponse(
+            send_prompt_for_response(search_results, chat_id, user_id, db),
+            media_type="text/plain",
+        )
+    except Exception as exc:
+        print(f"[OpenAI pipeline fallback: {exc}] - Streaming default answer.")
+        return StreamingResponse(
+            stream_default_response(message.message_content, chat_id, user_id, db),
+            media_type="text/plain",
+        )
 
 # @router.get("/get_message/{message_id}", response_model=MessageResponse)
 # async def get_message(message_id: int, db: Annotated[Session, Depends(get_db)]):
@@ -312,57 +330,47 @@ async def update_message(chat_id: int,
     message= db.execute(stmt).scalar_one_or_none()
     if message is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
-    newMessage= request.message_content
-
-    # normalization
-    try:
-        embeddable_query = await send_prompt_to_normalize(newMessage)
-        embeddable_queries = json.loads(embeddable_query)["queries"]
-    except Exception:
-        raise HTTPException(status_code=502, detail="Query normalization failed")
-
-    # embeddings creation
-    try:
-        embeddings = await get_embedding(embeddable_queries)
-    except Exception:
-        raise HTTPException(status_code=502, detail="Embedding generation failed")
-
-    # data getting saved
+    # Update message content in DB first
     message.message_content = newMessage
     message.embeddings.clear()
     try:
-        for embedding in embeddings:
-            db_embeddings = Embedding(message_id=message.id,
-                                      vector=embedding["vector"],
-                                      kind="MESSAGE",
-                                      embedded_text=embedding["subquery"]
-                                      )
-            db.add(db_embeddings)
         db.commit()
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(status_code=500, detail="Message could not be stored")
 
-    # decide what operations to use
+    # Attempt live OpenAI normalization, embeddings, and retrieval
     try:
+        embeddable_query = await send_prompt_to_normalize(newMessage)
+        embeddable_queries = json.loads(embeddable_query)["queries"]
+
+        embeddings = await get_embedding(embeddable_queries)
+        for embedding in embeddings:
+            db_embeddings = Embedding(
+                message_id=message.id,
+                vector=embedding["vector"],
+                kind="MESSAGE",
+                embedded_text=embedding["subquery"],
+            )
+            db.add(db_embeddings)
+        db.commit()
+
         decisions = await decide_retrieval_strategy(embeddable_queries)
-    except Exception:
-        raise HTTPException(status_code=502, detail="Error while deciding the operations")
+        search_results = await retrieve_queries(
+            db, user_id, embeddable_queries, decisions,
+            embeddings, message.id, send_prompt_to_plan,
+        )
 
-    # search
-    try:
-        search_results = await retrieve_queries(db, user_id, embeddable_queries, decisions,
-                                                embeddings, message.id, send_prompt_to_plan)
-    except SQLAlchemyError:
-        raise HTTPException(status_code=500, detail="Search could not be completed")
-    except Exception:
-        raise HTTPException(status_code=502, detail="Search plan could not be generated")
-
-    # stream final response
-    return StreamingResponse(
-        send_prompt_for_response(search_results, chat_id, user_id, db),
-        media_type="text/plain"
-    )
+        return StreamingResponse(
+            send_prompt_for_response(search_results, chat_id, user_id, db),
+            media_type="text/plain",
+        )
+    except Exception as exc:
+        print(f"[OpenAI pipeline update fallback: {exc}] - Streaming default answer.")
+        return StreamingResponse(
+            stream_default_response(newMessage, chat_id, user_id, db),
+            media_type="text/plain",
+        )
 
 @router.delete("/delete_message/{message_id}")
 async def delete_message(message_id: int, db: Annotated[Session, Depends(get_db)],

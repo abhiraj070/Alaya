@@ -20,8 +20,8 @@ export default function ChatMessages({
         />
       ))}
 
-      {/* Subtle Alaya Thinking Indicator */}
-      {isThinking && (
+      {/* Subtle Alaya Thinking Indicator (only shown if not already rendering a streaming message) */}
+      {isThinking && !messages.some((m) => m.sender === "alaya" && m.isStreaming) && (
         <div
           className="flex items-start gap-3 sm:gap-4 mb-6 animate-fadeIn motion-reduce:animate-none"
           role="status"

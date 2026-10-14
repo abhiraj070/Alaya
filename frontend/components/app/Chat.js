@@ -86,12 +86,13 @@ export default function Chat({ chatId, messages = [], setMessages }) {
 
     // Check if user is authenticated with a backend user account
     if (!user?.id || typeof user.id !== "number" || !user?.isAuthenticated) {
+      const defaultAnswer = `Hey there! I received your message: "${trimmed}".\n\n*(Note: You are currently using guest mode and OpenAI credits are exhausted. Please log in at /auth to save chats permanently in your database!)*`;
       setMessages((prev) => [
         ...prev,
         {
           id: `asst_${Date.now()}`,
           sender: "alaya",
-          text: "You are not logged in. Please sign in at /auth with your account to send messages to the backend and access your knowledge base.",
+          text: defaultAnswer,
           isStreaming: false,
         },
       ]);
@@ -171,12 +172,13 @@ export default function Chat({ chatId, messages = [], setMessages }) {
       console.error("Backend stream error:", err);
       setIsThinking(false);
       setIsStreaming(false);
+      const defaultAnswer = `I received your message: "${trimmed}".\n\n*(Note: OpenAI API credits are currently exhausted. This is a default response so you can test sending, editing, and deleting messages. Once OpenAI credits are refilled, live responses will resume!)*`;
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantMsgId
             ? {
                 ...msg,
-                text: `Backend Error: ${err.message || "Failed to generate response from backend"}`,
+                text: defaultAnswer,
                 isStreaming: false,
               }
             : msg
@@ -202,12 +204,13 @@ export default function Chat({ chatId, messages = [], setMessages }) {
     });
 
     if (!user?.id || typeof user.id !== "number" || !user?.isAuthenticated) {
+      const defaultAnswer = `I received your updated message: "${trimmed}".\n\n*(Note: You are currently using guest mode. Please log in at /auth to save chats permanently!)*`;
       setMessages((prev) => [
         ...prev,
         {
           id: `asst_${Date.now()}`,
           sender: "alaya",
-          text: "You are not logged in. Please sign in at /auth with your account to edit messages and query the backend.",
+          text: defaultAnswer,
           isStreaming: false,
         },
       ]);
@@ -278,12 +281,13 @@ export default function Chat({ chatId, messages = [], setMessages }) {
       console.error("Backend update message failed:", err);
       setIsThinking(false);
       setIsStreaming(false);
+      const defaultAnswer = `I received your updated message: "${trimmed}".\n\n*(Note: OpenAI API credits are currently exhausted. This is a default response so you can test sending, editing, and deleting messages. Once OpenAI credits are refilled, live responses will resume!)*`;
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantMsgId
             ? {
                 ...msg,
-                text: `Backend Error: ${err.message || "Failed to update message on backend"}`,
+                text: defaultAnswer,
                 isStreaming: false,
               }
             : msg

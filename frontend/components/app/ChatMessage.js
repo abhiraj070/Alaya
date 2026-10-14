@@ -9,9 +9,16 @@ import { useState, useRef, useEffect } from "react";
 function renderAlayaResponse(text, isStreaming) {
   if (!text) {
     return isStreaming ? (
-      <span className="inline-block text-accent-sky animate-pulse font-mono" aria-hidden="true">
-        ▌
-      </span>
+      <div className="flex items-center gap-2 py-1 text-text-muted text-xs sm:text-sm">
+        <div className="flex items-center gap-1" aria-hidden="true">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent-sky animate-bounce [animation-delay:-0.3s]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-accent-sky animate-bounce [animation-delay:-0.15s]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-accent-sky animate-bounce" />
+        </div>
+        <span className="text-text-secondary text-xs font-medium">
+          Alaya is thinking...
+        </span>
+      </div>
     ) : null;
   }
 
