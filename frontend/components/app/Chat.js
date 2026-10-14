@@ -4,8 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ChatEmptyState from "@/components/app/ChatEmptyState";
 import ChatMessages from "@/components/app/ChatMessages";
 import ChatInput from "@/components/app/ChatInput";
-import { findMockResponse } from "@/mock/chat";
-import { messagesApi } from "@/lib/api";
+import { messagesApi, chatApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 
 export default function Chat({ chatId, messages = [], setMessages }) {
@@ -60,75 +59,6 @@ export default function Chat({ chatId, messages = [], setMessages }) {
     }
   }, [messages, isThinking, isStreaming]);
 
-  // Generates and progressively streams assistant response for a given prompt (offline/mock fallback)
-  const triggerAssistantResponse = useCallback((promptText) => {
-    const matched = findMockResponse(promptText);
-
-    setIsThinking(true);
-
-    const thinkTimer = setTimeout(() => {
-      setIsThinking(false);
-
-      const prefersReducedMotion =
-        typeof window !== "undefined" &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      if (prefersReducedMotion) {
-        const assistantMsg = {
-          id: `asst_${Date.now()}`,
-          sender: "alaya",
-          text: matched.text,
-          source: matched.source,
-          isStreaming: false,
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
-        return;
-      }
-
-      setIsStreaming(true);
-      const assistantMsgId = `asst_${Date.now()}`;
-      const words = matched.text.split(" ");
-      let currentWordIndex = 0;
-      const batchSize = 3;
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: assistantMsgId,
-          sender: "alaya",
-          text: "",
-          source: matched.source,
-          isStreaming: true,
-        },
-      ]);
-
-      const streamTimer = setInterval(() => {
-        currentWordIndex = Math.min(currentWordIndex + batchSize, words.length);
-        const currentChunk = words.slice(0, currentWordIndex).join(" ");
-
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMsgId
-              ? {
-                  ...msg,
-                  text: currentChunk,
-                  isStreaming: currentWordIndex < words.length,
-                }
-              : msg
-          )
-        );
-
-        if (currentWordIndex >= words.length) {
-          clearInterval(streamTimer);
-          setIsStreaming(false);
-        }
-      }, 45);
-
-      activeTimersRef.current.push(streamTimer);
-    }, 700);
-
-    activeTimersRef.current.push(thinkTimer);
-  }, [setMessages]);
 
   // Core message submission handler - routes all messages to /api/messages/new_messages/{chat_id}
   const handleSendMessage = async (textOverride) => {
