@@ -14,6 +14,8 @@ __pycache__/
 *.py[cod]
 temp_img/
 temp_files/
+backend/temp_img/
+backend/temp_files/
 
 # Frontend dependencies and build outputs
 node_modules/

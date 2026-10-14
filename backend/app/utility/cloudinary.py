@@ -1,6 +1,6 @@
 import cloudinary
 import cloudinary.uploader
-from app.db.connect import get_settings
+from app.env_config.settings import get_settings
 
 settings = get_settings()
 

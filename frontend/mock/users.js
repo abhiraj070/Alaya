@@ -15,8 +15,6 @@ export const defaultGuestUser = {
   isAuthenticated: false,
 };
 
-export const mockUser = defaultGuestUser;
-export const mockUsers = [defaultGuestUser];
 
 let cachedUser = null;
 let lastStoredRaw = null;

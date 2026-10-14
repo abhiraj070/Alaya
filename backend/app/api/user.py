@@ -24,16 +24,6 @@ router= APIRouter(prefix= "/user", tags= ["user"])
 ph= PasswordHasher()
 settings = get_settings()
 
-def get_user_from_id(user_id: int, db: Session):
-    # db.query is old now we use select
-    stmt = select(User).where(User.id == user_id)
-    user = db.execute(stmt).scalar_one_or_none()
-
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-
-    return user
-
 def generate_tokens(user_id: int):
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)

@@ -44,7 +44,6 @@ SUPPORTED_IMAGE_SIGNATURES = (
 
 normalization_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "normalization_prompt.md").read_text(encoding="utf-8")
 structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "structure_knowledge_metadeta.md").read_text(encoding="utf-8")
-#decision_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "decision.md").read_text()
 criteria= json.loads((Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "criteria_decision.md").read_text(encoding="utf-8"))
 instruction= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "instruction_decision.md").read_text(encoding="utf-8")
 sql_retrieval_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "sql_retrieval.md").read_text(encoding="utf-8")
@@ -104,18 +103,6 @@ async def send_prompt_to_read_image(image_url: str) -> str:
 
 
 
-# def send_prompt_to_decide(user_queries: list[str]) -> str:
-#     response = client.chat.completions.create(
-#         model=MODEL,
-#         messages=[
-#             {"role": "system", "content": f"{decision_prompt}"},
-#             {"role": "user", "content": json.dumps(user_queries)},
-#         ],
-#         max_tokens=1024,
-#         temperature=0.7,
-#     )
-#     return response.choices[0].message.content
-
 async def decide_retrieval_strategy(user_queries: list[str]) -> list[str]:
     strategies: list[str] = []
 
@@ -136,26 +123,6 @@ async def decide_retrieval_strategy(user_queries: list[str]) -> list[str]:
 
     return strategies
 
-#jev response for reference
-# {
-#   "model": "jev-latest",
-#   "answers": {
-#     "retrieval_strategy": {
-#       "type": "choice",
-#       "choice": "sql",
-#       "probabilities": {
-#         "sql": 0.94,
-#         "semantic": 0.03,
-#         "hybrid": 0.03
-#       },
-#       "confidence": 0.94
-#     }
-#   },
-#   "usage": {
-#     "input_tokens": 312,
-#     "output_tokens": 48
-#   }
-# }
 
 async def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
     response = await client.chat.completions.create(
@@ -300,14 +267,6 @@ async def handle_new_message(chat_id: int,
             media_type="text/plain",
         )
 
-# @router.get("/get_message/{message_id}", response_model=MessageResponse)
-# async def get_message(message_id: int, db: Annotated[Session, Depends(get_db)]):
-#     stmt= select(Message).where(Message.id==message_id)
-#     message= db.execute(stmt).scalar_one_or_none()
-#     if message is None:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
-#     return message
-
 @router.get("/get_messages/{chat_id}", response_model=list[MessageResponse])
 async def get_messages(chat_id: int, db: Annotated[Session, Depends(get_db)],
                        user_id: Annotated[int, Depends(VerifyJWT)]):
@@ -336,8 +295,9 @@ async def update_message(chat_id: int,
     message= db.execute(stmt).scalar_one_or_none()
     if message is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
+    new_message = request.message_content
     # Update message content in DB first
-    message.message_content = newMessage
+    message.message_content = new_message
     message.embeddings.clear()
     try:
         db.commit()
@@ -347,7 +307,7 @@ async def update_message(chat_id: int,
 
     # Attempt live OpenAI normalization, embeddings, and retrieval
     try:
-        embeddable_query = await send_prompt_to_normalize(newMessage)
+        embeddable_query = await send_prompt_to_normalize(new_message)
         embeddable_queries = json.loads(embeddable_query)["queries"]
 
         embeddings = await get_embedding(embeddable_queries)
@@ -374,7 +334,7 @@ async def update_message(chat_id: int,
     except Exception as exc:
         print(f"[OpenAI pipeline update fallback: {exc}] - Streaming default answer.")
         return StreamingResponse(
-            stream_default_response(newMessage, chat_id, user_id, db),
+            stream_default_response(new_message, chat_id, user_id, db),
             media_type="text/plain",
         )
 

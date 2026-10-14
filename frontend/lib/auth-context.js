@@ -9,8 +9,6 @@ import {
   subscribeUserStorage,
 } from "@/mock/users";
 
-const STORAGE_KEY = "alaya_user";
-
 const AuthContext = createContext({
   user: null,
   isLoading: false,
@@ -31,30 +29,6 @@ export function AuthProvider({ children }) {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // Sync user state to browser storage
-  const persistUser = useCallback((userData) => {
-    if (typeof window === "undefined") return;
-    try {
-      if (userData) {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-        const token = cleanToken(userData.access_token || userData.token);
-        if (token) {
-          localStorage.setItem("access_token", token);
-          sessionStorage.setItem("access_token", token);
-        }
-      } else {
-        sessionStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem(STORAGE_KEY);
-        clearAllAuthTokens();
-      }
-      // Dispatch storage event so other tabs and external stores update
-      window.dispatchEvent(new Event("storage"));
-    } catch {
-      // Storage unavailable or quota exceeded
-    }
-  }, []);
 
   // Update user profile (persists to backend API and local storage)
   const updateUser = useCallback(async (updates) => {
