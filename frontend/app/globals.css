@@ -440,35 +440,103 @@ select:disabled {
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: background-color var(--duration-fast) var(--ease-standard),
               box-shadow var(--duration-fast) var(--ease-standard),
               transform var(--duration-fast) var(--ease-standard);
 }
 
-.btn-primary:hover {
-  background-color: #0ea5e9;
+/* Strict black text and stroke for .btn-primary and all descendants in all states */
+.btn-primary,
+.btn-primary *,
+.btn-primary span,
+.btn-primary svg,
+.btn-primary path,
+.btn-primary line,
+.btn-primary polyline,
+a.btn-primary,
+a.btn-primary *,
+a.btn-primary span,
+a.btn-primary svg,
+button.btn-primary,
+button.btn-primary *,
+button.btn-primary span,
+button.btn-primary svg {
   color: #000000 !important;
-  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
+  stroke: #000000 !important;
 }
 
-.btn-primary:active {
+/* Subdued hover state: slightly deeper tone to reduce brightness, subtle shadow without glow */
+.btn-primary:hover,
+a.btn-primary:hover,
+button.btn-primary:hover {
+  background-color: #0284c7;
+  color: #000000 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.btn-primary:hover,
+.btn-primary:hover *,
+.btn-primary:hover span,
+.btn-primary:hover svg,
+.btn-primary:hover path,
+.btn-primary:hover line,
+.btn-primary:hover polyline,
+a.btn-primary:hover,
+a.btn-primary:hover *,
+a.btn-primary:hover span,
+a.btn-primary:hover svg,
+button.btn-primary:hover,
+button.btn-primary:hover *,
+button.btn-primary:hover span,
+button.btn-primary:hover svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+
+.btn-primary:active,
+a.btn-primary:active,
+button.btn-primary:active {
   transform: scale(0.98);
 }
 
-/* Light mode primary button: high-contrast blue with white text */
+/* Light mode primary button: consistent sky blue with strict black text before and after hover */
 html.light .btn-primary,
-.light .btn-primary {
-  background-color: #0284C7;
-  color: #FFFFFF !important;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.2);
+.light .btn-primary,
+body.light .btn-primary {
+  background-color: #38BDF8;
+  color: #000000 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+html.light .btn-primary *,
+.light .btn-primary *,
+body.light .btn-primary *,
+html.light .btn-primary span,
+.light .btn-primary span,
+html.light .btn-primary svg,
+.light .btn-primary svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
 }
 
 html.light .btn-primary:hover,
-.light .btn-primary:hover {
-  background-color: #0369A1;
-  color: #FFFFFF !important;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+.light .btn-primary:hover,
+body.light .btn-primary:hover {
+  background-color: #0284c7;
+  color: #000000 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+html.light .btn-primary:hover *,
+.light .btn-primary:hover *,
+body.light .btn-primary:hover *,
+html.light .btn-primary:hover span,
+.light .btn-primary:hover span,
+html.light .btn-primary:hover svg,
+.light .btn-primary:hover svg {
+  color: #000000 !important;
+  stroke: #000000 !important;
 }
 
 /* Guarantee Alaya wordmark L & Y visibility in both light and dark modes */
