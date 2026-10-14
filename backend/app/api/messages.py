@@ -20,6 +20,7 @@ from app.core_tasks.arq_worker.get_queue import get_queue
 from app.core_tasks.search.retrieval import retrieve_queries
 from app.db.connect import get_db
 from app.db.model.chat import Chat, Message, Embedding
+from app.db.model.uploaded_data import UploadedData, DataType
 from app.env_config.settings import get_settings
 from app.schema.messages import MessageResponse, MessageRequest, MessageUpdateRequest
 from cloudinary.exceptions import Error as CloudinaryError
@@ -373,10 +374,21 @@ async def feed_knowledge(
         request: Request,
         user_id: Annotated[int, Depends(VerifyJWT)],
         text_content: str,
-        queue: Annotated[ArqRedis, Depends(get_queue)]
+        queue: Annotated[ArqRedis, Depends(get_queue)],
+        db: Annotated[Session, Depends(get_db)],
+        tag: str | None = None,
 ):
     if text_content.strip() == "":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message cannot be spaces or blank")
+
+    uploaded_data = UploadedData(
+        data_type=DataType.TEXT,
+        tag=tag,
+        data_source=text_content,
+        user_id=user_id,
+    )
+    db.add(uploaded_data)
+    db.commit()
     try:
         await queue.enqueue_job("create_knowledge_embedding", text_content, user_id)
     except Exception:
@@ -389,6 +401,7 @@ async def image_upload(
     file: Annotated[UploadFile, File(...)],
     user_id: Annotated[int, Depends(VerifyJWT)],
     queue: Annotated[ArqRedis, Depends(get_queue)],
+    db: Annotated[Session, Depends(get_db)],
 ):
     original_filename = Path(file.filename or "upload").name
     temporary_path = TEMP_IMAGE_DIR / f"{uuid4().hex}{Path(original_filename).suffix}"
@@ -428,6 +441,16 @@ async def image_upload(
             temporary_path.unlink(missing_ok=True)
         except OSError:
             pass
+    format_tag = (upload_result.get("format") or Path(original_filename).suffix.lstrip(".")).lower()
+    uploaded_data = UploadedData(
+        data_type=DataType.IMG,
+        tag=format_tag,
+        data_source=upload_result["secure_url"],
+        user_id=user_id,
+    )
+    db.add(uploaded_data)
+    db.commit()
+
     try:
         cloudinary_data = {
             "secure_url": upload_result["secure_url"],
@@ -454,6 +477,7 @@ async def file_upload(
         file: Annotated[UploadFile, File(...)],
         user_id: Annotated[int, Depends(VerifyJWT)],
         queue: Annotated[ArqRedis, Depends(get_queue)],
+        db: Annotated[Session, Depends(get_db)],
 ):
     original_filename= Path(file.filename or "upload").name
     temporary_path= TEMP_FILE_DIR / f"{uuid4().hex}{Path(original_filename).suffix}"
@@ -462,6 +486,17 @@ async def file_upload(
         with temporary_path.open("wb") as local_file:
             while chunk := await file.read(UPLOAD_CHUNK_SIZE_BYTES):
                 local_file.write(chunk)
+        upload_result = upload_file(temporary_path, original_filename)
+        format_tag = (upload_result.get("format") or Path(original_filename).suffix.lstrip(".")).lower()
+        uploaded_data = UploadedData(
+            data_type=DataType.DOCS,
+            tag=format_tag,
+            data_source=upload_result["secure_url"],
+            user_id=user_id,
+        )
+        db.add(uploaded_data)
+        db.commit()
+
         await queue.enqueue_job("create_file_embeddings", str(temporary_path), user_id)
     except Exception:
         temporary_path.unlink(missing_ok=True)
