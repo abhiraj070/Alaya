@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import UserAvatar from "@/components/ui/UserAvatar";
+import { useAuth } from "@/lib/auth-context";
 
 export default function AuthCard() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const { user, login, register, logout } = useAuth();
 
   const urlMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
   const [activeMode, setActiveMode] = useState(urlMode);
@@ -96,32 +97,7 @@ export default function AuthCard() {
     return !errors.identifier && !errors.password;
   };
 
-  // API Helper: Call Login Endpoint
-  const callLoginApi = async (username, password) => {
-    const payload = {
-      username: username.trim().replace(/^@/, ""),
-      password,
-    };
-
-    try {
-      return await fetch(`${API_BASE}/api/user/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      // Fallback via Next.js proxy if direct API_BASE failed
-      return await fetch(`/api/user/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-    }
-  };
-
-  // Sign In Submit Handler (Connects directly to Backend API)
+  // Sign In Submit Handler (Connects directly to Backend API via useAuth)
   const handleSignInSubmit = async (e) => {
     e.preventDefault();
     if (isSubmittingSignIn) return;
@@ -134,52 +110,27 @@ export default function AuthCard() {
     setSignInErrors((prev) => ({ ...prev, general: "" }));
 
     try {
-      const response = await callLoginApi(signInIdentifier, signInPassword);
+      await login(signInIdentifier, signInPassword);
 
-      if (response.ok) {
-        const userData = await response.json();
-
-        // Store user session profile in sessionStorage (NO passwords!)
-        if (typeof window !== "undefined") {
-          sessionStorage.setItem(
-            "alaya_user",
-            JSON.stringify({
-              id: userData.id,
-              name: userData.name,
-              username: userData.username,
-              isAuthenticated: true,
-            })
-          );
-        }
-
-        // Clear sensitive password
-        setSignInPassword("");
-        setIsSubmittingSignIn(false);
-
-        // Navigate to /app
-        router.push("/app");
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        let message = errorData.detail;
-
-        if (response.status === 404) {
-          message = "User not found. Please check your username or register an account.";
-        } else if (response.status === 401) {
-          message = "Incorrect password. Please try again.";
-        } else if (!message) {
-          message = "Authentication failed. Please verify your credentials.";
-        }
-
-        setIsSubmittingSignIn(false);
-        setSignInErrors((prev) => ({ ...prev, general: message }));
-      }
-    } catch {
+      // Clear sensitive password
+      setSignInPassword("");
       setIsSubmittingSignIn(false);
-      setSignInErrors((prev) => ({
-        ...prev,
-        general:
-          "Unable to connect to backend server. Please verify backend is running on port 8000.",
-      }));
+
+      // Navigate to /app
+      router.push("/app");
+    } catch (err) {
+      let message = err.detail || err.message;
+
+      if (err.status === 404) {
+        message = "User not found. Please check your username or register an account.";
+      } else if (err.status === 401) {
+        message = "Incorrect password. Please try again.";
+      } else if (!message) {
+        message = "Authentication failed. Please verify your credentials.";
+      }
+
+      setIsSubmittingSignIn(false);
+      setSignInErrors((prev) => ({ ...prev, general: message }));
     }
   };
 
@@ -228,33 +179,7 @@ export default function AuthCard() {
     return !Object.values(errors).some((err) => !!err);
   };
 
-  // API Helper: Call Register Endpoint
-  const callRegisterApi = async (name, username, password) => {
-    const payload = {
-      name: name.trim(),
-      username: username.trim().replace(/^@/, ""),
-      password,
-    };
-
-    try {
-      return await fetch(`${API_BASE}/api/user/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      // Fallback via Next.js proxy
-      return await fetch(`/api/user/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-    }
-  };
-
-  // Sign Up Submit Handler (Connects directly to Backend API)
+  // Sign Up Submit Handler (Connects directly to Backend API via useAuth)
   const handleSignUpSubmit = async (e) => {
     e.preventDefault();
     if (isSubmittingSignUp) return;
@@ -267,47 +192,36 @@ export default function AuthCard() {
     setSignUpErrors((prev) => ({ ...prev, general: "" }));
 
     try {
-      const response = await callRegisterApi(
-        signUpFullName,
-        signUpUsername,
-        signUpPassword
-      );
+      const newUser = await register({
+        name: signUpFullName,
+        username: signUpUsername,
+        password: signUpPassword,
+      });
 
-      if (response.ok) {
-        const newUser = await response.json();
+      // Clear sensitive fields
+      setSignUpPassword("");
+      setSignUpConfirmPassword("");
 
-        // Clear sensitive fields
-        setSignUpPassword("");
-        setSignUpConfirmPassword("");
+      // Prepopulate Sign In username
+      setSignInIdentifier(newUser?.username || signUpUsername.trim());
+      setSignInErrors({ identifier: "", password: "", general: "" });
 
-        // Prepopulate Sign In username
-        setSignInIdentifier(newUser.username || signUpUsername.trim());
-        setSignInErrors({ identifier: "", password: "", general: "" });
+      // Trigger success state and banner
+      setSignUpSuccess(true);
+      setBannerMessage({
+        title: "Account created successfully",
+        subtext: "Your account has been created. Please sign in to continue.",
+      });
 
-        // Trigger success state and banner
-        setSignUpSuccess(true);
-        setBannerMessage({
-          title: "Account created successfully",
-          subtext: "Your account has been created. Please sign in to continue.",
-        });
-
-        setIsSubmittingSignUp(false);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        const message =
-          errorData.detail ||
-          "Registration failed. Username may already be in use.";
-
-        setIsSubmittingSignUp(false);
-        setSignUpErrors((prev) => ({ ...prev, general: message }));
-      }
-    } catch {
       setIsSubmittingSignUp(false);
-      setSignUpErrors((prev) => ({
-        ...prev,
-        general:
-          "Unable to connect to backend server. Please verify backend is running on port 8000.",
-      }));
+    } catch (err) {
+      const message =
+        err.detail ||
+        err.message ||
+        "Registration failed. Username may already be in use.";
+
+      setIsSubmittingSignUp(false);
+      setSignUpErrors((prev) => ({ ...prev, general: message }));
     }
   };
 
@@ -347,24 +261,60 @@ export default function AuthCard() {
           aria-hidden="true"
         />
 
-        {/* Dynamic Heading and Supporting Text */}
-        <div className="text-center">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text-primary transition-all duration-200">
-            {mode === "signin" ? "Welcome back" : "Create your account"}
-          </h1>
-          <p className="mt-1.5 text-xs sm:text-sm text-text-secondary leading-relaxed transition-all duration-200">
-            {mode === "signin"
-              ? "Access your documents, personal memories, and conversations."
-              : "Start organizing your documents and personal knowledge."}
-          </p>
-        </div>
+        {user?.isAuthenticated ? (
+          <div className="py-4 text-center animate-fadeIn space-y-4">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-accent-sky/40 bg-accent-sky/10 text-accent-sky shadow-[0_0_24px_rgba(56,189,248,0.25)]">
+              <UserAvatar name={user.name} size="md" />
+            </div>
 
-        {/* Tab Switcher */}
-        <div
-          className="mt-6 flex rounded-xl border border-border-subtle bg-surface-secondary/70 p-1"
-          role="tablist"
-          aria-label="Authentication Mode"
-        >
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-text-primary">
+                Already Signed In
+              </h2>
+              <p className="mt-1.5 text-xs sm:text-sm text-text-secondary leading-relaxed">
+                You are currently signed in as <span className="font-semibold text-accent-sky">{user.name}</span> (@{user.username}).
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <Link
+                href="/app"
+                className="btn-primary w-full h-11 text-xs sm:text-sm font-semibold uppercase tracking-wider inline-flex items-center justify-center gap-2 shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)]"
+              >
+                <span>Continue to Workspace</span>
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </Link>
+              <button
+                type="button"
+                onClick={logout}
+                className="w-full text-center py-2 text-xs font-medium text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
+              >
+                Sign out of this account
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Dynamic Heading and Supporting Text */}
+            <div className="text-center">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text-primary transition-all duration-200">
+                {mode === "signin" ? "Welcome back" : "Create your account"}
+              </h1>
+              <p className="mt-1.5 text-xs sm:text-sm text-text-secondary leading-relaxed transition-all duration-200">
+                {mode === "signin"
+                  ? "Access your documents, personal memories, and conversations."
+                  : "Start organizing your documents and personal knowledge."}
+              </p>
+            </div>
+
+            {/* Tab Switcher */}
+            <div
+              className="mt-6 flex rounded-xl border border-border-subtle bg-surface-secondary/70 p-1"
+              role="tablist"
+              aria-label="Authentication Mode"
+            >
           <button
             type="button"
             role="tab"
@@ -1051,6 +1001,8 @@ export default function AuthCard() {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

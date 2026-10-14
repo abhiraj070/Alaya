@@ -8,6 +8,7 @@ import WorkspacePlaceholder from "@/components/app/WorkspacePlaceholder";
 import Chat from "@/components/app/Chat";
 import KnowledgeBaseManager from "@/components/app/KnowledgeBaseManager";
 import { getStoredUser, subscribeUserStorage, mockUser } from "@/mock/users";
+import { useAuth } from "@/lib/auth-context";
 
 export default function AppShell() {
   // Default to expanded; tablet auto-collapse handled after mount to prevent hydration mismatch
@@ -64,12 +65,16 @@ export default function AppShell() {
     setActiveTab("chat");
   };
 
+  const { user } = useAuth();
+
   // Synchronize user profile with external browser storage safely
-  const currentUser = useSyncExternalStore(
+  const storedUser = useSyncExternalStore(
     subscribeUserStorage,
     getStoredUser,
     () => mockUser
   );
+
+  const currentUser = user?.isAuthenticated ? user : storedUser;
 
   // Automatically close mobile drawer when viewport expands to desktop
   useEffect(() => {

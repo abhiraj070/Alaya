@@ -1,4 +1,5 @@
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata = {
   title: "Alaya - Personal Knowledge Platform",
@@ -24,7 +25,7 @@ export default function RootLayout({ children }) {
         className="min-h-screen bg-bg-primary text-text-primary antialiased"
         suppressHydrationWarning
       >
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

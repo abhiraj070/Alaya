@@ -1,20 +1,22 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 import UserAvatar from "@/components/ui/UserAvatar";
-import { getStoredUser, subscribeUserStorage, mockUser } from "@/mock/users";
+import { useAuth } from "@/lib/auth-context";
 
 export default function ProfilePage() {
-  const user = useSyncExternalStore(
-    subscribeUserStorage,
-    getStoredUser,
-    () => mockUser
-  );
+  const router = useRouter();
+  const { user, logout, isLoading } = useAuth();
 
-  const userName = user?.name || "Abhiraj Sharma";
-  const userUsername = user?.username ? `@${user.username.replace(/^@/, "")}` : "@abhiraj";
+  const userName = user?.name || (isLoading ? "Loading..." : "Guest User");
+  const userUsername = user?.username ? `@${user.username.replace(/^@/, "")}` : "@guest";
+
+  const handleSignOut = async () => {
+    await logout();
+    router.push("/");
+  };
 
   return (
     <div className="min-h-screen bg-bg-primary text-text-primary flex flex-col justify-between selection:bg-accent-sky/25">
@@ -40,7 +42,7 @@ export default function ProfilePage() {
           <span>Back to Workspace</span>
         </Link>
 
-        <Link href="/app" className="inline-flex items-center" aria-label="Alaya">
+        <Link href="/" className="inline-flex items-center" aria-label="Alaya">
           <AlayaWordmark className="text-lg sm:text-xl font-extrabold tracking-[0.22em] select-none" />
         </Link>
       </header>
@@ -72,22 +74,45 @@ export default function ProfilePage() {
               <span className="text-text-muted">Account Status</span>
               <span className="inline-flex items-center gap-1.5 font-medium text-emerald-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                Active
+                {user?.isAuthenticated ? "Active" : "Unauthenticated"}
               </span>
             </div>
+            {user?.id && (
+              <div className="flex items-center justify-between text-xs py-1.5 border-b border-border-subtle/50">
+                <span className="text-text-muted">User ID</span>
+                <span className="text-text-secondary font-mono text-[11px]">#{user.id}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between text-xs py-1.5 border-b border-border-subtle/50">
               <span className="text-text-muted">Knowledge Space</span>
               <span className="text-text-secondary font-mono text-[11px]">Personal Isolated</span>
             </div>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 flex flex-col gap-3">
             <Link
               href="/app"
               className="btn-primary w-full h-10 text-xs sm:text-sm font-semibold uppercase tracking-wider inline-flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_16px_rgba(56,189,248,0.25)] hover:shadow-[0_0_24px_rgba(56,189,248,0.4)]"
             >
               <span>Return to Workspace</span>
             </Link>
+
+            {user?.isAuthenticated ? (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="w-full h-9 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs font-semibold tracking-wider uppercase transition-colors cursor-pointer"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <Link
+                href="/auth?mode=signin"
+                className="w-full h-9 rounded-xl border border-border-strong text-text-secondary hover:text-accent-sky text-xs font-semibold tracking-wider uppercase inline-flex items-center justify-center transition-colors"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
 
           <p className="mt-4 text-[10px] text-text-muted">

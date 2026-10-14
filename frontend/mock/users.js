@@ -21,7 +21,9 @@ let lastStoredRaw = null;
 export function getStoredUser() {
   if (typeof window === "undefined") return mockUser;
   try {
-    const raw = sessionStorage.getItem("alaya_user");
+    const raw =
+      sessionStorage.getItem("alaya_user") ||
+      localStorage.getItem("alaya_user");
     if (raw === lastStoredRaw && cachedUser) {
       return cachedUser;
     }
