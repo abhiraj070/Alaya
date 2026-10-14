@@ -116,6 +116,28 @@ export default function AppHeader({
 
       {/* Right side: Theme Toggle & Profile Navigation */}
       <div className="flex items-center gap-2.5 sm:gap-3">
+        <a
+          href={process.env.NEXT_PUBLIC_MEMORY_UNIVERSE_URL || "http://localhost:5173"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-accent-sky/30 hover:border-accent-sky/60 bg-accent-sky/10 hover:bg-accent-sky/20 text-accent-sky text-xs font-semibold tracking-wide transition-all duration-200 shadow-xs group"
+          title="Open 3D Memory Universe"
+        >
+          <svg
+            className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-accent-sky transition-transform group-hover:rotate-45"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(30 12 12)" />
+          </svg>
+          <span className="hidden sm:inline">Memory Universe</span>
+        </a>
+
         <ThemeToggle />
 
         <Link
