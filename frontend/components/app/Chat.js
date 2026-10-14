@@ -6,12 +6,15 @@ import ChatMessages from "@/components/app/ChatMessages";
 import ChatInput from "@/components/app/ChatInput";
 import { messagesApi, chatApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import DeleteMessageModal from "@/components/app/DeleteMessageModal";
 
 export default function Chat({ chatId, messages = [], setMessages }) {
   const { user } = useAuth();
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState(null);
+  const [isDeletingMessage, setIsDeletingMessage] = useState(false);
 
   // Active timers tracker & abort controller for clean cancellation & unmount handling
   const activeTimersRef = useRef([]);
@@ -298,17 +301,32 @@ export default function Chat({ chatId, messages = [], setMessages }) {
     }
   };
 
-  // Delete message handler
-  const handleDeleteMessage = async (messageId) => {
-    if (typeof messageId === "number") {
+  // Message deletion prompt and confirmation handlers
+  const handlePromptDeleteMessage = (targetMessage) => {
+    if (typeof targetMessage === "object" && targetMessage !== null) {
+      setMessageToDelete(targetMessage);
+    } else {
+      const found = messages.find((m) => m.id === targetMessage);
+      setMessageToDelete(found || { id: targetMessage, text: "" });
+    }
+  };
+
+  const handleConfirmDeleteMessage = async () => {
+    if (!messageToDelete || isDeletingMessage) return;
+    const targetId = messageToDelete.id;
+    setIsDeletingMessage(true);
+
+    if (typeof targetId === "number") {
       try {
-        await messagesApi.deleteMessage(messageId);
+        await messagesApi.deleteMessage(targetId);
       } catch (err) {
         console.error("Failed to delete message in backend:", err);
       }
     }
 
-    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    setMessages((prev) => prev.filter((m) => m.id !== targetId));
+    setIsDeletingMessage(false);
+    setMessageToDelete(null);
   };
 
   const isBusy = isThinking || isStreaming;
@@ -337,7 +355,7 @@ export default function Chat({ chatId, messages = [], setMessages }) {
             isThinking={isThinking}
             bottomRef={bottomRef}
             onEditMessage={handleEditMessage}
-            onDeleteMessage={handleDeleteMessage}
+            onDeleteMessage={handlePromptDeleteMessage}
           />
         )}
       </div>
@@ -350,6 +368,18 @@ export default function Chat({ chatId, messages = [], setMessages }) {
         onChange={setInputValue}
         onSubmit={() => handleSendMessage()}
       />
+
+      {/* Delete Message Confirmation Modal */}
+      {messageToDelete && (
+        <DeleteMessageModal
+          message={messageToDelete}
+          isDeleting={isDeletingMessage}
+          onClose={() => {
+            if (!isDeletingMessage) setMessageToDelete(null);
+          }}
+          onConfirm={handleConfirmDeleteMessage}
+        />
+      )}
     </div>
   );
 }

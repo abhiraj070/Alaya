@@ -164,15 +164,9 @@ export default function ChatMessage({
     }
   };
 
-  const handleDelete = async () => {
-    if (isDeleting) return;
-    setIsDeleting(true);
-    try {
-      if (onDeleteMessage) {
-        await onDeleteMessage(message.id);
-      }
-    } finally {
-      setIsDeleting(false);
+  const handleDelete = () => {
+    if (onDeleteMessage) {
+      onDeleteMessage(message);
     }
   };
 

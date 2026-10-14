@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ChatInput from "@/components/app/ChatInput";
 import { useAuth } from "@/lib/auth-context";
 import { messagesApi, uploadedDataApi } from "@/lib/api";
+import DeleteKnowledgeItemModal from "@/components/app/DeleteKnowledgeItemModal";
 
 // Format date in friendly human-readable format
 function formatItemDate(dateStr) {
@@ -446,6 +447,7 @@ export default function KnowledgeBaseManager() {
   const [activeFilter, setActiveFilter] = useState("all"); // "all" | "document" | "image" | "memory"
   const [searchQuery, setSearchQuery] = useState("");
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
   const searchInputRef = useRef(null);
 
   // Keyboard shortcut: Press '/' to focus search, 'Escape' to clear or close modal
@@ -493,10 +495,12 @@ export default function KnowledgeBaseManager() {
   });
 
   const handleConfirmDelete = () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete || isDeletingItem) return;
+    setIsDeletingItem(true);
     const title = itemToDelete.title || "Item";
     setItems((prev) => prev.filter((item) => item.id !== itemToDelete.id));
     setItemToDelete(null);
+    setIsDeletingItem(false);
     showToast(`Removed "${title}" from Knowledge Base.`, "info");
   };
 
@@ -1340,60 +1344,16 @@ export default function KnowledgeBaseManager() {
         </div>
       </section>
 
-      {/* Delete Confirmation Popup Modal */}
+      {/* Delete Confirmation Modal */}
       {itemToDelete && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-dialog-title"
-          aria-describedby="delete-dialog-desc"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fadeIn"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setItemToDelete(null);
+        <DeleteKnowledgeItemModal
+          item={itemToDelete}
+          isDeleting={isDeletingItem}
+          onClose={() => {
+            if (!isDeletingItem) setItemToDelete(null);
           }}
-        >
-          <div className="w-full max-w-md rounded-2xl border border-border-strong bg-surface-primary p-6 shadow-2xl space-y-4">
-            <div className="flex items-start gap-3.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  <line x1="10" y1="11" x2="10" y2="17" />
-                  <line x1="14" y1="11" x2="14" y2="17" />
-                </svg>
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <h3 id="delete-dialog-title" className="text-sm font-bold text-text-primary">
-                  Are you sure you want to delete this?
-                </h3>
-                <p className="mt-1 text-xs text-text-muted truncate font-medium">
-                  &ldquo;{itemToDelete.title}&rdquo;
-                </p>
-                <p id="delete-dialog-desc" className="mt-2 text-xs text-text-secondary leading-relaxed">
-                  All the Info in this data will be removed from alaya&apos;s memory.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border-subtle">
-              <button
-                type="button"
-                onClick={() => setItemToDelete(null)}
-                className="rounded-lg border border-border-subtle bg-surface-secondary px-3.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-strong transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                className="rounded-lg bg-rose-600 hover:bg-rose-500 px-4 py-1.5 text-xs font-semibold text-white transition-all shadow-sm"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
+          onConfirm={handleConfirmDelete}
+        />
       )}
     </div>
   );
