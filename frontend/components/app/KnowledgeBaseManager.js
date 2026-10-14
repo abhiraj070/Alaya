@@ -323,6 +323,23 @@ export default function KnowledgeBaseManager() {
   // ==========================================
   const [activeFilter, setActiveFilter] = useState("all"); // "all" | "document" | "image" | "memory"
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef(null);
+
+  // Keyboard shortcut: Press '/' to focus search, 'Escape' to clear
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
+        setSearchQuery("");
+        searchInputRef.current?.blur();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const docCount = items.filter((i) => i.type === "document").length;
   const imgCount = items.filter((i) => i.type === "image").length;
@@ -339,7 +356,9 @@ export default function KnowledgeBaseManager() {
     const contentMatch = (item.content || "").toLowerCase().includes(query);
     const tagMatch = (item.tags || []).some((t) => t.toLowerCase().includes(query));
     const metaMatch = (item.meta || "").toLowerCase().includes(query);
-    return titleMatch || contentMatch || tagMatch || metaMatch;
+    const fileTypeMatch = (item.fileType || "").toLowerCase().includes(query);
+    const categoryMatch = (item.category || "").toLowerCase().includes(query);
+    return titleMatch || contentMatch || tagMatch || metaMatch || fileTypeMatch || categoryMatch;
   });
 
   const handleDeleteItem = (id, title) => {
@@ -349,16 +368,14 @@ export default function KnowledgeBaseManager() {
 
   return (
     <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
-      {/* Top Header */}
-      <div className="border-b border-border-subtle pb-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary">
-            Knowledge Base
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Feed information to Alaya through files, images, or natural-language memories. Everything is unified into your personal knowledge index.
-          </p>
-        </div>
+      {/* Top Header - No horizontal bar below */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-text-primary">
+          Knowledge Base
+        </h1>
+        <p className="mt-1 text-sm text-text-secondary">
+          Feed information to Alaya through files, images, or natural-language memories. Everything is unified into your personal knowledge index.
+        </p>
       </div>
 
       {/* Global Toast Feedback */}
@@ -791,68 +808,94 @@ export default function KnowledgeBaseManager() {
       {/* ==================================================================== */}
       <section className="border-t border-border-subtle pt-8 sm:pt-10 space-y-6">
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-text-primary">
-              Existing Knowledge
-            </h2>
-            <p className="text-xs text-text-secondary mt-0.5">
-              All indexed knowledge available to Alaya in conversations.
-            </p>
-          </div>
-
-          {/* Search Box */}
-          <div className="relative w-full sm:w-64">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search knowledge..."
-              className="w-full rounded-lg border border-border-subtle bg-surface-primary px-3 py-1.5 pl-8 text-xs text-text-primary placeholder:text-text-muted focus:border-accent-sky focus:outline-none"
-            />
-            <svg
-              className="absolute left-2.5 top-2 h-3.5 w-3.5 text-text-muted"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-1.5 text-text-muted hover:text-text-primary text-xs"
-              >
-                ✕
-              </button>
-            )}
-          </div>
+        <div>
+          <h2 className="text-lg font-bold tracking-tight text-text-primary">
+            Existing Knowledge
+          </h2>
+          <p className="text-xs text-text-secondary mt-0.5">
+            All indexed knowledge available to Alaya in conversations.
+          </p>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { id: "all", label: "All Knowledge", count: items.length },
-            { id: "document", label: "Documents", count: docCount },
-            { id: "image", label: "Images", count: imgCount },
-            { id: "memory", label: "Written Text", count: memCount },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveFilter(tab.id)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                activeFilter === tab.id
-                  ? "border border-accent-sky/50 bg-surface-secondary text-accent-sky shadow-sm"
-                  : "border border-transparent text-text-muted hover:text-text-primary hover:bg-surface-secondary/40"
-              }`}
-            >
-              {tab.label} <span className="ml-1 opacity-70">({tab.count})</span>
-            </button>
-          ))}
+        {/* Controls Toolbar: Filter Tabs & Enhanced Search Bar in unified alignment */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+          {/* Filter Tabs */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              { id: "all", label: "All Knowledge", count: items.length },
+              { id: "document", label: "Documents", count: docCount },
+              { id: "image", label: "Images", count: imgCount },
+              { id: "memory", label: "Written Text", count: memCount },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveFilter(tab.id)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  activeFilter === tab.id
+                    ? "border border-accent-sky/50 bg-surface-secondary text-accent-sky shadow-sm"
+                    : "border border-border-subtle/50 text-text-muted hover:text-text-primary hover:bg-surface-secondary/50 hover:border-border-subtle"
+                }`}
+              >
+                {tab.label} <span className="ml-1 opacity-70 font-mono text-[11px]">({tab.count})</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Enhanced Search Bar */}
+          <div className="relative w-full sm:w-72 md:w-80">
+            <div className="group relative flex items-center h-9 w-full rounded-xl border border-border-subtle bg-surface-primary hover:border-border-strong px-3 text-xs transition-all duration-200 focus-within:border-accent-sky focus-within:ring-1 focus-within:ring-accent-sky/30 focus-within:bg-surface-secondary/70">
+              <svg
+                className="h-4 w-4 shrink-0 text-text-muted group-focus-within:text-accent-sky transition-colors"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search knowledge..."
+                className="w-full bg-transparent px-2.5 py-1 text-xs text-text-primary placeholder:text-text-muted focus:outline-none"
+              />
+
+              {searchQuery ? (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] font-mono text-accent-sky hidden sm:inline">
+                    {filteredItems.length} found
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      searchInputRef.current?.focus();
+                    }}
+                    className="rounded p-0.5 text-text-muted hover:text-text-primary hover:bg-surface-tertiary transition-colors"
+                    aria-label="Clear search"
+                    title="Clear search (Esc)"
+                  >
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <kbd className="hidden sm:inline-flex items-center justify-center h-4.5 min-w-[18px] px-1 rounded border border-border-subtle bg-surface-secondary text-[10px] font-mono text-text-muted select-none" title="Press / to search">
+                  /
+                </kbd>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Empty State */}
@@ -886,7 +929,7 @@ export default function KnowledgeBaseManager() {
           {filteredItems.map((item) => {
             // ==========================================
             // 1. DOCUMENT ITEM CARD (Uploaded Data)
-            // Tags feature removed per user request
+            // No tags or bottom hr line per user request
             // ==========================================
             if (item.type === "document") {
               return (
@@ -944,7 +987,7 @@ export default function KnowledgeBaseManager() {
 
             // ==========================================
             // 2. IMAGE ITEM CARD (Uploaded Data)
-            // Tags feature removed per user request
+            // No tags or bottom hr line per user request
             // ==========================================
             if (item.type === "image") {
               return (
@@ -1009,7 +1052,7 @@ export default function KnowledgeBaseManager() {
 
             // ==========================================
             // 3. WRITTEN MEMORY CARD (Text Data Feed)
-            // Tags feature brought back / preserved
+            // No tags or bottom hr line per user request
             // ==========================================
             return (
               <div
@@ -1054,24 +1097,6 @@ export default function KnowledgeBaseManager() {
                       &ldquo;{item.content}&rdquo;
                     </p>
                   </div>
-                </div>
-
-                {/* Footer Tags & Status for Text Data Feed */}
-                <div className="mt-4 flex items-center justify-between border-t border-border-subtle pt-3 text-[10px] font-mono">
-                  <div className="flex flex-wrap gap-1.5">
-                    {(item.tags || []).slice(0, 3).map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="rounded bg-surface-primary px-1.5 py-0.5 text-text-muted border border-border-subtle"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <span className="text-accent-sky font-semibold flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-accent-sky" />
-                    Grounded
-                  </span>
                 </div>
               </div>
             );
