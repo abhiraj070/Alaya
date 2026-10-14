@@ -11,4 +11,5 @@ class ChatRequest(BaseModel):
     user_id: int
 
 class ChatUpdateRequest(BaseModel):
-    chat_title: str
+    chat_title: str | None
+    first_chat: str | None
