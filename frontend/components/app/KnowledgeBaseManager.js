@@ -323,23 +323,32 @@ export default function KnowledgeBaseManager() {
   // ==========================================
   const [activeFilter, setActiveFilter] = useState("all"); // "all" | "document" | "image" | "memory"
   const [searchQuery, setSearchQuery] = useState("");
+  const [itemToDelete, setItemToDelete] = useState(null);
   const searchInputRef = useRef(null);
 
-  // Keyboard shortcut: Press '/' to focus search, 'Escape' to clear
+  // Keyboard shortcut: Press '/' to focus search, 'Escape' to clear or close modal
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) {
-        e.preventDefault();
-        searchInputRef.current?.focus();
+      if (e.key === "Escape") {
+        if (itemToDelete) {
+          setItemToDelete(null);
+          return;
+        }
+        if (document.activeElement === searchInputRef.current) {
+          setSearchQuery("");
+          searchInputRef.current?.blur();
+        }
       }
-      if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
-        setSearchQuery("");
-        searchInputRef.current?.blur();
+      if (e.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) {
+        if (!itemToDelete) {
+          e.preventDefault();
+          searchInputRef.current?.focus();
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [itemToDelete]);
 
   const docCount = items.filter((i) => i.type === "document").length;
   const imgCount = items.filter((i) => i.type === "image").length;
@@ -361,9 +370,12 @@ export default function KnowledgeBaseManager() {
     return titleMatch || contentMatch || tagMatch || metaMatch || fileTypeMatch || categoryMatch;
   });
 
-  const handleDeleteItem = (id, title) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-    showToast(`Removed "${title || "Item"}" from Knowledge Base.`, "info");
+  const handleConfirmDelete = () => {
+    if (!itemToDelete) return;
+    const title = itemToDelete.title || "Item";
+    setItems((prev) => prev.filter((item) => item.id !== itemToDelete.id));
+    setItemToDelete(null);
+    showToast(`Removed "${title}" from Knowledge Base.`, "info");
   };
 
   return (
@@ -953,7 +965,7 @@ export default function KnowledgeBaseManager() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => handleDeleteItem(item.id, item.title)}
+                          onClick={() => setItemToDelete(item)}
                           className="text-text-muted hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                           title="Delete item"
                           aria-label={`Delete ${item.title}`}
@@ -1007,7 +1019,7 @@ export default function KnowledgeBaseManager() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => handleDeleteItem(item.id, item.title)}
+                          onClick={() => setItemToDelete(item)}
                           className="text-text-muted hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                           title="Delete item"
                           aria-label={`Delete ${item.title}`}
@@ -1075,7 +1087,7 @@ export default function KnowledgeBaseManager() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => handleDeleteItem(item.id, item.title)}
+                        onClick={() => setItemToDelete(item)}
                         className="text-text-muted hover:text-rose-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         title="Delete item"
                         aria-label={`Delete ${item.title}`}
@@ -1103,6 +1115,62 @@ export default function KnowledgeBaseManager() {
           })}
         </div>
       </section>
+
+      {/* Delete Confirmation Popup Modal */}
+      {itemToDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          aria-describedby="delete-dialog-desc"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fadeIn"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setItemToDelete(null);
+          }}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-border-strong bg-surface-primary p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3 id="delete-dialog-title" className="text-sm font-bold text-text-primary">
+                  Are you sure you want to delete this?
+                </h3>
+                <p className="mt-1 text-xs text-text-muted truncate font-medium">
+                  &ldquo;{itemToDelete.title}&rdquo;
+                </p>
+                <p id="delete-dialog-desc" className="mt-2 text-xs text-text-secondary leading-relaxed">
+                  All the Info in this data will be removed from alaya&apos;s memory.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border-subtle">
+              <button
+                type="button"
+                onClick={() => setItemToDelete(null)}
+                className="rounded-lg border border-border-subtle bg-surface-secondary px-3.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-strong transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="rounded-lg bg-rose-600 hover:bg-rose-500 px-4 py-1.5 text-xs font-semibold text-white transition-all shadow-sm"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
