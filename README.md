@@ -318,7 +318,7 @@ curl -b cookies.txt -X POST \
   -F 'file=@receipt.png'
 ```
 
-Images must be PNG, JPEG, or WEBP and no larger than 100 KB. The API checks the file signature, uploads to Cloudinary, and queues extraction and embedding. It returns `{"message":"Image queued for processing"}`; completion or failure arrives over the WebSocket. Temporary local files are removed after upload, and Cloudinary cleanup is attempted if enqueueing or processing fails.
+Images must be PNG, JPEG, or WEBP and no larger than 2 MB. The API checks the file signature, uploads to Cloudinary, and queues extraction and embedding. It returns `{"message":"Image queued for processing"}`; completion or failure arrives over the WebSocket. Temporary local files are removed after upload, and Cloudinary cleanup is attempted if enqueueing or processing fails.
 
 ## Document uploads and chunking
 

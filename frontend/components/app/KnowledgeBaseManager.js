@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import ChatInput from "@/components/app/ChatInput";
 import { useAuth } from "@/lib/auth-context";
 import { messagesApi, uploadedDataApi } from "@/lib/api";
@@ -104,82 +104,83 @@ export default function KnowledgeBaseManager() {
   }, []);
 
   // Fetch real uploaded items from backend if user is authenticated
-  useEffect(() => {
+  const fetchUploads = useCallback(async () => {
     if (!user?.id || typeof user.id !== "number" || !user?.isAuthenticated) {
       setItems([]);
       return;
     }
 
+    try {
+      const uploads = await uploadedDataApi.getUploads(user.id);
+      if (!Array.isArray(uploads) || uploads.length === 0) {
+        setItems([]);
+        return;
+      }
+
+      const backendItems = uploads.map((up) => {
+        if (up.data_type === "docs") {
+          const ext = up.tag || "pdf";
+          return {
+            id: `up_doc_${up.id}`,
+            type: "document",
+            title: up.tag ? `${up.tag.toUpperCase()} Document` : "Uploaded Document",
+            fileType: ext,
+            fileSize: "Document",
+            meta: "Indexed Document",
+            url: up.data_source,
+            createdAt: up.created_at,
+            tags: [up.tag ? `#${up.tag}` : "#document", "#uploaded"],
+          };
+        } else if (up.data_type === "img") {
+          return {
+            id: `up_img_${up.id}`,
+            type: "image",
+            title: "Uploaded Image",
+            fileType: up.tag || "png",
+            fileSize: "Image",
+            dimensions: "Multimodal",
+            previewUrl: up.data_source,
+            url: up.data_source,
+            createdAt: up.created_at,
+            status: "Indexed",
+            tags: ["#image", up.tag ? `#${up.tag}` : "#multimodal"],
+          };
+        } else {
+          const words = (up.data_source || "").split(/\s+/);
+          const snippet = words.slice(0, 6).join(" ");
+          const autoTitle = words.length > 6 ? `${snippet}...` : snippet || "Saved Note";
+          return {
+            id: `up_mem_${up.id}`,
+            type: "memory",
+            title: autoTitle,
+            content: up.data_source,
+            category: up.tag || "Note",
+            createdAt: up.created_at,
+            status: "Grounded",
+            tags: [up.tag ? `#${up.tag.toLowerCase()}` : "#memory"],
+          };
+        }
+      });
+
+      setItems(backendItems);
+    } catch (err) {
+      if (err?.status !== 401 && err?.status !== 403) {
+        console.warn("Could not load backend uploads:", err);
+      }
+    }
+  }, [user?.id, user?.isAuthenticated]);
+
+  useEffect(() => {
     let isMounted = true;
     setIsLoadingUploads(true);
-    uploadedDataApi
-      .getUploads(user.id)
-      .then((uploads) => {
-        if (!isMounted) return;
-        if (!Array.isArray(uploads) || uploads.length === 0) {
-          setItems([]);
-          return;
-        }
-
-        const backendItems = uploads.map((up) => {
-          if (up.data_type === "docs") {
-            const ext = up.tag || "pdf";
-            return {
-              id: `up_doc_${up.id}`,
-              type: "document",
-              title: up.tag ? `${up.tag.toUpperCase()} Document` : "Uploaded Document",
-              fileType: ext,
-              fileSize: "Document",
-              meta: "Indexed Document",
-              createdAt: up.created_at,
-              tags: [up.tag ? `#${up.tag}` : "#document", "#uploaded"],
-            };
-          } else if (up.data_type === "img") {
-            return {
-              id: `up_img_${up.id}`,
-              type: "image",
-              title: "Uploaded Image",
-              fileType: up.tag || "png",
-              fileSize: "Image",
-              dimensions: "Multimodal",
-              previewUrl: up.data_source,
-              createdAt: up.created_at,
-              status: "Indexed",
-              tags: ["#image", up.tag ? `#${up.tag}` : "#multimodal"],
-            };
-          } else {
-            const words = (up.data_source || "").split(/\s+/);
-            const snippet = words.slice(0, 6).join(" ");
-            const autoTitle = words.length > 6 ? `${snippet}...` : snippet || "Saved Note";
-            return {
-              id: `up_mem_${up.id}`,
-              type: "memory",
-              title: autoTitle,
-              content: up.data_source,
-              category: up.tag || "Note",
-              createdAt: up.created_at,
-              status: "Grounded",
-              tags: [up.tag ? `#${up.tag.toLowerCase()}` : "#memory"],
-            };
-          }
-        });
-
-        setItems(backendItems);
-      })
-      .catch((err) => {
-        if (err?.status !== 401 && err?.status !== 403) {
-          console.warn("Could not load backend uploads, using local state:", err);
-        }
-        if (isMounted) setItems([]);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoadingUploads(false);
-      });
+    fetchUploads().finally(() => {
+      if (isMounted) setIsLoadingUploads(false);
+    });
 
     return () => {
       isMounted = false;
     };
-  }, [user?.id, user?.isAuthenticated]);
+  }, [fetchUploads]);
 
   // ==========================================
   // MODE 1: UPLOAD FILES (Single Document)
@@ -252,6 +253,9 @@ export default function KnowledgeBaseManager() {
       setIsFilesProcessing(false);
       setFileProcessingStep("");
       showToast(`Successfully ingested "${fileName}" into your Knowledge Base.`);
+      if (user?.id && user?.isAuthenticated) {
+        fetchUploads().catch(() => {});
+      }
     } catch (err) {
       console.error("Document upload failed:", err);
       setIsFilesProcessing(false);
@@ -263,7 +267,7 @@ export default function KnowledgeBaseManager() {
 
   // ==========================================
   // MODE 2: UPLOAD IMAGES (Single Image)
-  // Backend endpoint supports only 1 image at a time (Max 100 KB)
+  // Backend endpoint supports only 1 image at a time (Max 2 MB)
   // ==========================================
   const [stagedImage, setStagedImage] = useState(null);
   const [isImageDragging, setIsImageDragging] = useState(false);
@@ -291,8 +295,8 @@ export default function KnowledgeBaseManager() {
       return;
     }
 
-    if (file.size > 100 * 1024) {
-      setImageError(`"${file.name}" exceeds 100 KB (${formatBytes(file.size)}). Backend supports up to 100 KB.`);
+    if (file.size > 2 * 1024 * 1024) {
+      setImageError(`"${file.name}" exceeds 2 MB (${formatBytes(file.size)}). Backend supports up to 2 MB.`);
       return;
     }
 
@@ -319,8 +323,8 @@ export default function KnowledgeBaseManager() {
   const handleIndexImageSubmit = async () => {
     if (!stagedImage || isImagesProcessing) return;
 
-    if (stagedImage.rawSize > 100 * 1024) {
-      setImageError("Image size must not exceed 100 KB.");
+    if (stagedImage.rawSize > 2 * 1024 * 1024) {
+      setImageError("Image size must not exceed 2 MB.");
       return;
     }
 
@@ -353,6 +357,9 @@ export default function KnowledgeBaseManager() {
       setIsImagesProcessing(false);
       setImageProcessingStep("");
       showToast(`Successfully indexed "${imageName}" into your Knowledge Base.`);
+      if (user?.id && user?.isAuthenticated) {
+        fetchUploads().catch(() => {});
+      }
     } catch (err) {
       console.error("Image upload failed:", err);
       setIsImagesProcessing(false);
@@ -418,6 +425,9 @@ export default function KnowledgeBaseManager() {
       setTextValue("");
       setIsTextSubmitting(false);
       showToast(`Memory recorded: "${autoTitle}" is now grounded in your Knowledge Base.`);
+      if (user?.id && user?.isAuthenticated) {
+        fetchUploads().catch(() => {});
+      }
     } catch (err) {
       console.error("Text knowledge ingestion failed:", err);
       setIsTextSubmitting(false);
@@ -735,7 +745,7 @@ export default function KnowledgeBaseManager() {
           <div className="mt-5 space-y-4 animate-fadeIn">
             <div className="flex items-center justify-between text-xs text-text-muted">
               <span>Supports PNG, JPG, JPEG, WebP</span>
-              <span className="font-mono">Max 100 KB</span>
+              <span className="font-mono">Max 2 MB</span>
             </div>
 
             {/* Error Message */}
@@ -902,8 +912,9 @@ export default function KnowledgeBaseManager() {
               {/* Exact ChatInput component as in Ask interface */}
               <ChatInput
                 value={textValue}
-                onChange={(e) => {
-                  setTextValue(e.target.value);
+                onChange={(val) => {
+                  const text = typeof val === "string" ? val : val?.target?.value ?? "";
+                  setTextValue(text);
                   if (textError) setTextError("");
                 }}
                 onSubmit={handleTextSubmit}
@@ -1084,6 +1095,22 @@ export default function KnowledgeBaseManager() {
                       <span className="text-[10px] font-mono text-text-muted" suppressHydrationWarning>
                         {formatItemDate(item.createdAt)}
                       </span>
+                      {item.url && (
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-text-muted hover:text-accent-sky p-1 transition-colors"
+                          title="Open document in new tab"
+                          aria-label={`Open ${item.title}`}
+                        >
+                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            <polyline points="15 3 21 3 21 9" />
+                            <line x1="10" y1="14" x2="21" y2="3" />
+                          </svg>
+                        </a>
+                      )}
                       <button
                         type="button"
                         onClick={() => setItemToDelete(item)}
@@ -1105,9 +1132,21 @@ export default function KnowledgeBaseManager() {
                       {item.fileType}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-text-primary line-clamp-2 leading-snug" title={item.title}>
-                        {item.title}
-                      </h3>
+                      {item.url ? (
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-semibold text-text-primary hover:text-accent-sky line-clamp-2 leading-snug transition-colors inline-block"
+                          title={`Open ${item.title}`}
+                        >
+                          {item.title}
+                        </a>
+                      ) : (
+                        <h3 className="text-sm font-semibold text-text-primary line-clamp-2 leading-snug" title={item.title}>
+                          {item.title}
+                        </h3>
+                      )}
                       <p className="text-[11px] text-text-muted mt-1 font-mono">
                         {item.fileSize} • {item.meta}
                       </p>
@@ -1117,7 +1156,23 @@ export default function KnowledgeBaseManager() {
                   {/* Bottom Metadata Bar */}
                   <div className="flex items-center justify-between text-[10px] font-mono text-text-muted pt-2 border-t border-border-subtle/50 shrink-0">
                     <span>{item.fileSize}</span>
-                    <span className="uppercase">{item.fileType} file</span>
+                    {item.url ? (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-accent-sky hover:underline inline-flex items-center gap-1 font-sans font-medium"
+                      >
+                        <span>Open file</span>
+                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                          <polyline points="15 3 21 3 21 9" />
+                          <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <span className="uppercase">{item.fileType} file</span>
+                    )}
                   </div>
                 </div>
               );
@@ -1141,6 +1196,22 @@ export default function KnowledgeBaseManager() {
                       <span className="text-[10px] font-mono text-text-muted" suppressHydrationWarning>
                         {formatItemDate(item.createdAt)}
                       </span>
+                      {(item.url || item.previewUrl) && (
+                        <a
+                          href={item.url || item.previewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-text-muted hover:text-accent-sky p-1 transition-colors"
+                          title="Open image in new tab"
+                          aria-label={`Open ${item.title}`}
+                        >
+                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                            <polyline points="15 3 21 3 21 9" />
+                            <line x1="10" y1="14" x2="21" y2="3" />
+                          </svg>
+                        </a>
+                      )}
                       <button
                         type="button"
                         onClick={() => setItemToDelete(item)}
@@ -1157,27 +1228,49 @@ export default function KnowledgeBaseManager() {
                   </div>
 
                   {/* Middle Thumbnail Preview */}
-                  <div className="relative h-24 w-full overflow-hidden rounded-lg border border-border-subtle bg-surface-secondary my-auto shrink-0">
-                    {item.previewUrl ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
+                  {item.previewUrl || item.url ? (
+                    <a
+                      href={item.url || item.previewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="relative h-24 w-full overflow-hidden rounded-lg border border-border-subtle bg-surface-secondary my-auto shrink-0 block cursor-pointer group/thumb"
+                      title="Click to view full image in new tab"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={item.previewUrl}
+                        src={item.previewUrl || item.url}
                         alt={item.title}
-                        className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                        className="h-full w-full object-cover object-center group-hover/thumb:scale-105 transition-transform duration-300"
                       />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-text-muted text-xs font-mono">
-                        Image
-                      </div>
-                    )}
-                  </div>
+                    </a>
+                  ) : (
+                    <div className="relative h-24 w-full overflow-hidden rounded-lg border border-border-subtle bg-surface-secondary my-auto shrink-0 flex items-center justify-center text-text-muted text-xs font-mono">
+                      Image
+                    </div>
+                  )}
 
                   {/* Bottom Details Bar */}
                   <div className="flex items-center justify-between text-[10px] font-mono text-text-muted pt-2 border-t border-border-subtle/50 shrink-0">
-                    <span className="truncate max-w-[160px] font-medium text-text-primary" title={item.title}>
+                    <span className="truncate max-w-[140px] font-medium text-text-primary" title={item.title}>
                       {item.title}
                     </span>
-                    <span>{item.fileSize}</span>
+                    {(item.url || item.previewUrl) ? (
+                      <a
+                        href={item.url || item.previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-accent-sky hover:underline inline-flex items-center gap-1 font-sans font-medium"
+                      >
+                        <span>Open image</span>
+                        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                          <polyline points="15 3 21 3 21 9" />
+                          <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <span>{item.fileSize}</span>
+                    )}
                   </div>
                 </div>
               );

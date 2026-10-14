@@ -9,7 +9,7 @@ from starlette.requests import Request
 from typesafe_sdk import AsyncTypeSafeClient, Choice
 from arq import ArqRedis
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette import status
@@ -35,7 +35,7 @@ settings = get_settings()
 
 TEMP_IMAGE_DIR = Path(__file__).resolve().parents[2] / "temp_img"
 TEMP_FILE_DIR = Path(__file__).resolve().parents[2] / "temp_files"
-MAX_IMAGE_SIZE_BYTES = 100 * 1024
+MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024
 UPLOAD_CHUNK_SIZE_BYTES = 64 * 1024
 SUPPORTED_IMAGE_SIGNATURES = (
     b"\x89PNG\r\n\x1a\n",
@@ -187,15 +187,17 @@ async def send_prompt_for_response(data: list[dict[str,Any]], chat_id: int, user
             full_response+=content
             yield content
 
-    if full_response!="":
-        db_message= Message(
+    if full_response != "":
+        db_message = Message(
             chat_id=chat_id,
             message_content=full_response,
             sent_by=Sender.LLM,
             user_id=user_id,
-
         )
         db.add(db_message)
+        chat = db.execute(select(Chat).where(Chat.id == chat_id)).scalar_one_or_none()
+        if chat:
+            chat.updated_at = func.now()
         db.commit()
 
 async def stream_default_response(user_query: str, chat_id: int, user_id: int, db: Session):
@@ -223,6 +225,9 @@ async def stream_default_response(user_query: str, chat_id: int, user_id: int, d
         user_id=user_id,
     )
     db.add(db_message)
+    chat = db.execute(select(Chat).where(Chat.id == chat_id)).scalar_one_or_none()
+    if chat:
+        chat.updated_at = func.now()
     db.commit()
 
 def is_supported_image(file_path: Path) -> bool:
@@ -254,6 +259,7 @@ async def handle_new_message(chat_id: int,
         sent_by=Sender.USER,
         user_id=user_id,
     )
+    chat.updated_at = func.now()
     db.add(db_message)
     try:
         db.commit()
@@ -433,7 +439,7 @@ async def image_upload(
                 if bytes_written > MAX_IMAGE_SIZE_BYTES:
                     raise HTTPException(
                         status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-                        detail="Image must not exceed 100 KB",
+                        detail="Image must not exceed 2 MB",
                     )
                 local_file.write(chunk)
 
