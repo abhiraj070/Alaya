@@ -3,11 +3,7 @@
  * Strictly local demonstration responses derived from mock documents and personal memories.
  */
 
-export const examplePrompts = [
-  "What did I accomplish today?",
-  "What are the main findings in my research paper?",
-  "What did we decide about Redis?",
-];
+export const examplePrompts = [];
 
 export const mockConversation = [
   {

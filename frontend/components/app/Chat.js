@@ -170,7 +170,7 @@ export default function Chat({ messages = [], setMessages }) {
         style={{ touchAction: "pan-y" }}
       >
         {messages.length === 0 ? (
-          <ChatEmptyState onSelectPrompt={(prompt) => handleSendMessage(prompt)} />
+          <ChatEmptyState />
         ) : (
           <ChatMessages
             messages={messages}
