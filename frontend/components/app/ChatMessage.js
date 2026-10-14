@@ -111,6 +111,7 @@ export default function ChatMessage({
   const [editText, setEditText] = useState(message.text || "");
   const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const textareaRef = useRef(null);
 
   // Focus and select textarea on edit open
@@ -163,9 +164,15 @@ export default function ChatMessage({
     }
   };
 
-  const handleDelete = () => {
-    if (onDeleteMessage) {
-      onDeleteMessage(message.id);
+  const handleDelete = async () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      if (onDeleteMessage) {
+        await onDeleteMessage(message.id);
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -208,7 +215,10 @@ export default function ChatMessage({
                 className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-accent-sky text-bg-primary hover:bg-accent-sky/90 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
               >
                 {isSubmitting ? (
-                  <span>Sending...</span>
+                  <>
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-bg-primary border-t-transparent" />
+                    <span>Sending...</span>
+                  </>
                 ) : (
                   <>
                     <span>Send</span>
@@ -272,14 +282,19 @@ export default function ChatMessage({
           <button
             type="button"
             onClick={handleDelete}
-            title="Delete"
+            disabled={isDeleting}
+            title={isDeleting ? "Deleting..." : "Delete"}
             aria-label="Delete"
-            className="p-1.5 rounded-lg text-text-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-text-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-60"
           >
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
+            {isDeleting ? (
+              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-rose-400 border-t-transparent" />
+            ) : (
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            )}
           </button>
         </div>
       </div>
@@ -343,14 +358,19 @@ export default function ChatMessage({
             <button
               type="button"
               onClick={handleDelete}
-              title="Delete"
+              disabled={isDeleting}
+              title={isDeleting ? "Deleting..." : "Delete"}
               aria-label="Delete response"
-              className="p-1.5 rounded-lg text-text-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-text-muted hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-60"
             >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
+              {isDeleting ? (
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-rose-400 border-t-transparent" />
+              ) : (
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              )}
             </button>
           </div>
         )}

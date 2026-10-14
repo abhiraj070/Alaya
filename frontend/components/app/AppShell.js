@@ -8,6 +8,7 @@ import MobileDrawer from "@/components/app/MobileDrawer";
 import WorkspacePlaceholder from "@/components/app/WorkspacePlaceholder";
 import Chat from "@/components/app/Chat";
 import KnowledgeBaseManager from "@/components/app/KnowledgeBaseManager";
+import DeleteChatModal from "@/components/app/DeleteChatModal";
 import { useAuth } from "@/lib/auth-context";
 import { chatApi, messagesApi } from "@/lib/api";
 
@@ -28,6 +29,8 @@ export default function AppShell() {
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [chatToDelete, setChatToDelete] = useState(null);
   const [isDeletingChat, setIsDeletingChat] = useState(false);
 
@@ -172,6 +175,11 @@ export default function AppShell() {
     }
 
     let isMounted = true;
+    requestAnimationFrame(() => {
+      if (isMounted) {
+        setIsLoadingMessages(true);
+      }
+    });
     messagesApi
       .getMessages(activeChatId)
       .then((data) => {
@@ -191,6 +199,11 @@ export default function AppShell() {
       .catch((err) => {
         if (err?.status !== 401) {
           console.error("Failed to load chat messages:", err);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingMessages(false);
         }
       });
 
@@ -236,6 +249,9 @@ export default function AppShell() {
 
   // Create chat session dynamically via POST /api/chat/create_chat
   const handleNewChat = async () => {
+    if (isCreatingChat) return;
+    setIsCreatingChat(true);
+
     if (!user?.id || typeof user.id !== "number" || !user?.isAuthenticated) {
       const localChat = {
         id: `chat-${Date.now()}`,
@@ -245,6 +261,7 @@ export default function AppShell() {
       setChats((prev) => [localChat, ...prev]);
       setActiveChatId(localChat.id);
       setActiveTab("chat");
+      setIsCreatingChat(false);
       return;
     }
 
@@ -272,6 +289,8 @@ export default function AppShell() {
       setChats((prev) => [fallbackChat, ...prev]);
       setActiveChatId(fallbackChat.id);
       setActiveTab("chat");
+    } finally {
+      setIsCreatingChat(false);
     }
   };
 
@@ -461,11 +480,13 @@ export default function AppShell() {
         chats={chats}
         activeChatId={activeChatId}
         onNewChat={handleNewChat}
+        isCreatingChat={isCreatingChat}
         onSelectChat={handleSelectChat}
         onUpdateChatTitle={handleUpdateChatTitle}
         onDeleteChat={handleRequestDeleteChat}
         user={user}
         isLoadingChats={isLoadingChats}
+        deletingChatId={isDeletingChat ? chatToDelete?.id : null}
       />
 
       {/* Mobile Navigation Drawer (Overlay on mobile) */}
@@ -477,11 +498,13 @@ export default function AppShell() {
         chats={chats}
         activeChatId={activeChatId}
         onNewChat={handleNewChat}
+        isCreatingChat={isCreatingChat}
         onSelectChat={handleSelectChat}
         onUpdateChatTitle={handleUpdateChatTitle}
         onDeleteChat={handleRequestDeleteChat}
         user={user}
         isLoadingChats={isLoadingChats}
+        deletingChatId={isDeletingChat ? chatToDelete?.id : null}
       />
 
       {/* Main Workspace Column (Header + Main Content) */}
@@ -492,6 +515,7 @@ export default function AppShell() {
           isMobileDrawerOpen={isMobileDrawerOpen}
           onToggleSidebar={handleToggleSidebar}
           onNewChat={handleNewChat}
+          isCreatingChat={isCreatingChat}
           activeTab={activeTab}
           user={user}
         />
@@ -504,14 +528,16 @@ export default function AppShell() {
           aria-label={activeTab === "chat" ? "Ask Workspace" : "Knowledge Base Workspace"}
         >
           {activeTab === "chat" ? (
-            isLoadingChats ? (
+            isLoadingChats || (isLoadingMessages && (!activeChatMessages || activeChatMessages.length === 0)) ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3 animate-fadeIn">
                 <div
                   className="h-8 w-8 animate-spin rounded-full border-2 border-accent-sky border-t-transparent"
                   role="status"
-                  aria-label="Loading chats..."
+                  aria-label="Loading conversation..."
                 />
-                <span className="text-xs text-text-muted font-medium">Loading chats...</span>
+                <span className="text-xs text-text-muted font-medium">
+                  {isLoadingChats ? "Loading chats..." : "Loading messages..."}
+                </span>
               </div>
             ) : (
               <Chat
@@ -535,77 +561,12 @@ export default function AppShell() {
 
       {/* Delete Chat Confirmation Modal */}
       {chatToDelete && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-chat-dialog-title"
-          aria-describedby="delete-chat-dialog-desc"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fadeIn"
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !isDeletingChat) {
-              setChatToDelete(null);
-            }
-          }}
-        >
-          <div className="w-full max-w-md rounded-2xl border border-border-strong bg-surface-primary p-6 shadow-2xl space-y-4">
-            <div className="flex items-start gap-3.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  <line x1="10" y1="11" x2="10" y2="17" />
-                  <line x1="14" y1="11" x2="14" y2="17" />
-                </svg>
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <h3 id="delete-chat-dialog-title" className="text-sm font-bold text-text-primary">
-                  Delete chat?
-                </h3>
-                <p className="mt-1 text-xs text-text-muted truncate font-medium">
-                  &ldquo;{chatToDelete.title || "New chat"}&rdquo;
-                </p>
-                <p id="delete-chat-dialog-desc" className="mt-2 text-xs text-text-secondary leading-relaxed">
-                  Are you sure you want to delete this chat? This conversation and all its messages will be permanently removed. This action cannot be undone.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border-subtle">
-              <button
-                type="button"
-                disabled={isDeletingChat}
-                onClick={() => setChatToDelete(null)}
-                className="rounded-lg border border-border-subtle bg-surface-secondary px-3.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-strong transition-all cursor-pointer disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isDeletingChat}
-                onClick={handleConfirmDeleteChat}
-                className="flex items-center gap-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 px-4 py-1.5 text-xs font-semibold text-white transition-all shadow-sm cursor-pointer disabled:opacity-50"
-              >
-                {isDeletingChat ? (
-                  <>
-                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    <span>Deleting...</span>
-                  </>
-                ) : (
-                  <span>Delete</span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteChatModal
+          chat={chatToDelete}
+          isDeleting={isDeletingChat}
+          onClose={() => setChatToDelete(null)}
+          onConfirm={handleConfirmDeleteChat}
+        />
       )}
     </div>
   );

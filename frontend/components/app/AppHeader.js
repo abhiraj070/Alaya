@@ -9,6 +9,7 @@ export default function AppHeader({
   isMobileDrawerOpen = false,
   onToggleSidebar,
   onNewChat,
+  isCreatingChat = false,
   activeTab = "chat",
   user,
 }) {
@@ -78,23 +79,28 @@ export default function AppHeader({
               <button
                 type="button"
                 onClick={onNewChat}
+                disabled={isCreatingChat}
                 aria-label="New chat"
                 title="New chat"
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-secondary hover:text-accent-sky hover:border-accent-sky/30 hover:bg-surface-secondary transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-secondary hover:text-accent-sky hover:border-accent-sky/30 hover:bg-surface-secondary transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky disabled:opacity-60"
               >
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
+                {isCreatingChat ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent-sky border-t-transparent" />
+                ) : (
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                )}
               </button>
             )}
           </div>

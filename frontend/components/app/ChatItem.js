@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 export default function ChatItem({
   chat,
   isCurrent = false,
+  isDeleting = false,
   onSelect,
   onUpdateTitle,
   onDelete,
@@ -135,17 +136,21 @@ export default function ChatItem({
           aria-label="Save title"
           className="p-1 rounded text-accent-sky hover:bg-accent-sky/20 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
         >
-          <svg
-            className="h-3.5 w-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+          {isUpdating ? (
+            <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent-sky border-t-transparent" />
+          ) : (
+            <svg
+              className="h-3.5 w-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          )}
         </button>
 
         {/* Cancel Button */}
@@ -188,37 +193,50 @@ export default function ChatItem({
       <button
         type="button"
         onClick={onSelect}
-        className="flex-1 min-w-0 text-left text-xs px-2.5 py-2 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate"
+        disabled={isDeleting}
+        className="flex-1 min-w-0 text-left text-xs px-2.5 py-2 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate disabled:cursor-not-allowed"
         title={chat.title || "New chat"}
       >
-        <span className="truncate block">{chat.title || "New chat"}</span>
+        <span className={`truncate block ${isDeleting ? "opacity-50" : ""}`}>
+          {chat.title || "New chat"}
+        </span>
       </button>
 
-      {/* 3-dots Actions Menu Trigger */}
-      <div className="relative shrink-0 pr-1">
-        <button
-          ref={menuButtonRef}
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsMenuOpen((prev) => !prev);
-          }}
-          title="Chat options"
-          aria-label="Chat options"
-          aria-haspopup="menu"
-          aria-expanded={isMenuOpen}
-          className={`h-6 w-6 flex items-center justify-center rounded-md transition-all cursor-pointer ${
-            isMenuOpen
-              ? "opacity-100 bg-surface-secondary text-text-primary"
-              : "opacity-0 group-hover:opacity-100 md:opacity-0 focus-visible:opacity-100 text-text-muted hover:text-text-primary hover:bg-surface-secondary max-md:opacity-80"
-          }`}
-        >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="1.5" />
-            <circle cx="6" cy="12" r="1.5" />
-            <circle cx="18" cy="12" r="1.5" />
-          </svg>
-        </button>
+      {/* 3-dots Actions Menu Trigger OR Deleting Buffering Circle */}
+      <div className="relative shrink-0 pr-1 flex items-center">
+        {isDeleting ? (
+          <div
+            className="h-6 w-6 flex items-center justify-center text-rose-400"
+            title="Deleting chat..."
+            aria-label="Deleting chat..."
+          >
+            <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-rose-400 border-t-transparent" />
+          </div>
+        ) : (
+          <button
+            ref={menuButtonRef}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMenuOpen((prev) => !prev);
+            }}
+            title="Chat options"
+            aria-label="Chat options"
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
+            className={`h-6 w-6 flex items-center justify-center rounded-md transition-all cursor-pointer ${
+              isMenuOpen
+                ? "opacity-100 bg-surface-secondary text-text-primary"
+                : "opacity-0 group-hover:opacity-100 md:opacity-0 focus-visible:opacity-100 text-text-muted hover:text-text-primary hover:bg-surface-secondary max-md:opacity-80"
+            }`}
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="12" r="1.5" />
+              <circle cx="6" cy="12" r="1.5" />
+              <circle cx="18" cy="12" r="1.5" />
+            </svg>
+          </button>
+        )}
 
         {/* Floating 3-dots Dropdown Menu */}
         {isMenuOpen && (

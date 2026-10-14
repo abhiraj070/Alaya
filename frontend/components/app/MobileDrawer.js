@@ -14,11 +14,13 @@ export default function MobileDrawer({
   chats = [],
   activeChatId,
   onNewChat,
+  isCreatingChat = false,
   onSelectChat,
   onUpdateChatTitle,
   onDeleteChat,
   user,
   isLoadingChats = false,
+  deletingChatId = null,
 }) {
   const mobileChatListRef = useRef(null);
   // Close on Escape key and lock background scroll while drawer is open
@@ -157,18 +159,23 @@ export default function MobileDrawer({
           <div className="mt-3 shrink-0">
             <button
               type="button"
+              disabled={isCreatingChat}
               onClick={() => {
                 onNewChat();
                 onClose();
               }}
-              className="group flex h-10 w-full items-center gap-3 px-3 py-2 rounded-xl border border-dashed border-border-strong hover:border-accent-sky/50 bg-surface-secondary/70 hover:bg-surface-secondary text-text-primary hover:text-accent-sky transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky"
+              className="group flex h-10 w-full items-center gap-3 px-3 py-2 rounded-xl border border-dashed border-border-strong hover:border-accent-sky/50 bg-surface-secondary/70 hover:bg-surface-secondary text-text-primary hover:text-accent-sky transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky disabled:opacity-60"
               aria-label="New chat"
             >
               <span className="flex h-5 w-5 items-center justify-center rounded-md bg-accent-sky/15 text-accent-sky group-hover:bg-accent-sky group-hover:text-bg-primary transition-all">
-                {plusIcon}
+                {isCreatingChat ? (
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent-sky border-t-transparent" />
+                ) : (
+                  plusIcon
+                )}
               </span>
               <span className="truncate text-sm font-semibold tracking-wide">
-                New chat
+                {isCreatingChat ? "Creating..." : "New chat"}
               </span>
             </button>
           </div>
@@ -276,6 +283,7 @@ export default function MobileDrawer({
                     key={chat.id}
                     chat={chat}
                     isCurrent={activeChatId === chat.id && activeTab === "chat"}
+                    isDeleting={deletingChatId === chat.id}
                     onSelect={() => {
                       onSelectChat(chat.id);
                       onSelectTab("chat");
