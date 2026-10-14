@@ -101,9 +101,10 @@ export default function KnowledgeBaseManager() {
   }, []);
 
   // ==========================================
-  // MODE 1: UPLOAD FILES (Documents)
+  // MODE 1: UPLOAD FILES (Single Document)
+  // Backend endpoint supports only 1 document at a time
   // ==========================================
-  const [stagedFiles, setStagedFiles] = useState([]);
+  const [stagedFile, setStagedFile] = useState(null);
   const [isFileDragging, setIsFileDragging] = useState(false);
   const [isFilesProcessing, setIsFilesProcessing] = useState(false);
   const [fileProcessingStep, setFileProcessingStep] = useState("");
@@ -113,71 +114,35 @@ export default function KnowledgeBaseManager() {
   const allowedDocExtensions = ["pdf", "docx", "doc", "txt", "xlsx", "xls", "pptx", "ppt"];
   const imageExtensions = ["png", "jpg", "jpeg", "webp", "gif", "svg"];
 
-  const handleFilesSelected = (fileList) => {
+  const handleFileSelected = (fileList) => {
     if (!fileList || fileList.length === 0) return;
     setFileError("");
 
-    const newFiles = [];
-    let detectedImages = 0;
-    let unsupportedCount = 0;
+    const file = fileList[0];
+    const ext = file.name.split(".").pop().toLowerCase();
 
-    Array.from(fileList).forEach((file) => {
-      const ext = file.name.split(".").pop().toLowerCase();
-
-      if (imageExtensions.includes(ext) || file.type.startsWith("image/")) {
-        detectedImages++;
-        return;
-      }
-
-      if (!allowedDocExtensions.includes(ext)) {
-        unsupportedCount++;
-        return;
-      }
-
-      newFiles.push({
-        id: generateId("staged_doc"),
-        name: file.name,
-        size: formatBytes(file.size),
-        rawSize: file.size,
-        fileType: ext,
-        fileObj: file,
-      });
-    });
-
-    if (detectedImages > 0) {
-      setFileError(
-        `${detectedImages} image file(s) skipped. Please switch to the "Upload Images" tab to upload images.`
-      );
-    } else if (unsupportedCount > 0) {
-      setFileError(
-        `${unsupportedCount} unsupported file(s) skipped. Supported document formats: PDF, DOCX, TXT, XLSX, PPTX.`
-      );
+    if (imageExtensions.includes(ext) || file.type.startsWith("image/")) {
+      setFileError('Image detected. Please switch to the "Upload Images" tab to upload images.');
+      return;
     }
 
-    if (newFiles.length > 0) {
-      setStagedFiles((prev) => [...prev, ...newFiles]);
+    if (!allowedDocExtensions.includes(ext)) {
+      setFileError(`"${file.name}" is not a supported document format (PDF, DOCX, TXT, XLSX, PPTX).`);
+      return;
     }
-  };
 
-  const removeStagedFile = (id) => {
-    setStagedFiles((prev) => prev.filter((f) => f.id !== id));
-  };
-
-  const handleAddSampleFile = (name, type, sizeStr) => {
-    const sample = {
+    setStagedFile({
       id: generateId("staged_doc"),
-      name: name,
-      size: sizeStr,
-      rawSize: 1024 * 1024 * 2,
-      fileType: type,
-      fileObj: null,
-    };
-    setStagedFiles((prev) => [...prev, sample]);
-    setFileError("");
+      name: file.name,
+      size: formatBytes(file.size),
+      rawSize: file.size,
+      fileType: ext,
+      fileObj: file,
+    });
   };
 
-  const handleIngestFilesSubmit = () => {
-    if (stagedFiles.length === 0 || isFilesProcessing) return;
+  const handleIngestFileSubmit = () => {
+    if (!stagedFile || isFilesProcessing) return;
 
     setIsFilesProcessing(true);
     setFileProcessingStep("Parsing document contents...");
@@ -187,34 +152,36 @@ export default function KnowledgeBaseManager() {
     }, 450);
 
     setTimeout(() => {
-      setFileProcessingStep("Generating 1,536-D vector embeddings...");
+      setFileProcessingStep("Generating vector embeddings...");
     }, 900);
 
     setTimeout(() => {
-      const count = stagedFiles.length;
-      const newDocs = stagedFiles.map((file) => ({
+      const fileName = stagedFile.name;
+      const newDoc = {
         id: generateId("kb_doc"),
         type: "document",
-        title: file.name,
-        fileType: file.fileType,
-        fileSize: file.size,
+        title: stagedFile.name,
+        fileType: stagedFile.fileType,
+        fileSize: stagedFile.size,
         meta: `${Math.floor(Math.random() * 15) + 4} pages • ${Math.floor(Math.random() * 10) + 6} chunks`,
         createdAt: new Date().toISOString(),
-        tags: ["#uploaded", `#${file.fileType}`, "#ingested"],
-      }));
+        tags: ["#uploaded", `#${stagedFile.fileType}`, "#ingested"],
+      };
 
-      setItems((prev) => [...newDocs, ...prev]);
-      setStagedFiles([]);
+      setItems((prev) => [newDoc, ...prev]);
+      setStagedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       setIsFilesProcessing(false);
       setFileProcessingStep("");
-      showToast(`Successfully ingested ${count} document${count > 1 ? "s" : ""} into your Knowledge Base.`);
+      showToast(`Successfully ingested "${fileName}" into your Knowledge Base.`);
     }, 1400);
   };
 
   // ==========================================
-  // MODE 2: UPLOAD IMAGES
+  // MODE 2: UPLOAD IMAGES (Single Image)
+  // Backend endpoint supports only 1 image at a time
   // ==========================================
-  const [stagedImages, setStagedImages] = useState([]);
+  const [stagedImage, setStagedImage] = useState(null);
   const [isImageDragging, setIsImageDragging] = useState(false);
   const [isImagesProcessing, setIsImagesProcessing] = useState(false);
   const [imageProcessingStep, setImageProcessingStep] = useState("");
@@ -223,83 +190,45 @@ export default function KnowledgeBaseManager() {
 
   const allowedImageExts = ["png", "jpg", "jpeg", "webp"];
 
-  const handleImagesSelected = (fileList) => {
+  const handleImageSelected = (fileList) => {
     if (!fileList || fileList.length === 0) return;
     setImageError("");
 
-    const newImgs = [];
-    let detectedDocs = 0;
-    let unsupportedCount = 0;
+    const file = fileList[0];
+    const ext = file.name.split(".").pop().toLowerCase();
 
-    Array.from(fileList).forEach((file) => {
-      const ext = file.name.split(".").pop().toLowerCase();
-
-      if (allowedDocExtensions.includes(ext) || file.type.includes("pdf")) {
-        detectedDocs++;
-        return;
-      }
-
-      if (!allowedImageExts.includes(ext) && !file.type.startsWith("image/")) {
-        unsupportedCount++;
-        return;
-      }
-
-      // Generate local preview URL
-      let previewUrl = "";
-      try {
-        previewUrl = URL.createObjectURL(file);
-      } catch {
-        previewUrl = "";
-      }
-
-      newImgs.push({
-        id: generateId("staged_img"),
-        name: file.name,
-        size: formatBytes(file.size),
-        rawSize: file.size,
-        fileType: ext || "png",
-        previewUrl: previewUrl,
-        dimensions: "1920 × 1080",
-        fileObj: file,
-      });
-    });
-
-    if (detectedDocs > 0) {
-      setImageError(
-        `${detectedDocs} document file(s) skipped. Please switch to the "Upload Files" tab to upload documents.`
-      );
-    } else if (unsupportedCount > 0) {
-      setImageError(
-        `${unsupportedCount} file(s) skipped. Supported image formats: PNG, JPG, JPEG, WebP.`
-      );
+    if (allowedDocExtensions.includes(ext) || file.type.includes("pdf")) {
+      setImageError('Document detected. Please switch to the "Upload Files" tab to upload documents.');
+      return;
     }
 
-    if (newImgs.length > 0) {
-      setStagedImages((prev) => [...prev, ...newImgs]);
+    if (!allowedImageExts.includes(ext) && !file.type.startsWith("image/")) {
+      setImageError(`"${file.name}" is not a supported image format (PNG, JPG, JPEG, WebP).`);
+      return;
     }
-  };
 
-  const removeStagedImage = (id) => {
-    setStagedImages((prev) => prev.filter((img) => img.id !== id));
-  };
+    // Generate local preview URL
+    let previewUrl = "";
+    try {
+      previewUrl = URL.createObjectURL(file);
+    } catch {
+      previewUrl = "";
+    }
 
-  const handleAddSampleImage = (mockImg) => {
-    const sample = {
+    setStagedImage({
       id: generateId("staged_img"),
-      name: mockImg.title,
-      size: mockImg.fileSize,
-      rawSize: 1024 * 1024,
-      fileType: mockImg.fileType,
-      previewUrl: mockImg.previewUrl,
-      dimensions: mockImg.dimensions || "1920 × 1080",
-      fileObj: null,
-    };
-    setStagedImages((prev) => [...prev, sample]);
-    setImageError("");
+      name: file.name,
+      size: formatBytes(file.size),
+      rawSize: file.size,
+      fileType: ext || "png",
+      previewUrl: previewUrl,
+      dimensions: "1920 × 1080",
+      fileObj: file,
+    });
   };
 
-  const handleIndexImagesSubmit = () => {
-    if (stagedImages.length === 0 || isImagesProcessing) return;
+  const handleIndexImageSubmit = () => {
+    if (!stagedImage || isImagesProcessing) return;
 
     setIsImagesProcessing(true);
     setImageProcessingStep("Analyzing image contents & visual layout...");
@@ -313,47 +242,36 @@ export default function KnowledgeBaseManager() {
     }, 900);
 
     setTimeout(() => {
-      const count = stagedImages.length;
-      const newItems = stagedImages.map((img) => ({
+      const imageName = stagedImage.name;
+      const newItem = {
         id: generateId("kb_img"),
         type: "image",
-        title: img.name,
-        fileType: img.fileType,
-        fileSize: img.size,
-        dimensions: img.dimensions || "1920 × 1080",
-        previewUrl: img.previewUrl || (mockImages[0] ? mockImages[0].previewUrl : ""),
+        title: stagedImage.name,
+        fileType: stagedImage.fileType,
+        fileSize: stagedImage.size,
+        dimensions: stagedImage.dimensions || "1920 × 1080",
+        previewUrl: stagedImage.previewUrl || (mockImages[0] ? mockImages[0].previewUrl : ""),
         createdAt: new Date().toISOString(),
         status: "Indexed",
-        tags: ["#image", `#${img.fileType}`, "#multimodal"],
-      }));
+        tags: ["#image", `#${stagedImage.fileType}`, "#multimodal"],
+      };
 
-      setItems((prev) => [...newItems, ...prev]);
-      setStagedImages([]);
+      setItems((prev) => [newItem, ...prev]);
+      setStagedImage(null);
+      if (imageInputRef.current) imageInputRef.current.value = "";
       setIsImagesProcessing(false);
       setImageProcessingStep("");
-      showToast(`Successfully indexed ${count} image${count > 1 ? "s" : ""} into your Knowledge Base.`);
+      showToast(`Successfully indexed "${imageName}" into your Knowledge Base.`);
     }, 1400);
   };
 
   // ==========================================
-  // MODE 3: WRITE TEXT (Natural Language Memories)
+  // MODE 3: WRITE TEXT (Feed The Data)
   // Reuses the exact same ChatInput component
   // ==========================================
   const [textValue, setTextValue] = useState("");
-  const [textCategory, setTextCategory] = useState("Accomplishment");
   const [isTextSubmitting, setIsTextSubmitting] = useState(false);
   const [textError, setTextError] = useState("");
-
-  const categories = [
-    { id: "Accomplishment", label: "Accomplishment", placeholder: "e.g. Today I finished the auth module and fixed two high-priority bugs." },
-    { id: "Decision", label: "Decision", placeholder: "e.g. We decided to use Redis and ARQ for background tasks instead of Celery." },
-    { id: "Event", label: "Event", placeholder: "e.g. Attended the quarterly roadmap review with the product and engineering teams." },
-    { id: "Idea", label: "Idea", placeholder: "e.g. Idea for a unified memory timeline with vector similarity clustering." },
-    { id: "Learning", label: "Learning", placeholder: "e.g. Learned how HNSW index parameters M and ef_construction trade off build time vs recall." },
-    { id: "Note", label: "Personal Note", placeholder: "e.g. Remember to check back on the pgvector query benchmark results next week." },
-  ];
-
-  const currentCategoryObj = categories.find((c) => c.id === textCategory) || categories[0];
 
   const handleTextSubmit = () => {
     const trimmed = textValue.trim();
@@ -377,10 +295,10 @@ export default function KnowledgeBaseManager() {
         type: "memory",
         title: autoTitle,
         content: trimmed,
-        category: textCategory,
+        category: "Memory",
         createdAt: new Date().toISOString(),
         status: "Grounded",
-        tags: ["#memory", `#${textCategory.toLowerCase()}`, "#personal"],
+        tags: ["#memory", "#grounded", "#personal"],
       };
 
       setItems((prev) => [newMemory, ...prev]);
@@ -422,7 +340,7 @@ export default function KnowledgeBaseManager() {
   return (
     <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-subtle pb-6">
+      <div className="border-b border-border-subtle pb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-text-primary">
             Knowledge Base
@@ -430,11 +348,6 @@ export default function KnowledgeBaseManager() {
           <p className="mt-1 text-sm text-text-secondary">
             Feed information to Alaya through files, images, or natural-language memories. Everything is unified into your personal knowledge index.
           </p>
-        </div>
-
-        <div className="flex items-center gap-2 text-xs font-mono text-text-muted">
-          <span className="inline-block h-2 w-2 rounded-full bg-accent-sky animate-pulse" />
-          <span>UNIFIED VECTOR SPACE · 1,536-D</span>
         </div>
       </div>
 
@@ -550,60 +463,13 @@ export default function KnowledgeBaseManager() {
 
         {/* ================================================================ */}
         {/* MODE 1: UPLOAD FILES INTERFACE                                   */}
+        {/* Single document upload at a time                                 */}
         {/* ================================================================ */}
         {activeInputMode === "files" && (
           <div className="mt-5 space-y-4 animate-fadeIn">
             <div className="flex items-center justify-between text-xs text-text-muted">
               <span>Supports PDF, DOCX, TXT, XLSX, PPTX</span>
-              <span className="font-mono">Max 25 MB per file</span>
-            </div>
-
-            {/* Drag & Drop Zone */}
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsFileDragging(true);
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                setIsFileDragging(false);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                setIsFileDragging(false);
-                handleFilesSelected(e.dataTransfer.files);
-              }}
-              onClick={() => fileInputRef.current?.click()}
-              className={`group relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-200 ${
-                isFileDragging
-                  ? "border-accent-sky bg-accent-sky/10"
-                  : "border-border-strong hover:border-accent-sky/60 bg-surface-secondary/40 hover:bg-surface-secondary/70"
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.pptx,.ppt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                onChange={(e) => handleFilesSelected(e.target.files)}
-                className="hidden"
-                id="doc-file-input"
-              />
-
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border-subtle bg-surface-primary text-accent-sky group-hover:scale-105 transition-transform">
-                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-              </div>
-
-              <p className="mt-3 text-sm font-semibold text-text-primary">
-                Drag and drop your document files here, or <span className="text-accent-sky underline underline-offset-4">browse</span>
-              </p>
-              <p className="mt-1 text-xs text-text-muted">
-                Document files only. For images, please use the Upload Images tab.
-              </p>
+              <span className="font-mono">Max 25 MB</span>
             </div>
 
             {/* Error Message */}
@@ -613,81 +479,105 @@ export default function KnowledgeBaseManager() {
               </div>
             )}
 
-            {/* Quick Demo Pre-fills */}
-            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-              <span className="text-text-muted font-medium">Quick add sample document:</span>
-              <button
-                type="button"
-                onClick={() => handleAddSampleFile("Climate_Change_Impact_2026.pdf", "pdf", "2.1 MB")}
-                className="rounded-md border border-border-subtle bg-surface-secondary px-2.5 py-1 text-accent-sky hover:border-accent-sky/50 transition-colors"
+            {/* If no file is staged, show Drop Zone. If 1 file is uploaded, remove option to upload new */}
+            {!stagedFile ? (
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsFileDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  setIsFileDragging(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsFileDragging(false);
+                  handleFileSelected(e.dataTransfer.files);
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                className={`group relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-200 ${
+                  isFileDragging
+                    ? "border-accent-sky bg-accent-sky/10"
+                    : "border-border-strong hover:border-accent-sky/60 bg-surface-secondary/40 hover:bg-surface-secondary/70"
+                }`}
               >
-                + Climate_Change_Impact_2026.pdf
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddSampleFile("Q3_Financial_Analysis.xlsx", "xlsx", "3.4 MB")}
-                className="rounded-md border border-border-subtle bg-surface-secondary px-2.5 py-1 text-accent-sky hover:border-accent-sky/50 transition-colors"
-              >
-                + Q3_Financial_Analysis.xlsx
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddSampleFile("API_Architecture_Spec.docx", "docx", "1.2 MB")}
-                className="rounded-md border border-border-subtle bg-surface-secondary px-2.5 py-1 text-accent-sky hover:border-accent-sky/50 transition-colors"
-              >
-                + API_Architecture_Spec.docx
-              </button>
-            </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.doc,.txt,.xlsx,.xls,.pptx,.ppt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                  onChange={(e) => handleFileSelected(e.target.files)}
+                  className="hidden"
+                  id="doc-file-input"
+                />
 
-            {/* Staged File List (Queue) */}
-            {stagedFiles.length > 0 && (
-              <div className="rounded-xl border border-border-subtle bg-surface-secondary/40 p-4 space-y-3">
-                <div className="flex items-center justify-between text-xs font-semibold text-text-secondary">
-                  <span>Selected Documents ({stagedFiles.length})</span>
-                  <button
-                    type="button"
-                    onClick={() => setStagedFiles([])}
-                    className="text-text-muted hover:text-rose-400 transition-colors"
-                  >
-                    Clear All
-                  </button>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border-subtle bg-surface-primary text-accent-sky group-hover:scale-105 transition-transform">
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
                 </div>
 
-                <div className="divide-y divide-border-subtle">
-                  {stagedFiles.map((file) => (
-                    <div
-                      key={file.id}
-                      className="flex items-center justify-between py-2.5 gap-3"
+                <p className="mt-3 text-sm font-semibold text-text-primary">
+                  Drag and drop your document file here, or <span className="text-accent-sky underline underline-offset-4">browse</span>
+                </p>
+                <p className="mt-1 text-xs text-text-muted">
+                  Document files only. For images, please use the Upload Images tab.
+                </p>
+              </div>
+            ) : (
+              /* When 1 file is uploaded, show the single file card (option to upload new is removed) */
+              <div className="rounded-xl border border-border-subtle bg-surface-secondary/40 p-4 space-y-3">
+                <div className="flex items-center justify-between text-xs font-semibold text-text-secondary">
+                  <span>Selected Document</span>
+                  {!isFilesProcessing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStagedFile(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                      className="text-text-muted hover:text-rose-400 transition-colors"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-bold uppercase border ${getExtBadgeStyle(
-                            file.fileType
-                          )}`}
-                        >
-                          {file.fileType}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-text-primary truncate">
-                            {file.name}
-                          </p>
-                          <p className="text-[10px] text-text-muted font-mono">
-                            {file.size}
-                          </p>
-                        </div>
-                      </div>
+                      Remove
+                    </button>
+                  )}
+                </div>
 
-                      <button
-                        type="button"
-                        onClick={() => removeStagedFile(file.id)}
-                        className="text-text-muted hover:text-rose-400 p-1 transition-colors"
-                        title="Remove file"
-                        aria-label={`Remove ${file.name}`}
-                      >
-                        ✕
-                      </button>
+                <div className="flex items-center justify-between py-2 gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-bold uppercase border ${getExtBadgeStyle(
+                        stagedFile.fileType
+                      )}`}
+                    >
+                      {stagedFile.fileType}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-text-primary truncate">
+                        {stagedFile.name}
+                      </p>
+                      <p className="text-[10px] text-text-muted font-mono">
+                        {stagedFile.size}
+                      </p>
                     </div>
-                  ))}
+                  </div>
+
+                  {!isFilesProcessing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStagedFile(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                      className="text-text-muted hover:text-rose-400 p-1 transition-colors"
+                      title="Remove file"
+                      aria-label={`Remove ${stagedFile.name}`}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
 
                 {/* Ingest Action Button */}
@@ -696,20 +586,20 @@ export default function KnowledgeBaseManager() {
                     {isFilesProcessing ? (
                       <span className="text-accent-sky animate-pulse">{fileProcessingStep}</span>
                     ) : (
-                      <span>Ready to ingest {stagedFiles.length} file(s)</span>
+                      <span>Ready to ingest document</span>
                     )}
                   </div>
 
                   <button
                     type="button"
-                    disabled={isFilesProcessing || stagedFiles.length === 0}
-                    onClick={handleIngestFilesSubmit}
+                    disabled={isFilesProcessing}
+                    onClick={handleIngestFileSubmit}
                     className="btn-primary h-9 px-4 text-xs font-semibold uppercase tracking-wider flex items-center gap-2 disabled:opacity-50"
                   >
                     {isFilesProcessing && (
                       <span className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
                     )}
-                    <span>{isFilesProcessing ? "Ingesting..." : `Ingest ${stagedFiles.length} Document${stagedFiles.length > 1 ? "s" : ""}`}</span>
+                    <span>{isFilesProcessing ? "Ingesting..." : "Ingest Document"}</span>
                   </button>
                 </div>
               </div>
@@ -719,60 +609,13 @@ export default function KnowledgeBaseManager() {
 
         {/* ================================================================ */}
         {/* MODE 2: UPLOAD IMAGES INTERFACE                                  */}
+        {/* Single image upload at a time                                    */}
         {/* ================================================================ */}
         {activeInputMode === "images" && (
           <div className="mt-5 space-y-4 animate-fadeIn">
             <div className="flex items-center justify-between text-xs text-text-muted">
               <span>Supports PNG, JPG, JPEG, WebP</span>
-              <span className="font-mono">Multiple selection supported</span>
-            </div>
-
-            {/* Drag & Drop Zone */}
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsImageDragging(true);
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                setIsImageDragging(false);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                setIsImageDragging(false);
-                handleImagesSelected(e.dataTransfer.files);
-              }}
-              onClick={() => imageInputRef.current?.click()}
-              className={`group relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-200 ${
-                isImageDragging
-                  ? "border-accent-sky bg-accent-sky/10"
-                  : "border-border-strong hover:border-accent-sky/60 bg-surface-secondary/40 hover:bg-surface-secondary/70"
-              }`}
-            >
-              <input
-                ref={imageInputRef}
-                type="file"
-                multiple
-                accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
-                onChange={(e) => handleImagesSelected(e.target.files)}
-                className="hidden"
-                id="image-file-input"
-              />
-
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border-subtle bg-surface-primary text-accent-sky group-hover:scale-105 transition-transform">
-                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-              </div>
-
-              <p className="mt-3 text-sm font-semibold text-text-primary">
-                Drag and drop your images here, or <span className="text-accent-sky underline underline-offset-4">browse</span>
-              </p>
-              <p className="mt-1 text-xs text-text-muted">
-                Images will be processed and indexed with visual preview thumbnails.
-              </p>
+              <span className="font-mono">Max 15 MB</span>
             </div>
 
             {/* Error Message */}
@@ -782,78 +625,116 @@ export default function KnowledgeBaseManager() {
               </div>
             )}
 
-            {/* Quick Demo Pre-fills */}
-            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-              <span className="text-text-muted font-medium">Quick add sample image:</span>
-              {mockImages.map((img) => (
-                <button
-                  key={img.id}
-                  type="button"
-                  onClick={() => handleAddSampleImage(img)}
-                  className="rounded-md border border-border-subtle bg-surface-secondary px-2.5 py-1 text-accent-sky hover:border-accent-sky/50 transition-colors"
-                >
-                  + {img.title}
-                </button>
-              ))}
-            </div>
+            {/* If no image is staged, show Drop Zone. If 1 image is uploaded, remove option to upload new */}
+            {!stagedImage ? (
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsImageDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  setIsImageDragging(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsImageDragging(false);
+                  handleImageSelected(e.dataTransfer.files);
+                }}
+                onClick={() => imageInputRef.current?.click()}
+                className={`group relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center cursor-pointer transition-all duration-200 ${
+                  isImageDragging
+                    ? "border-accent-sky bg-accent-sky/10"
+                    : "border-border-strong hover:border-accent-sky/60 bg-surface-secondary/40 hover:bg-surface-secondary/70"
+                }`}
+              >
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+                  onChange={(e) => handleImageSelected(e.target.files)}
+                  className="hidden"
+                  id="image-file-input"
+                />
 
-            {/* Selected Images Preview Grid */}
-            {stagedImages.length > 0 && (
-              <div className="rounded-xl border border-border-subtle bg-surface-secondary/40 p-4 space-y-4">
-                <div className="flex items-center justify-between text-xs font-semibold text-text-secondary">
-                  <span>Selected Images ({stagedImages.length})</span>
-                  <button
-                    type="button"
-                    onClick={() => setStagedImages([])}
-                    className="text-text-muted hover:text-rose-400 transition-colors"
-                  >
-                    Clear All
-                  </button>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border-subtle bg-surface-primary text-accent-sky group-hover:scale-105 transition-transform">
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {stagedImages.map((img) => (
-                    <div
-                      key={img.id}
-                      className="group relative rounded-lg border border-border-subtle bg-surface-primary overflow-hidden flex flex-col"
+                <p className="mt-3 text-sm font-semibold text-text-primary">
+                  Drag and drop your image here, or <span className="text-accent-sky underline underline-offset-4">browse</span>
+                </p>
+                <p className="mt-1 text-xs text-text-muted">
+                  Images will be processed and indexed with visual preview thumbnails.
+                </p>
+              </div>
+            ) : (
+              /* When 1 image is uploaded, show the single preview card (option to upload new is removed) */
+              <div className="rounded-xl border border-border-subtle bg-surface-secondary/40 p-4 space-y-4">
+                <div className="flex items-center justify-between text-xs font-semibold text-text-secondary">
+                  <span>Selected Image</span>
+                  {!isImagesProcessing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStagedImage(null);
+                        if (imageInputRef.current) imageInputRef.current.value = "";
+                      }}
+                      className="text-text-muted hover:text-rose-400 transition-colors"
                     >
-                      {/* Image Thumbnail */}
-                      <div className="relative aspect-video w-full bg-surface-secondary overflow-hidden">
-                        {img.previewUrl ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
-                            src={img.previewUrl}
-                            alt={img.name}
-                            className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center text-text-muted text-xs font-mono">
-                            Preview
-                          </div>
-                        )}
+                      Remove
+                    </button>
+                  )}
+                </div>
 
-                        <button
-                          type="button"
-                          onClick={() => removeStagedImage(img.id)}
-                          className="absolute top-1.5 right-1.5 rounded-full bg-black/80 hover:bg-rose-600 text-white p-1 text-[10px] transition-colors shadow-sm"
-                          title="Remove image"
-                          aria-label={`Remove ${img.name}`}
-                        >
-                          ✕
-                        </button>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-lg border border-border-subtle bg-surface-primary p-3">
+                  {/* Image Thumbnail */}
+                  <div className="relative aspect-video w-full sm:w-48 bg-surface-secondary overflow-hidden rounded-lg shrink-0">
+                    {stagedImage.previewUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={stagedImage.previewUrl}
+                        alt={stagedImage.name}
+                        className="h-full w-full object-cover object-center"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-text-muted text-xs font-mono">
+                        Preview
                       </div>
+                    )}
+                  </div>
 
-                      {/* Image Details */}
-                      <div className="p-2 min-w-0">
-                        <p className="text-xs font-medium text-text-primary truncate" title={img.name}>
-                          {img.name}
-                        </p>
-                        <p className="text-[10px] text-text-muted font-mono mt-0.5">
-                          {img.size}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                  {/* Image Details */}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-text-primary truncate" title={stagedImage.name}>
+                      {stagedImage.name}
+                    </p>
+                    <p className="text-[10px] text-text-muted font-mono mt-0.5">
+                      {stagedImage.size} • {stagedImage.dimensions}
+                    </p>
+                    <p className="text-[10px] text-text-muted mt-1">
+                      Ready to index into multimodal knowledge base.
+                    </p>
+                  </div>
+
+                  {!isImagesProcessing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStagedImage(null);
+                        if (imageInputRef.current) imageInputRef.current.value = "";
+                      }}
+                      className="text-text-muted hover:text-rose-400 p-1.5 transition-colors self-start sm:self-center"
+                      title="Remove image"
+                      aria-label={`Remove ${stagedImage.name}`}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
 
                 {/* Index Action Button */}
@@ -862,20 +743,20 @@ export default function KnowledgeBaseManager() {
                     {isImagesProcessing ? (
                       <span className="text-accent-sky animate-pulse">{imageProcessingStep}</span>
                     ) : (
-                      <span>Ready to index {stagedImages.length} image(s)</span>
+                      <span>Ready to index image</span>
                     )}
                   </div>
 
                   <button
                     type="button"
-                    disabled={isImagesProcessing || stagedImages.length === 0}
-                    onClick={handleIndexImagesSubmit}
+                    disabled={isImagesProcessing}
+                    onClick={handleIndexImageSubmit}
                     className="btn-primary h-9 px-4 text-xs font-semibold uppercase tracking-wider flex items-center gap-2 disabled:opacity-50"
                   >
                     {isImagesProcessing && (
                       <span className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
                     )}
-                    <span>{isImagesProcessing ? "Indexing..." : `Index ${stagedImages.length} Image${stagedImages.length > 1 ? "s" : ""}`}</span>
+                    <span>{isImagesProcessing ? "Indexing..." : "Index Image"}</span>
                   </button>
                 </div>
               </div>
@@ -885,33 +766,10 @@ export default function KnowledgeBaseManager() {
 
         {/* ================================================================ */}
         {/* MODE 3: WRITE TEXT INTERFACE                                     */}
-        {/* Exact same ChatInput component used by Ask Alaya interface       */}
+        {/* Feed The Data via reusable ChatInput component                    */}
         {/* ================================================================ */}
         {activeInputMode === "text" && (
           <div className="mt-5 space-y-4 animate-fadeIn">
-            {/* Category selection pills */}
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-2">
-                Memory Category
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setTextCategory(cat.id)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                      textCategory === cat.id
-                        ? "border border-accent-sky/50 bg-surface-secondary text-accent-sky shadow-sm"
-                        : "border border-border-subtle text-text-muted hover:text-text-primary hover:border-border-strong bg-surface-secondary/40"
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Error Message */}
             {textError && (
               <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300 font-mono">
@@ -920,9 +778,9 @@ export default function KnowledgeBaseManager() {
             )}
 
             {/* Reusable ChatInput component configuration */}
-            <div className="pt-2">
+            <div>
               <label className="block text-xs font-medium text-text-secondary mb-1.5">
-                Natural Language Knowledge Entry
+                Feed The Data
               </label>
 
               {/* Exact ChatInput component as in Ask interface */}
@@ -934,8 +792,8 @@ export default function KnowledgeBaseManager() {
                 }}
                 onSubmit={handleTextSubmit}
                 disabled={isTextSubmitting}
-                placeholder="Write something you want Alaya to remember (e.g. daily accomplishments, decisions, ideas)..."
-                ariaLabel="Write natural language knowledge entry"
+                placeholder="Write something you want Alaya to remember..."
+                ariaLabel="Feed the data"
                 submitButtonTitle="Save memory"
                 submitButtonAriaLabel="Save memory to Knowledge Base"
                 subtext="Recorded memories are immediately indexed and grounded for future conversations."
@@ -943,41 +801,6 @@ export default function KnowledgeBaseManager() {
                 className="px-0 pt-0 pb-0 bg-transparent"
                 containerClassName="w-full"
               />
-            </div>
-
-            {/* Example prompts for inspiration */}
-            <div className="pt-1 flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-text-muted font-medium">Prompt inspiration:</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setTextCategory("Accomplishment");
-                  setTextValue("Today I finished implementing the multi-source vector search module and resolved two memory leak bugs in the ingestion pipeline.");
-                }}
-                className="rounded-md border border-border-subtle bg-surface-secondary px-2 py-0.5 text-accent-sky hover:border-accent-sky/50 transition-colors text-[11px]"
-              >
-                &ldquo;Finished auth & fixed 2 bugs...&rdquo;
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTextCategory("Decision");
-                  setTextValue("We decided to use Redis and ARQ for background tasks instead of Celery for cleaner async Python integration.");
-                }}
-                className="rounded-md border border-border-subtle bg-surface-secondary px-2 py-0.5 text-accent-sky hover:border-accent-sky/50 transition-colors text-[11px]"
-              >
-                &ldquo;Decided on Redis & ARQ...&rdquo;
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTextCategory("Idea");
-                  setTextValue("Idea: A temporal knowledge graph connecting everyday notes to relevant research PDFs based on vector similarity.");
-                }}
-                className="rounded-md border border-border-subtle bg-surface-secondary px-2 py-0.5 text-accent-sky hover:border-accent-sky/50 transition-colors text-[11px]"
-              >
-                &ldquo;Temporal knowledge graph idea...&rdquo;
-              </button>
             </div>
           </div>
         )}
@@ -1241,7 +1064,6 @@ export default function KnowledgeBaseManager() {
 
             // ==========================================
             // 3. WRITTEN MEMORY CARD (Natural Language)
-            // Distinct quotation/note styling (not forced to look like a file!)
             // ==========================================
             return (
               <div
