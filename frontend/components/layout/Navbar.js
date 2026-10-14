@@ -16,26 +16,10 @@ export default function Navbar() {
         {/* Left: Brand Wordmark */}
         <Link
           href="/"
-          className="group flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary rounded-md"
+          className="group flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary rounded-md py-1"
           aria-label="Alaya Homepage"
         >
-          <span className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-border-strong bg-surface-secondary">
-            {/* Minimalist Geometric Diamond Core */}
-            <svg
-              className="h-4 w-4 text-accent-sky transition-transform duration-200 group-hover:scale-110"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polygon points="12 2 22 12 12 22 2 12" />
-              <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.8" />
-            </svg>
-          </span>
-          <AlayaWordmark className="text-base font-bold tracking-[0.2em]" />
+          <AlayaWordmark className="text-xl sm:text-2xl font-black tracking-[0.22em] select-none" />
         </Link>
 
         {/* Center: Desktop Navigation Links */}

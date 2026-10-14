@@ -11,14 +11,8 @@ export default function Hero() {
         <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-12 lg:gap-8">
           {/* Left Column: Core Positioning Copy & CTAs */}
           <div className="flex flex-col text-left lg:col-span-5">
-            {/* Introductory Badge */}
-            <div className="inline-flex items-center gap-2 self-start rounded-full border border-border-strong bg-surface-secondary px-3 py-1 text-xs font-semibold tracking-wider text-text-secondary uppercase">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent-sky" />
-              <span>Documents & Personal Memories</span>
-            </div>
-
             {/* Revised Main Headline */}
-            <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-text-primary sm:text-5xl lg:text-6xl leading-[1.08]">
+            <h1 className="text-4xl font-extrabold tracking-tight text-text-primary sm:text-5xl lg:text-6xl leading-[1.08]">
               Your documents & experiences. <br />
               <span className="text-accent-sky drop-shadow-[0_0_24px_rgba(56,189,248,0.3)]">
                 A conversation away.

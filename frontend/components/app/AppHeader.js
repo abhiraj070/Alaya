@@ -53,25 +53,10 @@ export default function AppHeader({
         {/* ALAYA Brand Wordmark Link */}
         <Link
           href="/app"
-          className="flex items-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky rounded-lg p-1"
+          className="flex items-center group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky rounded-lg py-1 px-1.5"
           aria-label="Alaya Application Home"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-border-strong bg-surface-secondary shadow-sm transition-transform duration-200 group-hover:scale-105">
-            <svg
-              className="h-3.5 w-3.5 text-accent-sky"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polygon points="12 2 22 12 12 22 2 12" />
-              <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.8" />
-            </svg>
-          </span>
-          <AlayaWordmark className="text-sm sm:text-base font-bold tracking-[0.25em]" />
+          <AlayaWordmark className="text-lg sm:text-xl font-extrabold tracking-[0.22em] select-none" />
         </Link>
       </div>
 

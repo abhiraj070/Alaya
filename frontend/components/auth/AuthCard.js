@@ -332,25 +332,10 @@ export default function AuthCard() {
       <div className="text-center mb-6">
         <Link
           href="/"
-          className="inline-flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary rounded-lg p-1"
+          className="inline-flex items-center group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary rounded-lg py-1 px-2"
           aria-label="Alaya Home"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-border-strong bg-surface-secondary shadow-sm transition-transform duration-200 group-hover:scale-105">
-            <svg
-              className="h-4.5 w-4.5 text-accent-sky"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polygon points="12 2 22 12 12 22 2 12" />
-              <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.8" />
-            </svg>
-          </span>
-          <AlayaWordmark className="text-lg font-bold tracking-[0.25em]" />
+          <AlayaWordmark className="text-2xl sm:text-3xl font-black tracking-[0.25em] select-none" />
         </Link>
       </div>
 

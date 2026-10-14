@@ -40,8 +40,8 @@ export default function ProfilePage() {
           <span>Back to Workspace</span>
         </Link>
 
-        <Link href="/app" className="inline-flex items-center gap-2" aria-label="Alaya">
-          <AlayaWordmark className="text-sm font-bold tracking-[0.25em]" />
+        <Link href="/app" className="inline-flex items-center" aria-label="Alaya">
+          <AlayaWordmark className="text-lg sm:text-xl font-extrabold tracking-[0.22em] select-none" />
         </Link>
       </header>
 

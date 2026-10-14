@@ -21,22 +21,10 @@ export default function ChatMessages({
           aria-live="polite"
         >
           <div
-            className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl border border-accent-sky/30 bg-surface-secondary text-accent-sky shadow-sm mt-0.5"
+            className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl border border-accent-sky/30 bg-surface-secondary text-accent-sky shadow-sm mt-0.5 select-none"
             aria-label="Alaya"
           >
-            <svg
-              className="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polygon points="12 2 22 12 12 22 2 12" />
-              <circle cx="12" cy="12" r="2.5" fill="currentColor" fillOpacity="0.8" />
-            </svg>
+            <span className="font-extrabold text-xs sm:text-sm text-accent-sky">A</span>
           </div>
 
           <div className="flex items-center gap-2.5 py-1.5 text-text-muted text-xs sm:text-sm">

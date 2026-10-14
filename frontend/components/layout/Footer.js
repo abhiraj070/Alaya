@@ -8,22 +8,8 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Brand Wordmark & Tagline */}
           <div className="flex items-center gap-3">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-border-strong bg-surface-primary">
-              <svg
-                className="h-3.5 w-3.5 text-accent-sky"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polygon points="12 2 22 12 12 22 2 12" />
-                <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.8" />
-              </svg>
-            </span>
-            <AlayaWordmark className="font-bold tracking-widest text-text-primary" />
-            <span className="text-text-muted">— Personal Knowledge Platform</span>
+            <AlayaWordmark className="text-base sm:text-lg font-bold tracking-[0.22em] text-text-primary select-none" />
+            <span className="text-text-muted text-xs">— Personal Knowledge Platform</span>
           </div>
 
           {/* Navigation Links */}
