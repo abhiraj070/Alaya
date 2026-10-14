@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import SidebarItem from "@/components/app/SidebarItem";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -14,6 +15,7 @@ export default function Sidebar({
   onSelectChat,
   user,
 }) {
+  const chatListRef = useRef(null);
   const askIcon = (
     <svg
       className="h-4.5 w-4.5"
@@ -75,7 +77,14 @@ export default function Sidebar({
       }`}
     >
       {/* Top Navigation & Chats Section */}
-      <div className="flex-1 overflow-hidden p-2 sm:p-3 flex flex-col min-h-0">
+      <div
+        className="flex-1 overflow-hidden p-2 sm:p-3 flex flex-col min-h-0"
+        onWheel={(e) => {
+          if (chatListRef.current && !chatListRef.current.contains(e.target)) {
+            chatListRef.current.scrollTop += e.deltaY;
+          }
+        }}
+      >
         {/* New Chat Button (Positioned above Ask) */}
         <div className="mb-2 shrink-0">
           {isCollapsed ? (
@@ -148,7 +157,14 @@ export default function Sidebar({
             <span className="text-[10px] font-mono text-text-muted mt-0.5">{chats.length}</span>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-border-strong/40 bg-surface-secondary/70 p-2 shadow-xs">
+          <div
+            className="flex-1 flex flex-col min-h-0 rounded-xl border border-border-strong/40 bg-surface-secondary/70 p-2 shadow-xs"
+            onWheel={(e) => {
+              if (chatListRef.current && !chatListRef.current.contains(e.target)) {
+                chatListRef.current.scrollTop += e.deltaY;
+              }
+            }}
+          >
             {/* Header: All Chats */}
             <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] font-semibold tracking-wider text-text-muted uppercase shrink-0">
               <span className="flex items-center gap-1.5">
@@ -161,7 +177,11 @@ export default function Sidebar({
             </div>
 
             {/* List of Chats */}
-            <div className="flex-1 min-h-0 overflow-y-auto chat-scrollbar space-y-1 pr-0.5">
+            <div
+              ref={chatListRef}
+              className="flex-1 min-h-0 overflow-y-auto chat-scrollbar space-y-1 pr-0.5"
+              style={{ touchAction: "pan-y" }}
+            >
               {chats.length === 0 ? (
                 <div className="px-2 py-3 text-center text-xs text-text-muted italic">
                   No chats yet
@@ -182,6 +202,7 @@ export default function Sidebar({
                           ? "bg-accent-sky/15 text-accent-sky font-medium border border-accent-sky/30 shadow-xs"
                           : "text-text-secondary hover:text-text-primary hover:bg-surface-tertiary/70 border border-transparent"
                       }`}
+                      style={{ touchAction: "pan-y" }}
                     >
                       <span className="truncate flex-1">{chat.title || "New chat"}</span>
                     </button>

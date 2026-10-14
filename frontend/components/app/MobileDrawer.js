@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -16,6 +16,7 @@ export default function MobileDrawer({
   onSelectChat,
   user,
 }) {
+  const mobileChatListRef = useRef(null);
   // Close on Escape key and lock background scroll while drawer is open
   useEffect(() => {
     if (!isOpen) return;
@@ -227,7 +228,14 @@ export default function MobileDrawer({
           <div className="my-3 mx-1 border-t border-border-subtle shrink-0" role="separator" />
 
           {/* All Chats Container */}
-          <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-border-strong/40 bg-surface-secondary/70 p-2 shadow-xs mb-2">
+          <div
+            className="flex-1 flex flex-col min-h-0 rounded-xl border border-border-strong/40 bg-surface-secondary/70 p-2 shadow-xs mb-2"
+            onWheel={(e) => {
+              if (mobileChatListRef.current && !mobileChatListRef.current.contains(e.target)) {
+                mobileChatListRef.current.scrollTop += e.deltaY;
+              }
+            }}
+          >
             <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] font-semibold tracking-wider text-text-muted uppercase shrink-0">
               <span className="flex items-center gap-1.5">
                 <svg className="h-3 w-3 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -238,7 +246,11 @@ export default function MobileDrawer({
               <span className="text-[10px] font-mono font-normal text-text-muted/80">{chats.length}</span>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto chat-scrollbar space-y-1 pr-0.5">
+            <div
+              ref={mobileChatListRef}
+              className="flex-1 min-h-0 overflow-y-auto chat-scrollbar space-y-1 pr-0.5"
+              style={{ touchAction: "pan-y" }}
+            >
               {chats.length === 0 ? (
                 <div className="px-2 py-3 text-center text-xs text-text-muted italic">
                   No chats yet
@@ -260,6 +272,7 @@ export default function MobileDrawer({
                           ? "bg-accent-sky/15 text-accent-sky font-medium border border-accent-sky/30 shadow-xs"
                           : "text-text-secondary hover:text-text-primary hover:bg-surface-tertiary/70 border border-transparent"
                       }`}
+                      style={{ touchAction: "pan-y" }}
                     >
                       <span className="truncate flex-1">{chat.title || "New chat"}</span>
                     </button>

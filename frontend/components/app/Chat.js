@@ -154,12 +154,20 @@ export default function Chat({ messages = [], setMessages }) {
   const isBusy = isThinking || isStreaming;
 
   return (
-    <div className="relative flex flex-col h-full w-full overflow-hidden bg-bg-primary">
+    <div
+      className="relative flex flex-col h-full w-full overflow-hidden bg-bg-primary"
+      onWheel={(e) => {
+        if (scrollContainerRef.current && !scrollContainerRef.current.contains(e.target)) {
+          scrollContainerRef.current.scrollTop += e.deltaY;
+        }
+      }}
+    >
       {/* Main Conversation Scrollable Region with ChatGPT-style autohiding scrollbar */}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
         className="flex-1 min-h-0 overflow-y-auto chat-scrollbar flex flex-col justify-between select-text"
+        style={{ touchAction: "pan-y" }}
       >
         {messages.length === 0 ? (
           <ChatEmptyState />

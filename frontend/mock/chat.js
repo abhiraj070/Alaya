@@ -52,6 +52,40 @@ export const mockChats = [
         source: 'Document · "Research Paper.pdf"',
         timestamp: "10:24 AM",
       },
+      {
+        id: "msg_1_3",
+        sender: "user",
+        text: "What specific mitigation measures does the paper recommend for regional drainage?",
+        timestamp: "10:26 AM",
+      },
+      {
+        id: "msg_1_4",
+        sender: "alaya",
+        text: `The paper outlines three strategic priorities for regional water management infrastructure:
+
+1. Nature-Based Buffer Systems: Developing coastal wetlands and bio-swales to absorb initial surge energy.
+2. Pump Station Modernization: Upgrading municipal high-capacity stormwater pumps with redundant backup power.
+3. Tidal Inundation Barriers: Installing modular sluice gates to prevent backflow into inland storm sewers during astronomical high tides.`,
+        source: 'Document · "Research Paper.pdf"',
+        timestamp: "10:26 AM",
+      },
+      {
+        id: "msg_1_5",
+        sender: "user",
+        text: "What is the estimated capital expenditure timeline?",
+        timestamp: "10:28 AM",
+      },
+      {
+        id: "msg_1_6",
+        sender: "alaya",
+        text: `According to the executive roadmap in Chapter 5:
+
+1. Phase 1 (Years 1-3): Immediate deployment of backflow barriers and critical pump repairs ($45M).
+2. Phase 2 (Years 4-7): Comprehensive restoration of coastal wetland buffers and elevation of arterial roads ($120M).
+3. Phase 3 (Years 8-10): Long-term structural sea wall reinforcements and decentralized telemetry monitoring ($85M).`,
+        source: 'Document · "Research Paper.pdf"',
+        timestamp: "10:28 AM",
+      },
     ],
   },
   {
