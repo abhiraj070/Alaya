@@ -19,7 +19,7 @@ from app.core_tasks.llm_setup.embeddings_llm import get_embedding
 from app.core_tasks.arq_worker.get_queue import get_queue
 from app.core_tasks.search.retrieval import retrieve_queries
 from app.db.connect import get_db
-from app.db.model.chat import Chat, Message, Embedding
+from app.db.model.chat import Chat, Message, Embedding, Sender
 from app.db.model.uploaded_data import UploadedData, DataType
 from app.env_config.settings import get_settings
 from app.schema.messages import MessageResponse, MessageRequest, MessageUpdateRequest
@@ -168,7 +168,7 @@ async def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
     )
     return json.loads(response.choices[0].message.content)
 
-async def send_prompt_for_response(data: list[dict[str,Any]]):
+async def send_prompt_for_response(data: list[dict[str,Any]], chat_id: int, user_id: int, db: Session):
     stream = await client.chat.completions.create(
         model=MODEL,
         messages=[
@@ -179,10 +179,23 @@ async def send_prompt_for_response(data: list[dict[str,Any]]):
         temperature=0.2,
         stream=True
     )
+    full_response=""
     async for chunk in stream:
         content = chunk.choices[0].delta.content
         if content:
+            full_response+=content
             yield content
+
+    if full_response!="":
+        db_message= Message(
+            chat_id=chat_id,
+            message_content=full_response,
+            sent_by=Sender.LLM,
+            user_id=user_id,
+
+        )
+        db.add(db_message)
+        db.commit()
 
 def is_supported_image(file_path: Path) -> bool:
     with file_path.open("rb") as image_file:
@@ -224,7 +237,7 @@ async def handle_new_message(chat_id: int,
     #data getting saved
     db_message = Message(chat_id=chat_id,
                       message_content=message.message_content,
-                      sent_by="USER",
+                      sent_by=Sender.USER,
                       user_id=user_id
     )
     db.add(db_message)
@@ -259,7 +272,7 @@ async def handle_new_message(chat_id: int,
 
     #stream final response
     return StreamingResponse(
-        send_prompt_for_response(search_results),
+        send_prompt_for_response(search_results, user_id, chat_id, db),
         media_type="text/plain"
     )
 
