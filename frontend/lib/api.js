@@ -232,13 +232,17 @@ export const chatApi = {
    * Update chat title
    * PUT /api/chat/update_chat/{chat_id}
    * @param {number} chatId
-   * @param {string} title
+   * @param {string|null} [title=null]
+   * @param {string|null} [firstChat=null]
    * @returns {Promise<{ id: number, chat_title: string, user_id: number }>}
    */
-  async updateChatTitle(chatId, title) {
+  async updateChatTitle(chatId, title = null, firstChat = null) {
     return request(`/api/chat/update_chat/${chatId}`, {
       method: "PUT",
-      body: JSON.stringify({ chat_title: title }),
+      body: JSON.stringify({
+        chat_title: title !== undefined ? title : null,
+        first_chat: firstChat !== undefined ? firstChat : null,
+      }),
     });
   },
 
