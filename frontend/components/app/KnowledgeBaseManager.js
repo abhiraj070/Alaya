@@ -77,6 +77,37 @@ function generateId(prefix = "kb") {
   return `${prefix}_${idCounter}_${Date.now()}`;
 }
 
+// Extract a clean original filename from a Cloudinary URL or fallback
+function extractFilenameFromUrl(url, fallback = "Uploaded File", defaultExt = "") {
+  if (!url || typeof url !== "string") return fallback;
+  try {
+    const cleanUrl = url.split("?")[0].split("#")[0];
+    const lastSegment = cleanUrl.substring(cleanUrl.lastIndexOf("/") + 1);
+    if (!lastSegment) return fallback;
+
+    const decoded = decodeURIComponent(lastSegment);
+    const dotIndex = decoded.lastIndexOf(".");
+    const isCloudinary = url.includes("cloudinary.com");
+
+    if (dotIndex === -1) {
+      const cleaned = isCloudinary
+        ? decoded.replace(/_[a-zA-Z0-9]{6,8}$/, "").trim() || decoded
+        : decoded;
+      return defaultExt ? `${cleaned}.${defaultExt.replace(/^\./, "")}` : cleaned;
+    }
+
+    const baseName = decoded.substring(0, dotIndex);
+    const ext = decoded.substring(dotIndex);
+    const cleanedBase = isCloudinary
+      ? baseName.replace(/_[a-zA-Z0-9]{6,8}$/, "").trim() || baseName
+      : baseName;
+
+    return `${cleanedBase}${ext}`;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function KnowledgeBaseManager() {
   const { user } = useAuth();
   // Knowledge Base items state (persisted locally in React state)
@@ -121,12 +152,16 @@ export default function KnowledgeBaseManager() {
 
       const backendItems = uploads.map((up) => {
         if (up.data_type === "docs") {
-          const ext = up.tag || "pdf";
+          const fallbackTitle = up.tag ? `${up.tag.toUpperCase()} Document` : "Uploaded Document";
+          const docTitle = extractFilenameFromUrl(up.data_source, fallbackTitle, up.tag || "pdf");
+          const ext = docTitle.includes(".")
+            ? docTitle.split(".").pop().toLowerCase()
+            : (up.tag || "pdf").toLowerCase();
           return {
             id: `up_doc_${up.id}`,
             rawId: up.id,
             type: "document",
-            title: up.tag ? `${up.tag.toUpperCase()} Document` : "Uploaded Document",
+            title: docTitle,
             fileType: ext,
             fileSize: "Document",
             meta: "Indexed Document",
@@ -135,12 +170,16 @@ export default function KnowledgeBaseManager() {
             tags: [up.tag ? `#${up.tag}` : "#document", "#uploaded"],
           };
         } else if (up.data_type === "img") {
+          const imgTitle = extractFilenameFromUrl(up.data_source, "Uploaded Image", up.tag || "png");
+          const ext = imgTitle.includes(".")
+            ? imgTitle.split(".").pop().toLowerCase()
+            : (up.tag || "png").toLowerCase();
           return {
             id: `up_img_${up.id}`,
             rawId: up.id,
             type: "image",
-            title: "Uploaded Image",
-            fileType: up.tag || "png",
+            title: imgTitle,
+            fileType: ext,
             fileSize: "Image",
             dimensions: "Multimodal",
             previewUrl: up.data_source,
@@ -1270,8 +1309,8 @@ export default function KnowledgeBaseManager() {
                   )}
 
                   {/* Bottom Details Bar */}
-                  <div className="flex items-center justify-between text-[10px] font-mono text-text-muted pt-2 border-t border-border-subtle/50 shrink-0">
-                    <span className="truncate max-w-[140px] font-medium text-text-primary" title={item.title}>
+                  <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-text-muted pt-2 border-t border-border-subtle/50 shrink-0">
+                    <span className="truncate min-w-0 flex-1 font-medium text-text-primary" title={item.title}>
                       {item.title}
                     </span>
                     {(item.url || item.previewUrl) ? (
@@ -1279,7 +1318,7 @@ export default function KnowledgeBaseManager() {
                         href={item.url || item.previewUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-accent-sky hover:underline inline-flex items-center gap-1 font-sans font-medium"
+                        className="text-accent-sky hover:underline inline-flex items-center gap-1 font-sans font-medium shrink-0"
                       >
                         <span>Open image</span>
                         <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1289,7 +1328,7 @@ export default function KnowledgeBaseManager() {
                         </svg>
                       </a>
                     ) : (
-                      <span>{item.fileSize}</span>
+                      <span className="shrink-0">{item.fileSize}</span>
                     )}
                   </div>
                 </div>
