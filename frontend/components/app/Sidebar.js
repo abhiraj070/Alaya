@@ -251,7 +251,7 @@ export default function Sidebar({
 
             {/* All Chats Container */}
             <div
-              className={`flex-1 flex flex-col ${
+              className={`flex flex-col grow shrink-0 ${
                 pinnedChats.length === 0 ? "min-h-full" : "min-h-0"
               } rounded-xl border border-border-strong/40 bg-surface-secondary/70 p-2 shadow-xs`}
             >
