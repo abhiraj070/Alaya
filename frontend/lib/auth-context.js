@@ -80,7 +80,7 @@ export function AuthProvider({ children }) {
         setUser(authenticatedUser);
         return authenticatedUser;
       } catch (err) {
-        if (err.status) {
+        if (err.status && err.status !== 0) {
           throw err;
         }
         // Fallback for offline frontend prototype
@@ -101,7 +101,19 @@ export function AuthProvider({ children }) {
   // Register handler
   const register = useCallback(async ({ name, username, password }) => {
     setError(null);
-    return await authApi.register({ name, username, password });
+    try {
+      return await authApi.register({ name, username, password });
+    } catch (err) {
+      if (err.status && err.status !== 0) {
+        throw err;
+      }
+      // Fallback for offline frontend prototype
+      return {
+        id: Date.now(),
+        name,
+        username: username.replace(/^@/, ""),
+      };
+    }
   }, []);
 
   // Logout handler (strictly frontend-only per Phase 7.1)
