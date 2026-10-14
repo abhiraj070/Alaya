@@ -25,3 +25,21 @@ async def get_uploads(
     stmt = select(UploadedData).where(UploadedData.user_id == user_id).order_by(UploadedData.created_at.desc())
     uploads = db.execute(stmt).scalars().all()
     return uploads
+
+
+@router.delete("/delete_upload/{upload_id}")
+async def delete_upload(
+    upload_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    authenticated_user_id: Annotated[int, Depends(VerifyJWT)],
+):
+    stmt = select(UploadedData).where(
+        UploadedData.id == upload_id, UploadedData.user_id == authenticated_user_id
+    )
+    upload = db.execute(stmt).scalar_one_or_none()
+    if upload is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload not found")
+    db.delete(upload)
+    db.commit()
+    return {"detail": "Upload deleted successfully"}
+

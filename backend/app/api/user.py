@@ -175,7 +175,7 @@ async def logout(user_id: int, db: Annotated[Session, Depends(get_db)], response
     user= db.execute(stmt).scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    user.refresh_token = ""
+    user.refreshToken = ""
     db.commit()
     db.refresh(user)
     response.delete_cookie(key="access_token")

@@ -696,6 +696,18 @@ export const uploadedDataApi = {
       method: "GET",
     });
   },
+
+  /**
+   * Delete uploaded data record
+   * DELETE /api/uploaded_data/delete_upload/{upload_id}
+   * @param {number} uploadId
+   * @returns {Promise<{ detail: string }>}
+   */
+  async deleteUpload(uploadId) {
+    return request(`/api/uploaded_data/delete_upload/${uploadId}`, {
+      method: "DELETE",
+    });
+  },
 };
 
 const api = {

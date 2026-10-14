@@ -124,6 +124,7 @@ export default function KnowledgeBaseManager() {
           const ext = up.tag || "pdf";
           return {
             id: `up_doc_${up.id}`,
+            rawId: up.id,
             type: "document",
             title: up.tag ? `${up.tag.toUpperCase()} Document` : "Uploaded Document",
             fileType: ext,
@@ -136,6 +137,7 @@ export default function KnowledgeBaseManager() {
         } else if (up.data_type === "img") {
           return {
             id: `up_img_${up.id}`,
+            rawId: up.id,
             type: "image",
             title: "Uploaded Image",
             fileType: up.tag || "png",
@@ -153,6 +155,7 @@ export default function KnowledgeBaseManager() {
           const autoTitle = words.length > 6 ? `${snippet}...` : snippet || "Saved Note";
           return {
             id: `up_mem_${up.id}`,
+            rawId: up.id,
             type: "memory",
             title: autoTitle,
             content: up.data_source,
@@ -494,10 +497,19 @@ export default function KnowledgeBaseManager() {
     return titleMatch || contentMatch || tagMatch || metaMatch || fileTypeMatch || categoryMatch;
   });
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!itemToDelete || isDeletingItem) return;
     setIsDeletingItem(true);
     const title = itemToDelete.title || "Item";
+
+    if (itemToDelete.rawId && typeof itemToDelete.rawId === "number") {
+      try {
+        await uploadedDataApi.deleteUpload(itemToDelete.rawId);
+      } catch (err) {
+        console.error("Failed to delete upload from backend:", err);
+      }
+    }
+
     setItems((prev) => prev.filter((item) => item.id !== itemToDelete.id));
     setItemToDelete(null);
     setIsDeletingItem(false);

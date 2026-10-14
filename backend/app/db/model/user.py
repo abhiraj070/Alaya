@@ -13,8 +13,8 @@ class User(Base):
     password = Column(Text, nullable=False)
     chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
     messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")
-    knowledge= relationship("Knowledge", back_populates="user")
-    uploaded_data = relationship("UploadedData", back_populates="user")
+    knowledge = relationship("Knowledge", back_populates="user", cascade="all, delete-orphan")
+    uploaded_data = relationship("UploadedData", back_populates="user", cascade="all, delete-orphan")
     refreshToken = Column(Text, nullable=False)
 
 def already_hashed(password: str)->bool:
