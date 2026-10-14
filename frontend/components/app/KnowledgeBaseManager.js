@@ -898,6 +898,7 @@ export default function KnowledgeBaseManager() {
                 }}
                 onSubmit={handleTextSubmit}
                 disabled={isTextSubmitting}
+                isLoading={isTextSubmitting}
                 placeholder="Write something you want Alaya to remember..."
                 ariaLabel="Feed the data"
                 submitButtonTitle="Save memory"

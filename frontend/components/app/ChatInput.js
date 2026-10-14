@@ -7,6 +7,7 @@ export default function ChatInput({
   onChange,
   onSubmit,
   disabled = false,
+  isLoading = false,
   placeholder,
   ariaLabel = "Message composer",
   submitButtonTitle = "Send message",
@@ -86,19 +87,27 @@ export default function ChatInput({
               title={submitButtonTitle}
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-sky text-bg-primary font-bold shadow-md hover:bg-accent-sky-light disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary"
             >
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="12" y1="19" x2="12" y2="5" />
-                <polyline points="5 12 12 5 19 12" />
-              </svg>
+              {isLoading ? (
+                <div
+                  className="h-4 w-4 animate-spin rounded-full border-2 border-bg-primary border-t-transparent"
+                  role="status"
+                  aria-label="Processing..."
+                />
+              ) : (
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <line x1="12" y1="19" x2="12" y2="5" />
+                  <polyline points="5 12 12 5 19 12" />
+                </svg>
+              )}
             </button>
           </div>
         </form>

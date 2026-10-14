@@ -346,6 +346,7 @@ export default function Chat({ chatId, messages = [], setMessages }) {
       <ChatInput
         value={inputValue}
         disabled={isBusy}
+        isLoading={isBusy}
         onChange={setInputValue}
         onSubmit={() => handleSendMessage()}
       />
