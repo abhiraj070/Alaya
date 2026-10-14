@@ -159,7 +159,7 @@ export default function Chat({ messages = [], setMessages }) {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto chat-scrollbar flex flex-col justify-between select-text"
+        className="flex-1 min-h-0 overflow-y-auto chat-scrollbar flex flex-col justify-between select-text"
       >
         {messages.length === 0 ? (
           <ChatEmptyState />

@@ -8,6 +8,7 @@ import WorkspacePlaceholder from "@/components/app/WorkspacePlaceholder";
 import Chat from "@/components/app/Chat";
 import KnowledgeBaseManager from "@/components/app/KnowledgeBaseManager";
 import { getStoredUser, subscribeUserStorage, mockUser } from "@/mock/users";
+import { mockChats } from "@/mock/chat";
 import { useAuth } from "@/lib/auth-context";
 
 export default function AppShell() {
@@ -16,14 +17,7 @@ export default function AppShell() {
 
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("chat"); // Chat (Ask) active by default
-  const [chats, setChats] = useState([
-    {
-      id: "chat-1",
-      title: "New chat",
-      messages: [],
-      createdAt: 1,
-    },
-  ]);
+  const [chats, setChats] = useState(mockChats);
   const [activeChatId, setActiveChatId] = useState("chat-1");
 
   const activeChat = chats.find((c) => c.id === activeChatId) || chats[0];
@@ -37,8 +31,19 @@ export default function AppShell() {
             typeof newMessagesOrUpdater === "function"
               ? newMessagesOrUpdater(c.messages)
               : newMessagesOrUpdater;
+          let updatedTitle = c.title;
+          if (c.title === "New chat" && updatedMessages.length > 0) {
+            const firstUserMsg = updatedMessages.find((m) => m.sender === "user");
+            if (firstUserMsg?.text) {
+              updatedTitle =
+                firstUserMsg.text.length > 28
+                  ? `${firstUserMsg.text.slice(0, 28)}...`
+                  : firstUserMsg.text;
+            }
+          }
           return {
             ...c,
+            title: updatedTitle,
             messages: updatedMessages,
           };
         }

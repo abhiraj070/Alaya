@@ -238,7 +238,7 @@ export default function MobileDrawer({
               <span className="text-[10px] font-mono font-normal text-text-muted/80">{chats.length}</span>
             </div>
 
-            <div className="flex-1 overflow-y-auto chat-scrollbar space-y-1 pr-0.5">
+            <div className="flex-1 min-h-0 overflow-y-auto chat-scrollbar space-y-1 pr-0.5">
               {chats.length === 0 ? (
                 <div className="px-2 py-3 text-center text-xs text-text-muted italic">
                   No chats yet

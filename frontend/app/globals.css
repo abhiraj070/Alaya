@@ -153,6 +153,7 @@ body.light {
 .chat-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
+  overscroll-behavior-y: contain;
   transition: scrollbar-color 0.25s ease;
 }
 

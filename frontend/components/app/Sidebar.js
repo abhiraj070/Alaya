@@ -75,7 +75,7 @@ export default function Sidebar({
       }`}
     >
       {/* Top Navigation & Chats Section */}
-      <div className="flex-1 overflow-y-auto chat-scrollbar p-2 sm:p-3 flex flex-col min-h-0">
+      <div className="flex-1 overflow-hidden p-2 sm:p-3 flex flex-col min-h-0">
         {/* New Chat Button (Positioned above Ask) */}
         <div className="mb-2 shrink-0">
           {isCollapsed ? (
@@ -161,7 +161,7 @@ export default function Sidebar({
             </div>
 
             {/* List of Chats */}
-            <div className="flex-1 overflow-y-auto chat-scrollbar space-y-1 pr-0.5 min-h-[70px]">
+            <div className="flex-1 min-h-0 overflow-y-auto chat-scrollbar space-y-1 pr-0.5">
               {chats.length === 0 ? (
                 <div className="px-2 py-3 text-center text-xs text-text-muted italic">
                   No chats yet

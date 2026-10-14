@@ -29,6 +29,159 @@ export const mockConversation = [
   },
 ];
 
+export const mockChats = [
+  {
+    id: "chat-1",
+    title: "Research Paper Findings",
+    createdAt: 1713000000000,
+    messages: [
+      {
+        id: "msg_1_1",
+        sender: "user",
+        text: "What are the main findings in my research paper?",
+        timestamp: "10:24 AM",
+      },
+      {
+        id: "msg_1_2",
+        sender: "alaya",
+        text: `Based on the sample document "Research Paper.pdf" (Climate Dynamics & Coastal Infrastructure):
+
+1. Rising sea levels significantly increase coastal flooding risk across shoreline communities.
+2. The frequency and magnitude of storm surges create compound challenges for urban defenses.
+3. Regional drainage and water management infrastructure face severe pressure without structural modernization.`,
+        source: 'Document · "Research Paper.pdf"',
+        timestamp: "10:24 AM",
+      },
+    ],
+  },
+  {
+    id: "chat-2",
+    title: "Redis & Background Workers",
+    createdAt: 1712990000000,
+    messages: [
+      {
+        id: "msg_2_1",
+        sender: "user",
+        text: "What did we decide about Redis?",
+        timestamp: "08:15 AM",
+      },
+      {
+        id: "msg_2_2",
+        sender: "alaya",
+        text: `According to your recorded discussion notes with Rahul:\n\nYou discussed background job execution strategies and decided to use ARQ with FastAPI rather than heavier alternatives to keep task queues lightweight and asynchronous.`,
+        source: 'Personal Memory · "Discussion with Rahul"',
+        timestamp: "08:15 AM",
+      },
+    ],
+  },
+  {
+    id: "chat-3",
+    title: "Today's Accomplishments",
+    createdAt: 1712980000000,
+    messages: [
+      {
+        id: "msg_3_1",
+        sender: "user",
+        text: "What did I accomplish today?",
+        timestamp: "06:40 PM",
+      },
+      {
+        id: "msg_3_2",
+        sender: "alaya",
+        text: `Based on your personal memory log recorded today:\n\nYou noted that you finished implementing the authentication system for your project and fixed two bugs.`,
+        source: 'Personal Memory · "Project Accomplishments"',
+        timestamp: "06:40 PM",
+      },
+    ],
+  },
+  {
+    id: "chat-4",
+    title: "Q3 Financial Analysis",
+    createdAt: 1712970000000,
+    messages: [
+      {
+        id: "msg_4_1",
+        sender: "user",
+        text: "Summarize Q3 financial revenue and margins",
+        timestamp: "02:10 PM",
+      },
+      {
+        id: "msg_4_2",
+        sender: "alaya",
+        text: `Based on "Financial Report Q3.xlsx":\n\nThe report records 24% quarter-over-quarter growth, strong operating margins, and continued investment in core knowledge infrastructure.`,
+        source: 'Document · "Financial Report Q3.xlsx"',
+        timestamp: "02:10 PM",
+      },
+    ],
+  },
+  {
+    id: "chat-5",
+    title: "System Architecture Spec",
+    createdAt: 1712960000000,
+    messages: [
+      {
+        id: "msg_5_1",
+        sender: "user",
+        text: "What is the system architecture stack?",
+        timestamp: "11:05 AM",
+      },
+      {
+        id: "msg_5_2",
+        sender: "alaya",
+        text: `According to "Project Architecture.docx":\n\nThe Alaya technical architecture combines a FastAPI service layer, PostgreSQL with pgvector for embeddings, and a Next.js App Router frontend for the workspace.`,
+        source: 'Document · "Project Architecture.docx"',
+        timestamp: "11:05 AM",
+      },
+    ],
+  },
+  {
+    id: "chat-6",
+    title: "Internship Interview Notes",
+    createdAt: 1712950000000,
+    messages: [
+      {
+        id: "msg_6_1",
+        sender: "user",
+        text: "What did I take notes on from my internship interview?",
+        timestamp: "04:30 PM",
+      },
+      {
+        id: "msg_6_2",
+        sender: "alaya",
+        text: `From your personal notes regarding your internship interview:\n\nThe discussion centered around database indexing techniques (such as B-Tree and vector indexes) and distributed systems architectural patterns.`,
+        source: 'Personal Memory · "Internship Interview Experience"',
+        timestamp: "04:30 PM",
+      },
+    ],
+  },
+  {
+    id: "chat-7",
+    title: "Travel Project Ideas",
+    createdAt: 1712940000000,
+    messages: [
+      {
+        id: "msg_7_1",
+        sender: "user",
+        text: "What travel project idea did I write down?",
+        timestamp: "09:20 AM",
+      },
+      {
+        id: "msg_7_2",
+        sender: "alaya",
+        text: `From your personal reflection notes:\n\nYou recorded an interesting creative project idea while travelling that you flagged to revisit and explore further.`,
+        source: 'Personal Memory · "Travel Project Idea"',
+        timestamp: "09:20 AM",
+      },
+    ],
+  },
+  {
+    id: "chat-8",
+    title: "Database Indexing Strategy",
+    createdAt: 1712930000000,
+    messages: [],
+  },
+];
+
 /**
  * Predictable local response selector matching keywords against mock knowledge base.
  * Returns { text: string, source: string }
