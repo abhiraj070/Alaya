@@ -31,4 +31,5 @@ class UploadedData(Base):
     data_source = Column(Text, nullable=False)
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     user = relationship(User, back_populates='uploaded_data')
+    knowledge = relationship("Knowledge", back_populates='uploaded_data')
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

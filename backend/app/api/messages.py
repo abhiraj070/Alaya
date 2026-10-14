@@ -441,7 +441,7 @@ async def image_upload(
             "public_id": upload_result["public_id"],
             "resource_type": upload_result.get("resource_type", "image"),
         }
-        await queue.enqueue_job("create_image_embeddings", user_id, cloudinary_data)
+        await queue.enqueue_job("create_image_embeddings", user_id, cloudinary_data, uploaded_data.id)
     except Exception:
         try:
             delete_file(
@@ -481,7 +481,7 @@ async def file_upload(
         db.add(uploaded_data)
         db.commit()
 
-        await queue.enqueue_job("create_file_embeddings", str(temporary_path), user_id)
+        await queue.enqueue_job("create_file_embeddings", str(temporary_path), user_id, uploaded_data.id)
     except Exception:
         temporary_path.unlink(missing_ok=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File upload failed")

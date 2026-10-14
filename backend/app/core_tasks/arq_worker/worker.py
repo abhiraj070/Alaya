@@ -36,6 +36,7 @@ async def create_knowledge_embedding(
         ctx,
         text_content: str,
         user_id: int,
+        uploaded_data_id: int | None = None,
 ):
     db= SessionLocal()
     try:
@@ -90,7 +91,10 @@ async def create_knowledge_embedding(
             knowledge= Knowledge(text_content=content,
                                  user_id=user_id,
                                  knowledge_metadata= structured_metadata[i]["metadata"],
-                                 knowledge_type= knowledge_type
+                                 knowledge_type= knowledge_type,
+                                 uploaded_data_id=uploaded_data_id,
+                                 chunk_index=i,
+                                 page_number=None,
             )
             db.add(knowledge)
             db.flush()
@@ -147,7 +151,8 @@ async def create_knowledge_embedding(
 async def create_image_embeddings(
         ctx,
         user_id: int,
-        upload_result:dict[str, str]
+        upload_result:dict[str, str],
+        uploaded_data_id: int | None = None,
 ):
     db= SessionLocal()
 
@@ -198,6 +203,9 @@ async def create_image_embeddings(
                               user_id=user_id,
                               text_content=image_string,
                               knowledge_metadata=structured_metadata["metadata"],
+                              uploaded_data_id=uploaded_data_id,
+                              chunk_index=0,
+                              page_number=None,
                               )
         db.add(knowledge)
         db.flush()
@@ -239,6 +247,7 @@ async def create_file_embeddings(
         ctx,
         file_path: str,
         user_id: int,
+        uploaded_data_id: int | None = None,
 ):
     db= SessionLocal()
     try:
@@ -253,6 +262,26 @@ async def create_file_embeddings(
                 raise ValueError("Text cannot be empty")
         except Exception:
             raise HTTPException(status_code=502, detail="Error while creating chunks")
+
+        # Determine page numbers for chunks if PDF
+        chunk_pages = []
+        if Path(file_path).suffix.lower() == ".pdf":
+            import re
+            current_page = 1
+            for chunk in chunks:
+                page_markers = list(re.finditer(r'\[Page\s+(\d+)\]', chunk))
+                if page_markers:
+                    first_marker = page_markers[0]
+                    if first_marker.start() == 0 or not chunk[:first_marker.start()].strip():
+                        chunk_page = int(first_marker.group(1))
+                    else:
+                        chunk_page = current_page
+                    current_page = int(page_markers[-1].group(1))
+                else:
+                    chunk_page = current_page
+                chunk_pages.append(chunk_page)
+        else:
+            chunk_pages = [None] * len(chunks)
 
         #structured metadata
         structured_metadata= []
@@ -291,7 +320,10 @@ async def create_file_embeddings(
             knowledge= Knowledge(text_content=chunk,
                                  user_id=user_id,
                                  knowledge_metadata=structured_metadata[i]["metadata"],
-                                 knowledge_type=structured_metadata[i]["fact_type"]
+                                 knowledge_type=structured_metadata[i]["fact_type"],
+                                 uploaded_data_id=uploaded_data_id,
+                                 chunk_index=i,
+                                 page_number=chunk_pages[i],
             )
             db.add(knowledge)
             db.flush()
