@@ -6,6 +6,7 @@ import Sidebar from "@/components/app/Sidebar";
 import MobileDrawer from "@/components/app/MobileDrawer";
 import WorkspacePlaceholder from "@/components/app/WorkspacePlaceholder";
 import Chat from "@/components/app/Chat";
+import KnowledgeBaseManager from "@/components/app/KnowledgeBaseManager";
 import { getStoredUser, subscribeUserStorage, mockUser } from "@/mock/users";
 
 export default function AppShell() {
@@ -141,6 +142,10 @@ export default function AppShell() {
               messages={activeChatMessages}
               setMessages={handleSetMessages}
             />
+          ) : activeTab === "knowledge" ? (
+            <div className="flex-1 overflow-y-auto chat-scrollbar flex flex-col">
+              <KnowledgeBaseManager />
+            </div>
           ) : (
             <div className="flex-1 overflow-y-auto chat-scrollbar flex flex-col">
               <WorkspacePlaceholder activeTab={activeTab} />

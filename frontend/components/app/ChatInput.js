@@ -7,6 +7,14 @@ export default function ChatInput({
   onChange,
   onSubmit,
   disabled = false,
+  placeholder,
+  ariaLabel = "Message composer",
+  submitButtonTitle = "Send message",
+  submitButtonAriaLabel = "Send message",
+  subtext = "Alaya answers questions based on your ingested documents and personal memories.",
+  showSubtext = true,
+  className = "",
+  containerClassName = "max-w-3xl",
 }) {
   const textareaRef = useRef(null);
 
@@ -34,9 +42,15 @@ export default function ChatInput({
 
   const isSendDisabled = disabled || !value.trim();
 
+  const defaultPlaceholder = disabled
+    ? "Alaya is generating a response..."
+    : "Ask Alaya anything...";
+
+  const resolvedPlaceholder = placeholder !== undefined ? placeholder : defaultPlaceholder;
+
   return (
-    <div className="w-full shrink-0 px-3 sm:px-4 pb-4 pt-2 bg-gradient-to-t from-bg-primary via-bg-primary/95 to-transparent z-10 select-none">
-      <div className="max-w-3xl mx-auto w-full">
+    <div className={`w-full shrink-0 px-3 sm:px-4 pb-4 pt-2 bg-gradient-to-t from-bg-primary via-bg-primary/95 to-transparent z-10 select-none ${className}`}>
+      <div className={`${containerClassName} mx-auto w-full`}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -57,14 +71,10 @@ export default function ChatInput({
             disabled={disabled}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={
-              disabled
-                ? "Alaya is generating a response..."
-                : "Ask Alaya anything..."
-            }
+            placeholder={resolvedPlaceholder}
             style={{ outline: "none", boxShadow: "none" }}
             className="w-full bg-transparent px-4 py-3.5 pr-14 text-sm sm:text-base text-text-primary placeholder:text-text-muted outline-none focus:outline-none focus-visible:outline-none resize-none leading-relaxed font-sans max-h-44 min-h-[52px] overflow-y-auto disabled:cursor-not-allowed border-none ring-0 focus:ring-0"
-            aria-label="Message composer"
+            aria-label={ariaLabel}
           />
 
           {/* Send Button */}
@@ -72,8 +82,8 @@ export default function ChatInput({
             <button
               type="submit"
               disabled={isSendDisabled}
-              aria-label="Send message"
-              title="Send message"
+              aria-label={submitButtonAriaLabel}
+              title={submitButtonTitle}
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-sky text-bg-primary font-bold shadow-md hover:bg-accent-sky-light disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary"
             >
               <svg
@@ -94,9 +104,11 @@ export default function ChatInput({
         </form>
 
         {/* Minimal Subtext Disclaimer */}
-        <p className="mt-2 text-center text-[11px] text-text-muted">
-          Alaya answers questions based on your ingested documents and personal memories.
-        </p>
+        {showSubtext && subtext && (
+          <p className="mt-2 text-center text-[11px] text-text-muted">
+            {subtext}
+          </p>
+        )}
       </div>
     </div>
   );
