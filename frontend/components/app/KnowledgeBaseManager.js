@@ -267,11 +267,21 @@ export default function KnowledgeBaseManager() {
 
   // ==========================================
   // MODE 3: WRITE TEXT (Feed The Data)
-  // Reuses the exact same ChatInput component
+  // Reuses the exact same ChatInput component + Tags selection
   // ==========================================
   const [textValue, setTextValue] = useState("");
+  const [selectedTag, setSelectedTag] = useState("Accomplishment");
   const [isTextSubmitting, setIsTextSubmitting] = useState(false);
   const [textError, setTextError] = useState("");
+
+  const tagsList = [
+    { id: "Accomplishment", label: "#accomplishment" },
+    { id: "Decision", label: "#decision" },
+    { id: "Event", label: "#event" },
+    { id: "Idea", label: "#idea" },
+    { id: "Learning", label: "#learning" },
+    { id: "Note", label: "#note" },
+  ];
 
   const handleTextSubmit = () => {
     const trimmed = textValue.trim();
@@ -295,10 +305,10 @@ export default function KnowledgeBaseManager() {
         type: "memory",
         title: autoTitle,
         content: trimmed,
-        category: "Memory",
+        category: selectedTag,
         createdAt: new Date().toISOString(),
         status: "Grounded",
-        tags: ["#memory", "#grounded", "#personal"],
+        tags: [`#${selectedTag.toLowerCase()}`, "#memory"],
       };
 
       setItems((prev) => [newMemory, ...prev]);
@@ -529,23 +539,11 @@ export default function KnowledgeBaseManager() {
             ) : (
               /* When 1 file is uploaded, show the single file card (option to upload new is removed) */
               <div className="rounded-xl border border-border-subtle bg-surface-secondary/40 p-4 space-y-3">
-                <div className="flex items-center justify-between text-xs font-semibold text-text-secondary">
+                <div className="text-xs font-semibold text-text-secondary">
                   <span>Selected Document</span>
-                  {!isFilesProcessing && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStagedFile(null);
-                        if (fileInputRef.current) fileInputRef.current.value = "";
-                      }}
-                      className="text-text-muted hover:text-rose-400 transition-colors"
-                    >
-                      Remove
-                    </button>
-                  )}
                 </div>
 
-                <div className="flex items-center justify-between py-2 gap-3">
+                <div className="flex items-center py-2 gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <span
                       className={`rounded px-1.5 py-0.5 text-[10px] font-mono font-bold uppercase border ${getExtBadgeStyle(
@@ -563,21 +561,6 @@ export default function KnowledgeBaseManager() {
                       </p>
                     </div>
                   </div>
-
-                  {!isFilesProcessing && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStagedFile(null);
-                        if (fileInputRef.current) fileInputRef.current.value = "";
-                      }}
-                      className="text-text-muted hover:text-rose-400 p-1 transition-colors"
-                      title="Remove file"
-                      aria-label={`Remove ${stagedFile.name}`}
-                    >
-                      ✕
-                    </button>
-                  )}
                 </div>
 
                 {/* Ingest Action Button */}
@@ -675,20 +658,8 @@ export default function KnowledgeBaseManager() {
             ) : (
               /* When 1 image is uploaded, show the single preview card (option to upload new is removed) */
               <div className="rounded-xl border border-border-subtle bg-surface-secondary/40 p-4 space-y-4">
-                <div className="flex items-center justify-between text-xs font-semibold text-text-secondary">
+                <div className="text-xs font-semibold text-text-secondary">
                   <span>Selected Image</span>
-                  {!isImagesProcessing && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStagedImage(null);
-                        if (imageInputRef.current) imageInputRef.current.value = "";
-                      }}
-                      className="text-text-muted hover:text-rose-400 transition-colors"
-                    >
-                      Remove
-                    </button>
-                  )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-lg border border-border-subtle bg-surface-primary p-3">
@@ -720,21 +691,6 @@ export default function KnowledgeBaseManager() {
                       Ready to index into multimodal knowledge base.
                     </p>
                   </div>
-
-                  {!isImagesProcessing && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setStagedImage(null);
-                        if (imageInputRef.current) imageInputRef.current.value = "";
-                      }}
-                      className="text-text-muted hover:text-rose-400 p-1.5 transition-colors self-start sm:self-center"
-                      title="Remove image"
-                      aria-label={`Remove ${stagedImage.name}`}
-                    >
-                      ✕
-                    </button>
-                  )}
                 </div>
 
                 {/* Index Action Button */}
@@ -766,10 +722,33 @@ export default function KnowledgeBaseManager() {
 
         {/* ================================================================ */}
         {/* MODE 3: WRITE TEXT INTERFACE                                     */}
-        {/* Feed The Data via reusable ChatInput component                    */}
+        {/* Feed The Data via reusable ChatInput component + Tags             */}
         {/* ================================================================ */}
         {activeInputMode === "text" && (
           <div className="mt-5 space-y-4 animate-fadeIn">
+            {/* Tags selection section */}
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-2">
+                Tags
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {tagsList.map((tag) => (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => setSelectedTag(tag.id)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                      selectedTag === tag.id
+                        ? "border border-accent-sky/50 bg-surface-secondary text-accent-sky shadow-sm"
+                        : "border border-border-subtle text-text-muted hover:text-text-primary hover:border-border-strong bg-surface-secondary/40"
+                    }`}
+                  >
+                    {tag.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Error Message */}
             {textError && (
               <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-300 font-mono">
@@ -808,11 +787,11 @@ export default function KnowledgeBaseManager() {
 
       {/* ==================================================================== */}
       {/* SECTION 2: EXISTING KNOWLEDGE ITEMS                                  */}
-      {/* Represent documents, images, and written entries appropriately       */}
+      {/* Horizontal divider placed ABOVE Existing Knowledge with proper spacing*/}
       {/* ==================================================================== */}
-      <section className="space-y-4">
-        {/* Section Header & Filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-subtle pb-4">
+      <section className="border-t border-border-subtle pt-8 sm:pt-10 space-y-6">
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold tracking-tight text-text-primary">
               Existing Knowledge
@@ -906,7 +885,8 @@ export default function KnowledgeBaseManager() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredItems.map((item) => {
             // ==========================================
-            // 1. DOCUMENT ITEM CARD
+            // 1. DOCUMENT ITEM CARD (Uploaded Data)
+            // Tags feature removed per user request
             // ==========================================
             if (item.type === "document") {
               return (
@@ -958,30 +938,13 @@ export default function KnowledgeBaseManager() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Footer Tags & Status */}
-                  <div className="mt-4 flex items-center justify-between border-t border-border-subtle pt-3 text-[10px] font-mono">
-                    <div className="flex flex-wrap gap-1.5">
-                      {(item.tags || []).slice(0, 3).map((tag, idx) => (
-                        <span
-                          key={idx}
-                          className="rounded bg-surface-secondary px-1.5 py-0.5 text-text-muted border border-border-subtle"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      Indexed
-                    </span>
-                  </div>
                 </div>
               );
             }
 
             // ==========================================
-            // 2. IMAGE ITEM CARD
+            // 2. IMAGE ITEM CARD (Uploaded Data)
+            // Tags feature removed per user request
             // ==========================================
             if (item.type === "image") {
               return (
@@ -1040,30 +1003,13 @@ export default function KnowledgeBaseManager() {
                       </p>
                     </div>
                   </div>
-
-                  {/* Footer Tags & Status */}
-                  <div className="mt-4 flex items-center justify-between border-t border-border-subtle pt-3 text-[10px] font-mono">
-                    <div className="flex flex-wrap gap-1.5">
-                      {(item.tags || []).slice(0, 3).map((tag, idx) => (
-                        <span
-                          key={idx}
-                          className="rounded bg-surface-secondary px-1.5 py-0.5 text-text-muted border border-border-subtle"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                      Indexed
-                    </span>
-                  </div>
                 </div>
               );
             }
 
             // ==========================================
-            // 3. WRITTEN MEMORY CARD (Natural Language)
+            // 3. WRITTEN MEMORY CARD (Text Data Feed)
+            // Tags feature brought back / preserved
             // ==========================================
             return (
               <div
@@ -1110,7 +1056,7 @@ export default function KnowledgeBaseManager() {
                   </div>
                 </div>
 
-                {/* Footer Tags & Status */}
+                {/* Footer Tags & Status for Text Data Feed */}
                 <div className="mt-4 flex items-center justify-between border-t border-border-subtle pt-3 text-[10px] font-mono">
                   <div className="flex flex-wrap gap-1.5">
                     {(item.tags || []).slice(0, 3).map((tag, idx) => (
