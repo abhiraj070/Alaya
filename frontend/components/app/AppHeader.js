@@ -56,9 +56,9 @@ export default function AppHeader({
 
         {/* ALAYA Brand Wordmark Link */}
         <Link
-          href="/app"
+          href="/"
           className="flex items-center group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky rounded-lg py-1 px-1.5"
-          aria-label="Alaya Application Home"
+          aria-label="Alaya Homepage"
         >
           <AlayaWordmark className="text-lg sm:text-xl font-extrabold tracking-[0.22em] select-none" />
         </Link>

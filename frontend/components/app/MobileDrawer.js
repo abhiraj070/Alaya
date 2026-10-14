@@ -119,10 +119,10 @@ export default function MobileDrawer({
           {/* Drawer Header: Brand + Close Button */}
           <div className="flex items-center justify-between pb-4 border-b border-border-subtle shrink-0">
             <Link
-              href="/app"
+              href="/"
               onClick={onClose}
               className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky rounded-md py-1"
-              aria-label="Alaya Application Home"
+              aria-label="Alaya Homepage"
             >
               <AlayaWordmark className="text-xl font-extrabold tracking-[0.22em] select-none" />
             </Link>
