@@ -23,6 +23,7 @@ export default function Sidebar({
   onUpdateChatTitle,
   onDeleteChat,
   user,
+  isLoadingChats = false,
 }) {
   const chatListRef = useRef(null);
   const askIcon = (
@@ -208,7 +209,18 @@ export default function Sidebar({
             className="flex-1 min-h-0 overflow-y-auto chat-scrollbar space-y-1 pr-0.5"
             style={{ touchAction: "pan-y" }}
           >
-            {chats.length === 0 ? (
+            {isLoadingChats ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-2 text-text-muted">
+                <div
+                  className="h-5 w-5 animate-spin rounded-full border-2 border-accent-sky border-t-transparent"
+                  role="status"
+                  aria-label="Loading chats..."
+                />
+                <span className="text-[11px] text-text-muted font-medium tracking-wide">
+                  Loading chats...
+                </span>
+              </div>
+            ) : chats.length === 0 ? (
               <div className="px-2 py-3 text-center text-xs text-text-muted italic">
                 No chats yet
               </div>
