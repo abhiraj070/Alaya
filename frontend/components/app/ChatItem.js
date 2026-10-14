@@ -210,36 +210,50 @@ export default function ChatItem({
         {isMenuOpen && (
           <div
             ref={menuRef}
-            className={`absolute right-0 z-50 min-w-[140px] rounded-[11px] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 shadow-lg shadow-slate-900/10 animate-fadeIn ${
-              openUpward ? "bottom-full mb-1" : "top-full mt-1"
+            className={`absolute right-0 z-50 min-w-[148px] rounded-xl border border-slate-200/90 dark:border-border-strong bg-white/95 dark:bg-surface-primary/95 backdrop-blur-md p-1.5 shadow-lg shadow-black/10 dark:shadow-[0_8px_24px_rgba(0,0,0,0.45)] space-y-1 animate-fadeIn ${
+              openUpward ? "bottom-full mb-1.5" : "top-full mt-1.5"
             }`}
             role="menu"
             aria-orientation="vertical"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* 1. Rename Option */}
+            {/* 1. Edit / Rename Button */}
             <button
               type="button"
-              onClick={handleStartEdit}
-              className="flex w-full h-9 items-center gap-2.5 rounded-[8px] px-2.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:bg-slate-100 dark:focus-visible:bg-slate-800"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStartEdit();
+              }}
+              className="group/btn flex w-full h-9 items-center gap-2.5 rounded-lg px-3 text-xs font-medium text-slate-700 dark:text-text-secondary hover:text-slate-900 dark:hover:text-text-primary bg-transparent hover:bg-slate-100 dark:hover:bg-surface-secondary border border-transparent hover:border-slate-200/60 dark:hover:border-border-subtle transition-all duration-150 cursor-pointer text-left select-none focus-visible:outline-none focus-visible:ring-1.5 focus-visible:ring-slate-400 dark:focus-visible:ring-accent-sky/50"
               role="menuitem"
             >
-              <Pencil className="h-4 w-4 text-slate-500 dark:text-slate-400 shrink-0" aria-hidden="true" />
-              <span className="font-medium">Rename</span>
+              <Pencil
+                className="h-4 w-4 text-slate-500 dark:text-text-muted group-hover/btn:text-slate-800 dark:group-hover/btn:text-text-primary transition-colors shrink-0"
+                strokeWidth={1.75}
+                aria-hidden="true"
+              />
+              <span>Rename</span>
             </button>
 
-            {/* Separator */}
-            <div className="my-1 border-t border-slate-100 dark:border-slate-800" role="separator" />
+            {/* Subtle Separator */}
+            <div className="border-t border-slate-100 dark:border-border-subtle/80 my-0.5" role="separator" />
 
-            {/* 2. Delete Chat Option */}
+            {/* 2. Delete Chat Button */}
             <button
               type="button"
-              onClick={handleDelete}
-              className="flex w-full h-9 items-center gap-2.5 rounded-[8px] px-2.5 text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-300 transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:bg-red-50 dark:focus-visible:bg-red-950/40"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete();
+              }}
+              className="group/btn flex w-full h-9 items-center gap-2.5 rounded-lg px-3 text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 bg-transparent hover:bg-rose-50 dark:hover:bg-rose-500/10 border border-transparent hover:border-rose-200/70 dark:hover:border-rose-500/20 transition-all duration-150 cursor-pointer text-left select-none focus-visible:outline-none focus-visible:ring-1.5 focus-visible:ring-rose-400"
               role="menuitem"
             >
-              <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0" aria-hidden="true" />
-              <span className="font-medium">Delete</span>
+              <Trash2
+                className="h-4 w-4 text-rose-500 dark:text-rose-400 group-hover/btn:text-rose-600 dark:group-hover/btn:text-rose-300 transition-colors shrink-0"
+                strokeWidth={1.75}
+                aria-hidden="true"
+              />
+              <span>Delete</span>
             </button>
           </div>
         )}
