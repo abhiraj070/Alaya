@@ -126,7 +126,7 @@ export default function AppHeader({
             onOpenUniverse?.();
           }}
           className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-accent-sky/30 hover:border-accent-sky/60 bg-accent-sky/10 hover:bg-accent-sky/20 text-accent-sky text-xs font-semibold tracking-wide transition-all duration-200 shadow-xs group"
-          title="Open 3D Memory Universe"
+          title="View your memory graph"
         >
           <svg
             className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-accent-sky transition-transform group-hover:rotate-45"
@@ -140,7 +140,7 @@ export default function AppHeader({
             <circle cx="12" cy="12" r="3" />
             <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(30 12 12)" />
           </svg>
-          <span className="hidden sm:inline">Memory Universe</span>
+          <span className="hidden sm:inline">View your memory graph</span>
         </a>
 
         <ThemeToggle />

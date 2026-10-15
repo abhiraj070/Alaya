@@ -5,7 +5,7 @@ import {
   ExternalLink,
   Calendar,
   Layers,
-  Sparkles,
+  AlignLeft,
   Image as ImageIcon,
   BookOpen,
   Info,
@@ -58,6 +58,8 @@ export function ChunkDetailDrawer({
   const pageNumber = detail?.page_number ?? null;
   const chunkIndex = detail?.chunk_index ?? null;
   const sourceViewUrl = getSourceViewUrl(source, pageNumber);
+  const dataType = source?.data_type || node.content_type || node.source_type;
+  const isDocOrImg = dataType === 'docs' || dataType === 'img';
 
   // Format date
   const createdDate = detail?.created_at || node.created_at;
@@ -242,7 +244,7 @@ export function ChunkDetailDrawer({
               {/* Direct Natural-Language Entry */}
               {(!source || source.data_type === 'text') && (
                 <div className="flex items-start gap-2.5 text-xs text-[#A1AAB5]">
-                  <Sparkles className="w-4 h-4 text-[#38BDF8] shrink-0 mt-0.5" />
+                  <AlignLeft className="w-4 h-4 text-[#38BDF8] shrink-0 mt-0.5" />
                   <p className="leading-relaxed">
                     This knowledge was ingested directly as natural-language text. No external file was uploaded.
                   </p>
@@ -250,15 +252,17 @@ export function ChunkDetailDrawer({
               )}
             </div>
 
-            {/* Extracted Chunk Content */}
-            <div>
-              <span className="text-xs font-medium text-[#737D89] block mb-2">
-                Chunk Text Content
-              </span>
-              <div className="bg-[#080A0C] border border-[rgba(255,255,255,0.06)] rounded-md p-4 text-xs text-[#F5F7FA] leading-relaxed whitespace-pre-wrap select-text max-h-[340px] overflow-y-auto">
-                {detail.text_content}
+            {/* Text Content (suppressed for documents and images) */}
+            {!isDocOrImg && detail.text_content && (
+              <div>
+                <span className="text-xs font-medium text-[#737D89] block mb-2">
+                  Text Content
+                </span>
+                <div className="bg-[#080A0C] border border-[rgba(255,255,255,0.06)] rounded-md p-4 text-xs text-[#F5F7FA] leading-relaxed whitespace-pre-wrap select-text max-h-[340px] overflow-y-auto">
+                  {detail.text_content}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Structured Metadata Inspector */}
             {metadataEntries.length > 0 && (

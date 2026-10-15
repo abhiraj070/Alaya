@@ -96,8 +96,8 @@ export function UniverseCanvas({
     const dx = e.clientX - pointerDownPosRef.current.x;
     const dy = e.clientY - pointerDownPosRef.current.y;
     const distSq = dx * dx + dy * dy;
-    // If pointer moved more than 6px (36px squared), treat as a camera drag, not an intentional star click
-    wasDraggingRef.current = distSq > 36;
+    // If pointer moved more than 10px (100px squared), treat as a camera drag, not an intentional star click
+    wasDraggingRef.current = distSq > 100;
     const canvas = e.currentTarget?.querySelector('canvas') || (e.target?.tagName === 'CANVAS' ? e.target : null);
     if (canvas) {
       canvas.style.cursor = hoveredStarId !== null ? 'pointer' : 'grab';
@@ -127,10 +127,12 @@ export function UniverseCanvas({
       if (canvas) {
         canvas.style.cursor = 'pointer';
       }
+      const clientX = e?.clientX ?? e?.nativeEvent?.clientX ?? 0;
+      const clientY = e?.clientY ?? e?.nativeEvent?.clientY ?? 0;
       if (typeof onStarHover === 'function') {
         if (rafHoverRef.current) cancelAnimationFrame(rafHoverRef.current);
         rafHoverRef.current = requestAnimationFrame(() => {
-          onStarHover(node, { x: e.clientX, y: e.clientY });
+          onStarHover(node, { x: clientX, y: clientY });
         });
       }
     },

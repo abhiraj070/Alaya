@@ -65,7 +65,7 @@ export function HeaderHUD({
         </div>
 
         {/* Center: Search Control */}
-        <div className="pointer-events-auto flex-1 max-w-xs sm:max-w-md flex justify-center">
+        <div className="pointer-events-auto flex-1 max-w-sm sm:max-w-xl md:max-w-2xl flex justify-center">
           <SearchControl nodes={nodes} onSelectResult={onSelectSearchResult} />
         </div>
 

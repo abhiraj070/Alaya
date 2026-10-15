@@ -49,28 +49,6 @@ export default function Navbar() {
 
         {/* Right: Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
-          <a
-            href={process.env.NEXT_PUBLIC_MEMORY_UNIVERSE_URL || "http://localhost:5173"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-accent-sky/30 hover:border-accent-sky/60 bg-accent-sky/10 hover:bg-accent-sky/20 text-accent-sky text-xs font-semibold tracking-wide transition-all duration-200 shadow-xs group"
-            title="Open 3D Memory Universe"
-          >
-            <svg
-              className="h-4 w-4 text-accent-sky transition-transform group-hover:rotate-45"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="3" />
-              <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(30 12 12)" />
-            </svg>
-            <span>Memory Universe</span>
-          </a>
-
           <ThemeToggle />
 
           {isClient && user?.isAuthenticated ? (
@@ -187,19 +165,6 @@ export default function Navbar() {
               FAQ
             </a>
             <div className="pt-2 border-t border-border-subtle flex flex-col gap-2">
-              <a
-                href={process.env.NEXT_PUBLIC_MEMORY_UNIVERSE_URL || "http://localhost:5173"}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={closeMobileMenu}
-                className="flex items-center justify-center gap-2 rounded-lg border border-accent-sky/30 bg-accent-sky/10 px-3 py-2 text-xs font-semibold text-accent-sky hover:bg-accent-sky/20 transition-colors"
-              >
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="3" />
-                  <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(30 12 12)" />
-                </svg>
-                <span>Open Memory Universe (3D)</span>
-              </a>
               {isClient && user?.isAuthenticated ? (
                 <>
                   <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surface-secondary/70">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Sparkles, Image as ImageIcon, MousePointerClick } from 'lucide-react';
+import { FileText, AlignLeft, Image as ImageIcon, MousePointerClick } from 'lucide-react';
 import { Badge } from '../ui/Badge.jsx';
 
 /**
@@ -43,7 +43,7 @@ export function StarHoverCard({ node, position }) {
   // Screen boundary clamping to keep tooltip within viewport
   const style = getHoverStyle(position);
 
-  const SourceIconComponent = node.source_type === 'docs' ? FileText : node.source_type === 'img' ? ImageIcon : Sparkles;
+  const SourceIconComponent = node.source_type === 'docs' ? FileText : node.source_type === 'img' ? ImageIcon : AlignLeft;
 
 
   return (

@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
-import { Compass, Sparkles, FileText, ArrowRight } from 'lucide-react';
+import { Compass, Network, AlignLeft, FileText, ArrowRight } from 'lucide-react';
 import { getRelatedChunks } from '../../utils/searchFilter.js';
 import { Badge } from '../ui/Badge.jsx';
 
 /**
- * Semantically Related Knowledge Explorer
+ * Top 4 Related Knowledge Explorer
  *
  * Discovers neighboring knowledge chunks using 3D UMAP coordinate proximity and cluster affiliation.
  * Allows one-click celestial navigation to related knowledge stars.
@@ -18,8 +18,8 @@ export function RelatedKnowledgeSection({ currentNode, allNodes = [], onSelectRe
     return (
       <div>
         <span className="text-[11px] text-[#737D89] block mb-2 flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-[#38BDF8]" />
-          <span>Semantically Related Knowledge</span>
+          <Network className="w-3.5 h-3.5 text-[#38BDF8]" />
+          <span>Top 4 Related Knowledge</span>
         </span>
         <div className="bg-[#11161B] border border-[rgba(255,255,255,0.06)] rounded-md p-4 text-xs text-[#737D89] text-center ">
           No neighboring knowledge records found in this sector.
@@ -32,8 +32,8 @@ export function RelatedKnowledgeSection({ currentNode, allNodes = [], onSelectRe
     <div>
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[11px] text-[#737D89] flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-[#38BDF8]" />
-          <span>Semantically Related Knowledge</span>
+          <Network className="w-3.5 h-3.5 text-[#38BDF8]" />
+          <span>Top 4 Related Knowledge</span>
         </span>
         <span className="text-[10px] text-[#737D89]">
           3D semantic proximity
@@ -79,7 +79,7 @@ export function RelatedKnowledgeSection({ currentNode, allNodes = [], onSelectRe
                 {node.has_source ? (
                   <FileText className="w-3 h-3 text-[#38BDF8] shrink-0" />
                 ) : (
-                  <Sparkles className="w-3 h-3 text-[#38BDF8] shrink-0" />
+                  <AlignLeft className="w-3 h-3 text-[#38BDF8] shrink-0" />
                 )}
                 <span className="truncate">{node.source_name || 'Direct Entry'}</span>
               </div>

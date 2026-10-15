@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useMemo, useLayoutEffect, useCallback } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { getStarColor, getStarScale } from '../../utils/celestialColors.js';
@@ -41,8 +41,7 @@ export function Starfield({
 
   const count = validNodes.length;
 
-  // Update instance transformations and colors whenever nodes, selection, or filters change
-  useEffect(() => {
+  const updateInstances = useCallback(() => {
     if (!meshRef.current || count === 0) return;
 
     const mesh = meshRef.current;
@@ -81,7 +80,20 @@ export function Starfield({
     if (mesh.instanceColor) {
       mesh.instanceColor.needsUpdate = true;
     }
+    if (mesh.geometry && typeof mesh.geometry.computeBoundingSphere === 'function') {
+      mesh.geometry.computeBoundingSphere();
+    }
+    if (typeof mesh.computeBoundingSphere === 'function') {
+      mesh.computeBoundingSphere();
+    }
+    if (typeof mesh.computeBoundingBox === 'function') {
+      mesh.computeBoundingBox();
+    }
   }, [validNodes, count, selectedStarId, hoveredStarId, filteredNodeIds]);
+
+  useLayoutEffect(() => {
+    updateInstances();
+  }, [updateInstances]);
 
   if (count === 0) {
     return null;
@@ -130,7 +142,7 @@ export function Starfield({
         }
       }}
     >
-      <sphereGeometry args={[0.5, 14, 14]} />
+      <sphereGeometry args={[0.7, 16, 16]} />
       <meshBasicMaterial toneMapped={false} />
     </instancedMesh>
   );
