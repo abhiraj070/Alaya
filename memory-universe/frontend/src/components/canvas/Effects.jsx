@@ -50,5 +50,3 @@ export function Effects({ enabled = true }) {
     </PostprocessingErrorBoundary>
   );
 }
-
-export default Effects;

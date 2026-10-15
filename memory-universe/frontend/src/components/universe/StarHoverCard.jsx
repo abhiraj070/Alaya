@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { FileText, Sparkles, Image as ImageIcon, MousePointerClick } from 'lucide-react';
 import { Badge } from '../ui/Badge.jsx';
 
@@ -8,11 +8,7 @@ import { Badge } from '../ui/Badge.jsx';
  * Renders near the cursor when hovering over an active knowledge star.
  * Includes intelligent screen boundary detection and micro-interaction guidance.
  */
-export function StarHoverCard({ node, position }) {
-  if (!node || !position) return null;
-
-  // Screen boundary clamping to keep tooltip within viewport
-  const style = useMemo(() => {
+function getHoverStyle(position) {
     const cardWidth = 300;
     const cardHeight = 160;
     const padding = 16;
@@ -39,15 +35,16 @@ export function StarHoverCard({ node, position }) {
       left: `${left}px`,
       top: `${top}px`,
     };
-  }, [position]);
+  }
 
-  const sourceIcon = useMemo(() => {
-    if (node.source_type === 'docs') return FileText;
-    if (node.source_type === 'img') return ImageIcon;
-    return Sparkles;
-  }, [node.source_type]);
+export function StarHoverCard({ node, position }) {
+  if (!node || !position) return null;
 
-  const SourceIconComponent = sourceIcon;
+  // Screen boundary clamping to keep tooltip within viewport
+  const style = getHoverStyle(position);
+
+  const SourceIconComponent = node.source_type === 'docs' ? FileText : node.source_type === 'img' ? ImageIcon : Sparkles;
+
 
   return (
     <div

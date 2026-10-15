@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
 /**
@@ -25,10 +25,10 @@ export function CelestialGrid({ radius = 40, visible = true }) {
     return new THREE.BufferGeometry().setFromPoints(circlePoints);
   }, [circlePoints]);
 
-  if (!visible) return null;
+  useEffect(() => () => circleGeometry.dispose(), [circleGeometry]);
 
   return (
-    <group raycast={() => null}>
+    <group visible={visible} raycast={() => null}>
       {/* Equatorial Plane Ring (Y = 0) */}
       <lineLoop geometry={circleGeometry}>
         <lineBasicMaterial color="#38BDF8" transparent opacity={0.12} />
@@ -49,5 +49,3 @@ export function CelestialGrid({ radius = 40, visible = true }) {
     </group>
   );
 }
-
-export default CelestialGrid;

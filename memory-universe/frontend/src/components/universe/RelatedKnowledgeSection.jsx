@@ -41,7 +41,7 @@ export function RelatedKnowledgeSection({ currentNode, allNodes = [], onSelectRe
       </div>
 
       <div className="space-y-2">
-        {relatedChunks.map(({ node, proximityPercent, sameCluster }) => (
+        {relatedChunks.map(({ node, distance, sameCluster }) => (
           <div
             key={node.id}
             onClick={() => {
@@ -62,8 +62,8 @@ export function RelatedKnowledgeSection({ currentNode, allNodes = [], onSelectRe
                     Sector Match
                   </Badge>
                 )}
-                <Badge variant={proximityPercent >= 75 ? 'success' : 'neutral'} size="xs">
-                  {proximityPercent}% Match
+                <Badge variant={sameCluster ? 'success' : 'neutral'} size="xs">
+                  {distance.toFixed(1)} units
                 </Badge>
               </div>
             </div>

@@ -1,7 +1,8 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
+import { useReducedMotion } from '../../hooks/useReducedMotion.js';
 
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 25, 75);
 const DEFAULT_TARGET = new THREE.Vector3(0, 0, 0);
@@ -13,27 +14,17 @@ const targetStarPos = new THREE.Vector3();
 /**
  * Camera Controller with Damping, Smooth Reset, Initial Glide, and Target Star Flight
  */
-export function CameraRig({ resetSignal = 0, navigationTarget = null, onControlsReady = null }) {
+export function CameraRig({ resetSignal = 0, navigationTarget = null }) {
   const controlsRef = useRef(null);
   const { camera } = useThree();
 
-  const prefersReducedMotion = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }, []);
+  const prefersReducedMotion = useReducedMotion();
 
   const [isResetting, setIsResetting] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [initialEntrance, setInitialEntrance] = useState(!prefersReducedMotion);
 
   const lastNavTimestampRef = useRef(0);
-
-  // Notify parent of controls instance
-  useEffect(() => {
-    if (controlsRef.current && typeof onControlsReady === 'function') {
-      onControlsReady(controlsRef.current);
-    }
-  }, [onControlsReady]);
 
   // Initial camera entrance animation setup
   useEffect(() => {
@@ -154,7 +145,7 @@ export function CameraRig({ resetSignal = 0, navigationTarget = null, onControls
       enablePan={true}
       maxPolarAngle={Math.PI}
       minPolarAngle={0}
-      onChange={() => {
+      onStart={() => {
         // Cancel automated lerps immediately if user initiates interaction
         if (isResetting) setIsResetting(false);
         if (isNavigating) setIsNavigating(false);
@@ -163,5 +154,3 @@ export function CameraRig({ resetSignal = 0, navigationTarget = null, onControls
     />
   );
 }
-
-export default CameraRig;

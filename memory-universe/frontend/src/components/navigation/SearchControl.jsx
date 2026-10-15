@@ -103,7 +103,7 @@ export function SearchControl({ nodes = [], onSelectResult }) {
           }}
           onKeyDown={handleKeyDown}
           placeholder="Search knowledge..."
-          className="bg-[#0D1014]/90 backdrop-blur-md border border-[rgba(255,255,255,0.08)] focus:border-[#38BDF8]/50 text-[#F5F7FA] placeholder-[#737D89] text-xs font-mono pl-8 pr-16 py-1.5 rounded-sm outline-none w-44 sm:w-60 focus:w-72 transition-all duration-200 shadow-sm"
+          className="bg-[#0D1014]/90 backdrop-blur-md border border-[rgba(255,255,255,0.08)] focus:border-[#38BDF8]/50 text-[#F5F7FA] placeholder-[#737D89] text-xs pl-8 pr-16 py-1.5 rounded-sm outline-none w-44 sm:w-60 focus:w-72 transition-all duration-200 shadow-sm"
         />
 
         <div className="absolute right-2 flex items-center gap-1">
@@ -117,7 +117,7 @@ export function SearchControl({ nodes = [], onSelectResult }) {
               <X className="w-3 h-3" />
             </button>
           ) : (
-            <kbd className="hidden sm:inline-block text-[10px] font-mono text-[#737D89] bg-[#11161B] border border-[rgba(255,255,255,0.06)] px-1 rounded pointer-events-none">
+            <kbd className="hidden sm:inline-block text-[10px] text-[#737D89] bg-[#11161B] border border-[rgba(255,255,255,0.06)] px-1 rounded pointer-events-none">
               /
             </kbd>
           )}
@@ -127,10 +127,10 @@ export function SearchControl({ nodes = [], onSelectResult }) {
       {/* Floating Results Popover Panel */}
       {isOpen && query.trim() && (
         <div className="absolute left-0 right-0 sm:right-auto sm:w-96 top-full mt-2 bg-[#0D1014]/95 backdrop-blur-2xl border border-[rgba(56,189,248,0.25)] rounded-md shadow-[0_15px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50">
-          <div className="p-2 border-b border-[rgba(255,255,255,0.06)] bg-[#080A0C]/80 flex items-center justify-between font-mono text-[10px] text-[#737D89]">
-            <span>{results.length} {results.length === 1 ? 'MATCH FOUND' : 'MATCHES FOUND'}</span>
+          <div className="p-2 border-b border-[rgba(255,255,255,0.06)] bg-[#080A0C]/80 flex items-center justify-between text-xs text-[#737D89]">
+            <span>{results.length} {results.length === 1 ? 'match found' : 'matches found'}</span>
             <span className="flex items-center gap-1">
-              <CornerDownLeft className="w-2.5 h-2.5" /> SELECT
+              <CornerDownLeft className="w-2.5 h-2.5" /> Select
             </span>
           </div>
 
@@ -148,7 +148,7 @@ export function SearchControl({ nodes = [], onSelectResult }) {
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-mono font-semibold text-[#F5F7FA] truncate">
+                    <span className="text-xs font-semibold text-[#F5F7FA] truncate">
                       {node.title}
                     </span>
                     <Badge variant="sky" size="xs">
@@ -156,11 +156,11 @@ export function SearchControl({ nodes = [], onSelectResult }) {
                     </Badge>
                   </div>
 
-                  <p className="text-[11px] font-sans text-[#737D89] line-clamp-2 leading-relaxed">
+                  <p className="text-xs text-[#737D89] line-clamp-2 leading-relaxed">
                     {node.preview}
                   </p>
 
-                  <div className="flex items-center justify-between gap-2 mt-0.5 text-[10px] font-mono text-[#737D89]">
+                  <div className="flex items-center justify-between gap-2 mt-0.5 text-xs text-[#737D89]">
                     <div className="flex items-center gap-1.5 truncate">
                       {node.has_source ? (
                         <FileText className="w-3 h-3 text-[#38BDF8] shrink-0" />
@@ -181,7 +181,7 @@ export function SearchControl({ nodes = [], onSelectResult }) {
             ) : (
               <div className="p-6 text-center">
                 <Search className="w-5 h-5 text-[#737D89] mx-auto mb-2 opacity-50" />
-                <p className="text-xs font-mono text-[#737D89]">
+                <p className="text-xs text-[#737D89]">
                   No knowledge matching "{query}"
                 </p>
               </div>
@@ -192,5 +192,3 @@ export function SearchControl({ nodes = [], onSelectResult }) {
     </div>
   );
 }
-
-export default SearchControl;

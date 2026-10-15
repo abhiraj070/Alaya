@@ -1,91 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-
-const THEME_KEY = "alaya_theme";
+import { useEffect } from "react";
+import { useLocalStorage } from "@/lib/use-local-storage";
 
 export default function ThemeToggle({ className = "" }) {
-  const [mounted, setMounted] = useState(false);
-  const [theme, setTheme] = useState("dark");
-
+  const [theme, setTheme] = useLocalStorage("alaya_theme", "dark");
+  const isDark = theme !== "light";
   useEffect(() => {
-    const syncTheme = () => {
-      try {
-        const saved = localStorage.getItem(THEME_KEY);
-        const isLight = saved === "light" || document.documentElement.classList.contains("light");
-        const currentTheme = isLight ? "light" : "dark";
-        setTheme(currentTheme);
-
-        if (isLight) {
-          document.documentElement.classList.remove("dark");
-          document.documentElement.classList.add("light");
-          document.body?.classList?.remove("dark");
-          document.body?.classList?.add("light");
-        } else {
-          document.documentElement.classList.remove("light");
-          document.documentElement.classList.add("dark");
-          document.body?.classList?.remove("light");
-          document.body?.classList?.add("dark");
-        }
-      } catch {}
-    };
-
-    const raf = requestAnimationFrame(() => {
-      setMounted(true);
-      syncTheme();
-    });
-
-    window.addEventListener("storage", syncTheme);
-    window.addEventListener("alaya-theme-change", syncTheme);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("storage", syncTheme);
-      window.removeEventListener("alaya-theme-change", syncTheme);
-    };
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setTheme((prevTheme) => {
-      const nextTheme = prevTheme === "dark" ? "light" : "dark";
-
-      if (nextTheme === "light") {
-        document.documentElement.classList.remove("dark");
-        document.documentElement.classList.add("light");
-        document.body?.classList?.remove("dark");
-        document.body?.classList?.add("light");
-      } else {
-        document.documentElement.classList.remove("light");
-        document.documentElement.classList.add("dark");
-        document.body?.classList?.remove("light");
-        document.body?.classList?.add("dark");
-      }
-
-      try {
-        localStorage.setItem(THEME_KEY, nextTheme);
-        window.dispatchEvent(new Event("alaya-theme-change"));
-      } catch {}
-
-      return nextTheme;
-    });
-  }, []);
-
-  // Before mounting on client, render a stable button matching SSR exactly to prevent hydration mismatch
-  if (!mounted) {
-    return (
-      <button
-        type="button"
-        disabled
-        aria-label="Toggle theme"
-        title="Toggle theme"
-        suppressHydrationWarning
-        className={`flex h-9 w-9 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted opacity-60 ${className}`}
-      >
-        <span className="h-4 w-4 rounded-full border border-border-subtle" />
-      </button>
-    );
-  }
-
-  const isDark = theme === "dark";
+    for (const element of [document.documentElement, document.body]) {
+      element.classList.toggle("dark", isDark);
+      element.classList.toggle("light", !isDark);
+    }
+  }, [isDark]);
+  const toggleTheme = () => setTheme(isDark ? "light" : "dark");
 
   return (
     <button

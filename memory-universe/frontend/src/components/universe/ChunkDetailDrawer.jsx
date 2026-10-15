@@ -22,7 +22,6 @@ import { RelatedKnowledgeSection } from './RelatedKnowledgeSection.jsx';
  *
  * Provides complete inspection of a selected knowledge chunk:
  * - Verified source document navigation (#page=N support for PDFs in real mode)
- * - Interactive sample document viewer support in demo mode
  * - Safe whitespace-preserving content rendering
  * - Structured metadata inspector
  * - Semantic neighbor / related knowledge discovery
@@ -37,7 +36,6 @@ export function ChunkDetailDrawer({
   onClose,
   onRetry,
   onSelectRelatedStar,
-  onViewDemoSource = null,
 }) {
   const drawerRef = useRef(null);
 
@@ -57,7 +55,6 @@ export function ChunkDetailDrawer({
   const source = detail?.source;
   const pageNumber = detail?.page_number ?? null;
   const chunkIndex = detail?.chunk_index ?? null;
-  const isDemo = node.is_demo || detail?.is_demo || source?.data_source?.startsWith('demo://');
   const sourceViewUrl = getSourceViewUrl(source, pageNumber);
 
   // Format date
@@ -73,7 +70,7 @@ export function ChunkDetailDrawer({
     : null;
 
   // Filter dynamic metadata (exclude internal non-displayable properties)
-  const metadataEntries = Object.entries(detail?.metadata || {}).filter(([k, v]) => {
+  const metadataEntries = Object.entries(detail?.metadata || {}).filter(([, v]) => {
     return v !== null && v !== undefined && typeof v !== 'object';
   });
 
@@ -88,17 +85,17 @@ export function ChunkDetailDrawer({
       {/* Top Header Bar */}
       <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[rgba(255,255,255,0.08)] bg-[#080A0C]/60 select-none">
         <div className="flex items-center gap-2 truncate">
-          <Badge variant={isDemo ? 'warning' : 'sky'} size="sm">
-            {isDemo ? 'DEMO CHUNK' : node.cluster_name || (node.cluster_id !== null ? `Sector ${node.cluster_id}` : 'Celestial Star')}
+          <Badge variant="sky" size="sm">
+            {node.cluster_name || (node.cluster_id !== null ? `Sector ${node.cluster_id}` : 'Celestial Star')}
           </Badge>
-          <span className="text-xs font-mono text-[#737D89] uppercase tracking-wider truncate">
+          <span className="text-xs text-[#737D89] capitalize truncate">
             {node.knowledge_type?.replace(/_/g, ' ') || 'Fact'}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="hidden sm:inline text-[10px] font-mono text-[#737D89] bg-[#11161B] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.06)]">
-            ESC
+          <span className="hidden sm:inline text-[10px] text-[#737D89] bg-[#11161B] px-1.5 py-0.5 rounded border border-[rgba(255,255,255,0.06)]">
+            Esc
           </span>
           <Button
             variant="ghost"
@@ -127,10 +124,10 @@ export function ChunkDetailDrawer({
         {error && (
           <div className="bg-[#1C1214] border border-[#EF4444]/30 rounded-md p-4 text-center">
             <AlertCircle className="w-6 h-6 text-[#EF4444] mx-auto mb-2" />
-            <h4 className="text-xs font-mono font-semibold text-[#EF4444] mb-1">
+            <h4 className="text-xs font-semibold text-[#EF4444] mb-1">
               Failed to load chunk details
             </h4>
-            <p className="text-xs text-[#A1AAB5] mb-3 font-sans">
+            <p className="text-xs text-[#A1AAB5] mb-3">
               {error.message || 'The knowledge record could not be retrieved from the server.'}
             </p>
             <Button variant="secondary" size="sm" onClick={onRetry} icon={RefreshCw}>
@@ -144,11 +141,11 @@ export function ChunkDetailDrawer({
           <>
             {/* Title & Coordinate Lineage */}
             <div>
-              <h3 className="text-base font-mono font-semibold text-[#F5F7FA] mb-2 leading-snug">
+              <h3 className="text-base font-semibold text-[#F5F7FA] mb-2 leading-snug">
                 {node.title || 'Knowledge Record'}
               </h3>
 
-              <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-[#737D89]">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-[#737D89]">
                 {formattedDate && (
                   <span className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-[#A1AAB5]" />
@@ -173,10 +170,10 @@ export function ChunkDetailDrawer({
             {/* Source Lineage Card */}
             <div className="bg-[#11161B] border border-[rgba(255,255,255,0.06)] rounded-md p-4">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="text-[11px] font-mono text-[#737D89] uppercase tracking-wider">
+                <span className="text-xs font-medium text-[#737D89]">
                   Knowledge Origin
                 </span>
-                <span className="text-[10px] font-mono text-[#38BDF8] bg-[rgba(56,189,248,0.1)] px-2 py-0.5 rounded border border-[rgba(56,189,248,0.2)]">
+                <span className="text-xs text-[#38BDF8] bg-[rgba(56,189,248,0.1)] px-2 py-0.5 rounded border border-[rgba(56,189,248,0.2)]">
                   {formatSourceLabel(source?.data_type || (node.has_source ? 'docs' : 'text'), source?.tag)}
                 </span>
               </div>
@@ -184,37 +181,19 @@ export function ChunkDetailDrawer({
               {/* Uploaded Document Source */}
               {source && source.data_type === 'docs' && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2.5 text-xs text-[#F5F7FA] font-mono">
+                  <div className="flex items-center gap-2.5 text-xs text-[#F5F7FA]">
                     <FileText className="w-4 h-4 text-[#38BDF8] shrink-0" />
                     <span className="truncate" title={node.source_name || 'Uploaded Document'}>
                       {node.source_name || 'Uploaded Document'}
                     </span>
                   </div>
 
-                  {/* If in demo mode: open functional demo document viewer modal */}
-                  {isDemo ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (typeof onViewDemoSource === 'function') {
-                          onViewDemoSource(node.source_name, pageNumber);
-                        }
-                      }}
-                      className="inline-flex items-center gap-2 w-full justify-center bg-[#161C23] hover:bg-[#1C232B] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(56,189,248,0.3)] text-xs font-mono font-medium text-[#38BDF8] py-2 px-3 rounded-sm transition-all duration-150 shadow-sm cursor-pointer"
-                    >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      <span>
-                        {pageNumber ? `Inspect Sample Document at Page ${pageNumber}` : 'Inspect Sample Document'}
-                      </span>
-                      <ExternalLink className="w-3 h-3 ml-auto opacity-70" />
-                    </button>
-                  ) : sourceViewUrl ? (
-                    /* In real mode: open Cloudinary URL with #page=N */
+                  {sourceViewUrl ? (
                     <a
                       href={sourceViewUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 w-full justify-center bg-[#161C23] hover:bg-[#1C232B] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(56,189,248,0.3)] text-xs font-mono font-medium text-[#38BDF8] py-2 px-3 rounded-sm transition-all duration-150 shadow-sm"
+                      className="inline-flex items-center gap-2 w-full justify-center bg-[#161C23] hover:bg-[#1C232B] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(56,189,248,0.3)] text-xs font-medium text-[#38BDF8] py-2 px-3 rounded-sm transition-all duration-150 shadow-sm"
                     >
                       <BookOpen className="w-3.5 h-3.5" />
                       <span>
@@ -233,7 +212,7 @@ export function ChunkDetailDrawer({
               {/* Uploaded Image Source */}
               {source && source.data_type === 'img' && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2.5 text-xs text-[#F5F7FA] font-mono">
+                  <div className="flex items-center gap-2.5 text-xs text-[#F5F7FA]">
                     <ImageIcon className="w-4 h-4 text-[#38BDF8] shrink-0" />
                     <span className="truncate">{node.source_name || 'Uploaded Image'}</span>
                   </div>
@@ -243,7 +222,7 @@ export function ChunkDetailDrawer({
                       href={sourceViewUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 w-full justify-center bg-[#161C23] hover:bg-[#1C232B] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(56,189,248,0.3)] text-xs font-mono font-medium text-[#38BDF8] py-2 px-3 rounded-sm transition-all duration-150 shadow-sm"
+                      className="inline-flex items-center gap-2 w-full justify-center bg-[#161C23] hover:bg-[#1C232B] border border-[rgba(255,255,255,0.08)] hover:border-[rgba(56,189,248,0.3)] text-xs font-medium text-[#38BDF8] py-2 px-3 rounded-sm transition-all duration-150 shadow-sm"
                     >
                       <ImageIcon className="w-3.5 h-3.5" />
                       <span>View Original Image</span>
@@ -266,10 +245,10 @@ export function ChunkDetailDrawer({
 
             {/* Extracted Chunk Content */}
             <div>
-              <span className="text-[11px] font-mono text-[#737D89] uppercase tracking-wider block mb-2">
+              <span className="text-xs font-medium text-[#737D89] block mb-2">
                 Chunk Text Content
               </span>
-              <div className="bg-[#080A0C] border border-[rgba(255,255,255,0.06)] rounded-md p-4 text-xs font-sans text-[#F5F7FA] leading-relaxed whitespace-pre-wrap select-text max-h-[340px] overflow-y-auto">
+              <div className="bg-[#080A0C] border border-[rgba(255,255,255,0.06)] rounded-md p-4 text-xs text-[#F5F7FA] leading-relaxed whitespace-pre-wrap select-text max-h-[340px] overflow-y-auto">
                 {detail.text_content}
               </div>
             </div>
@@ -277,14 +256,14 @@ export function ChunkDetailDrawer({
             {/* Structured Metadata Inspector */}
             {metadataEntries.length > 0 && (
               <div>
-                <span className="text-[11px] font-mono text-[#737D89] uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+                <span className="text-xs font-medium text-[#737D89] block mb-2 flex items-center gap-1.5">
                   <Info className="w-3.5 h-3.5 text-[#38BDF8]" />
                   <span>Extracted Metadata</span>
                 </span>
-                <div className="grid grid-cols-2 gap-2 bg-[#11161B] border border-[rgba(255,255,255,0.06)] rounded-md p-3 font-mono text-xs">
+                <div className="grid grid-cols-2 gap-2 bg-[#11161B] border border-[rgba(255,255,255,0.06)] rounded-md p-3 text-xs">
                   {metadataEntries.map(([key, val]) => (
                     <div key={key} className="bg-[#080A0C] p-2 rounded-sm border border-[rgba(255,255,255,0.04)] truncate">
-                      <span className="text-[10px] text-[#737D89] uppercase block truncate">{key}</span>
+                      <span className="text-[10px] text-[#737D89] capitalize block truncate">{key}</span>
                       <span className="text-xs text-[#F5F7FA] font-medium truncate block">{String(val)}</span>
                     </div>
                   ))}
@@ -303,8 +282,8 @@ export function ChunkDetailDrawer({
       </div>
 
       {/* Drawer Footer with Coordinates Telemetry */}
-      <div className="px-5 py-3 border-t border-[rgba(255,255,255,0.08)] bg-[#080A0C]/80 font-mono text-[11px] text-[#737D89] flex items-center justify-between select-none">
-        <span>3D POSITION:</span>
+      <div className="px-5 py-3 border-t border-[rgba(255,255,255,0.08)] bg-[#080A0C]/80 text-xs text-[#737D89] flex items-center justify-between select-none">
+        <span>3D Position:</span>
         <span className="text-[#38BDF8]">
           [{node.x?.toFixed(2)}, {node.y?.toFixed(2)}, {node.z?.toFixed(2)}]
         </span>
@@ -312,5 +291,3 @@ export function ChunkDetailDrawer({
     </aside>
   );
 }
-
-export default ChunkDetailDrawer;

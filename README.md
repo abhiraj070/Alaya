@@ -4,6 +4,8 @@ Alaya is a personal knowledge and conversational retrieval API. It lets each use
 
 The backend is built with FastAPI, PostgreSQL/pgvector, Redis, ARQ, SQLAlchemy, and OpenAI.
 
+The [Alaya frontend](frontend/README.md) and standalone [Memory Universe 3D client](memory-universe/README.md) use this same backend and database. Their setup and structure are documented in those directories.
+
 > **Project status:** Alaya is under active development. Text, image, and document ingestion pipelines are implemented, including document chunking and background processing. See [Current limitations](#current-limitations) for outstanding work.
 
 ## What Alaya does
@@ -358,6 +360,7 @@ The worker deletes the local file in its cleanup block after success or failure.
 - **Message** stores user/LLM content, its sender, owner, and creation time.
 - **Knowledge** stores a normalized text fact, extracted image content, or document chunk, together with its dynamic JSONB metadata, fact type, and owner.
 - **Embedding** links a 1,536-dimensional vector to either a message or knowledge record.
+- **KnowledgeCoordinate** in `backend/app/db/model/universe.py` stores one saved 3D position per knowledge chunk in `knowledge_coordinates`.
 
 Deleting a user cascades to chats and messages at the ORM level. Deleting a chat or message also removes its related messages or embeddings through configured relationships.
 

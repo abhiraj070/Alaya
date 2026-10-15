@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, Component } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Component } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Starfield } from './Starfield.jsx';
 import { CosmicDust } from './CosmicDust.jsx';
@@ -16,11 +16,11 @@ import { Button } from '../ui/Button.jsx';
 class WebGLErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
@@ -34,16 +34,16 @@ class WebGLErrorBoundary extends Component {
           <div className="w-12 h-12 rounded-full bg-[#11161B] border border-[#EF4444]/40 flex items-center justify-center mb-4 text-[#EF4444]">
             <AlertTriangle className="w-6 h-6" />
           </div>
-          <h3 className="font-mono text-sm uppercase tracking-wider mb-2 text-[#F5F7FA]">
+          <h3 className="text-sm font-semibold mb-2 text-[#F5F7FA]">
             WebGL Initialization Failed
           </h3>
-          <p className="text-xs text-[#A1AAB5] max-w-sm mb-5 leading-relaxed font-sans">
+          <p className="text-xs text-[#A1AAB5] max-w-sm mb-5 leading-relaxed">
             Your browser or graphics hardware could not create a 3D WebGL context. Please verify hardware acceleration is enabled.
           </p>
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => this.setState({ hasError: false, error: null })}
+            onClick={() => this.setState({ hasError: false })}
             icon={RefreshCw}
           >
             Retry WebGL Context
@@ -81,6 +81,8 @@ export function UniverseCanvas({
   const wasDraggingRef = useRef(false);
   const rafHoverRef = useRef(null);
 
+  useEffect(() => () => cancelAnimationFrame(rafHoverRef.current), []);
+
   const handlePointerDown = useCallback((e) => {
     pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
     wasDraggingRef.current = false;
@@ -105,18 +107,6 @@ export function UniverseCanvas({
   );
 
   const handleStarHover = useCallback(
-    (node, e) => {
-      if (typeof onStarHover === 'function') {
-        if (rafHoverRef.current) cancelAnimationFrame(rafHoverRef.current);
-        rafHoverRef.current = requestAnimationFrame(() => {
-          onStarHover(node, { x: e.clientX, y: e.clientY });
-        });
-      }
-    },
-    [onStarHover]
-  );
-
-  const handleStarMove = useCallback(
     (node, e) => {
       if (typeof onStarHover === 'function') {
         if (rafHoverRef.current) cancelAnimationFrame(rafHoverRef.current);
@@ -205,7 +195,7 @@ export function UniverseCanvas({
             filteredNodeIds={filteredNodeIds}
             onClick={handleStarClick}
             onPointerOver={handleStarHover}
-            onPointerMove={handleStarMove}
+            onPointerMove={handleStarHover}
             onPointerOut={handleStarOut}
           />
 
@@ -226,5 +216,3 @@ export function UniverseCanvas({
     </WebGLErrorBoundary>
   );
 }
-
-export default UniverseCanvas;

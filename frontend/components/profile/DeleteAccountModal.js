@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useDialog } from "@/lib/use-dialog";
 
 /**
  * DeleteAccountModal
@@ -13,70 +13,10 @@ export default function DeleteAccountModal({
   onClose,
   onConfirm,
 }) {
-  const dialogRef = useRef(null);
-  const cancelBtnRef = useRef(null);
-  const previousActiveElementRef = useRef(null);
+  const { dialogRef, cancelBtnRef } = useDialog({ busy: isDeleting, onClose });
+
 
   const displayHandle = username ? `@${username.replace(/^@/, "")}` : "@user";
-
-  // Manage initial focus, scroll lock, and return focus on close
-  useEffect(() => {
-    previousActiveElementRef.current = document.activeElement;
-
-    // Default focus on the safe "Keep account" action
-    cancelBtnRef.current?.focus();
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      if (
-        previousActiveElementRef.current &&
-        typeof previousActiveElementRef.current.focus === "function"
-      ) {
-        previousActiveElementRef.current.focus();
-      }
-    };
-  }, []);
-
-  // Keyboard navigation: Escape to cancel and Focus Trap inside dialog
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape") {
-        if (!isDeleting) {
-          e.preventDefault();
-          onClose();
-        }
-        return;
-      }
-
-      if (e.key === "Tab") {
-        const focusableElements = dialogRef.current?.querySelectorAll(
-          'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        if (!focusableElements || focusableElements.length === 0) return;
-
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === firstElement) {
-            e.preventDefault();
-            lastElement.focus();
-          }
-        } else {
-          if (document.activeElement === lastElement) {
-            e.preventDefault();
-            firstElement.focus();
-          }
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isDeleting, onClose]);
 
   // Click on backdrop to cancel safely
   const handleBackdropClick = (e) => {

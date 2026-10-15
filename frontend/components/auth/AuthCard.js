@@ -67,9 +67,6 @@ export default function AuthCard() {
     params.set("mode", newMode);
     const newUrl = `${pathname}?${params.toString()}`;
     router.replace(newUrl, { scroll: false });
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", newUrl);
-    }
   };
 
   // Email format validator
@@ -235,9 +232,6 @@ export default function AuthCard() {
     params.set("mode", "signin");
     const newUrl = `${pathname}?${params.toString()}`;
     router.replace(newUrl, { scroll: false });
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", newUrl);
-    }
   };
 
   return (

@@ -1,91 +1,31 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { universeProvider } from '../data/universeProvider.js';
+import { useState, useEffect, useCallback } from 'react';
+import { universeApi } from '../api/universeApi.js';
 
-// Global in-memory cache across star selections within session
-const chunkDetailCache = new Map();
-
-/**
- * Custom hook to retrieve full chunk details for a selected star
- *
- * Implements:
- * - Routing through unified universeProvider (demo vs real)
- * - In-memory caching for zero-latency re-inspection
- * - Race-condition prevention (cancels stale responses)
- * - Safe error handling with retry capability
- *
- * @param {number|null} knowledgeId
- */
 export function useChunkDetail(knowledgeId) {
-  const [chunkDetail, setChunkDetail] = useState(() => {
-    return knowledgeId !== null ? chunkDetailCache.get(knowledgeId) || null : null;
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Tracks active request sequence to discard stale responses
-  const activeRequestIdRef = useRef(0);
-
-  const fetchDetail = useCallback(
-    async (id, forceRefresh = false) => {
-      if (id === null || id === undefined) {
-        setChunkDetail(null);
-        setLoading(false);
-        setError(null);
-        return;
-      }
-
-      // Check cache first
-      if (!forceRefresh && chunkDetailCache.has(id)) {
-        setChunkDetail(chunkDetailCache.get(id));
-        setLoading(false);
-        setError(null);
-        return;
-      }
-
-      const requestId = ++activeRequestIdRef.current;
-      setLoading(true);
-      setError(null);
-
-      try {
-        const data = await universeProvider.getChunk(id);
-
-        // Ensure this response matches the most recently requested star
-        if (requestId === activeRequestIdRef.current) {
-          chunkDetailCache.set(id, data);
-          setChunkDetail(data);
-          setLoading(false);
-          setError(null);
-        }
-      } catch (err) {
-        if (requestId === activeRequestIdRef.current) {
-          setLoading(false);
-          setError({
-            message: err.message || 'Failed to retrieve chunk details',
-            status: err.status || 0,
-            detail: err.detail || null,
-          });
-        }
-      }
-    },
-    []
-  );
+  const [result, setResult] = useState(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    fetchDetail(knowledgeId);
-  }, [knowledgeId, fetchDetail]);
+    if (knowledgeId == null) return;
+    const controller = new AbortController();
+    setResult({ id: knowledgeId, loading: true });
+    universeApi.getChunk(knowledgeId, { signal: controller.signal }).then(
+      (data) => {
+        if (!controller.signal.aborted) setResult({ id: knowledgeId, data });
+      },
+      (error) => {
+        if (!controller.signal.aborted) setResult({ id: knowledgeId, error });
+      },
+    );
+    return () => controller.abort();
+  }, [knowledgeId, attempt]);
 
-  const retry = useCallback(() => {
-    if (knowledgeId !== null) {
-      fetchDetail(knowledgeId, true);
-    }
-  }, [knowledgeId, fetchDetail]);
-
+  const current = knowledgeId != null && result?.id === knowledgeId ? result : null;
+  const retry = useCallback(() => setAttempt((value) => value + 1), []);
   return {
-    chunkDetail,
-    loading,
-    error,
+    chunkDetail: current?.data ?? null,
+    loading: knowledgeId != null && (!current || Boolean(current.loading)),
+    error: current?.error ?? null,
     retry,
   };
 }
-
-export default useChunkDetail;

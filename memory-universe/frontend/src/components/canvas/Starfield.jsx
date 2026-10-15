@@ -18,7 +18,6 @@ export function Starfield({
   selectedStarId = null,
   hoveredStarId = null,
   filteredNodeIds = null, // Set<number> | null
-  onInstanceMapReady = null,
   onPointerOver = null,
   onPointerMove = null,
   onPointerOut = null,
@@ -39,44 +38,6 @@ export function Starfield({
   }, [nodes]);
 
   const count = validNodes.length;
-
-  // Build bidirectional index <-> node mappings
-  const { instanceToNodeMap, nodeIdToInstanceMap } = useMemo(() => {
-    const toNode = new Array(count);
-    const toIndex = new Map();
-
-    validNodes.forEach((node, idx) => {
-      toNode[idx] = node;
-      toIndex.set(node.id, idx);
-    });
-
-    return { instanceToNodeMap: toNode, nodeIdToInstanceMap: toIndex };
-  }, [validNodes, count]);
-
-  // Notify parent/store when instance map changes
-  useEffect(() => {
-    if (typeof onInstanceMapReady === 'function') {
-      onInstanceMapReady({ instanceToNodeMap, nodeIdToInstanceMap });
-    }
-  }, [instanceToNodeMap, nodeIdToInstanceMap, onInstanceMapReady]);
-
-  // Shared geometry and material (memoized)
-  const sphereGeometry = useMemo(() => new THREE.SphereGeometry(0.5, 14, 14), []);
-  const starMaterial = useMemo(
-    () =>
-      new THREE.MeshBasicMaterial({
-        toneMapped: false, // Preserves high luminance for bloom
-      }),
-    []
-  );
-
-  // Dispose GPU resources on unmount
-  useEffect(() => {
-    return () => {
-      sphereGeometry.dispose();
-      starMaterial.dispose();
-    };
-  }, [sphereGeometry, starMaterial]);
 
   // Update instance transformations and colors whenever nodes, selection, or filters change
   useEffect(() => {
@@ -126,20 +87,21 @@ export function Starfield({
 
   return (
     <instancedMesh
+      key={count}
       ref={meshRef}
-      args={[sphereGeometry, starMaterial, count]}
+      args={[undefined, undefined, count]}
       frustumCulled={false}
       onPointerOver={(e) => {
         if (typeof onPointerOver === 'function' && e.instanceId !== undefined) {
           e.stopPropagation();
-          const node = instanceToNodeMap[e.instanceId];
+          const node = validNodes[e.instanceId];
           if (node) onPointerOver(node, e);
         }
       }}
       onPointerMove={(e) => {
         if (typeof onPointerMove === 'function' && e.instanceId !== undefined) {
           e.stopPropagation();
-          const node = instanceToNodeMap[e.instanceId];
+          const node = validNodes[e.instanceId];
           if (node) onPointerMove(node, e);
         }
       }}
@@ -152,12 +114,13 @@ export function Starfield({
       onClick={(e) => {
         if (typeof onClick === 'function' && e.instanceId !== undefined) {
           e.stopPropagation();
-          const node = instanceToNodeMap[e.instanceId];
+          const node = validNodes[e.instanceId];
           if (node) onClick(node, e);
         }
       }}
-    />
+    >
+      <sphereGeometry args={[0.5, 14, 14]} />
+      <meshBasicMaterial toneMapped={false} />
+    </instancedMesh>
   );
 }
-
-export default Starfield;

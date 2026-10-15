@@ -77,7 +77,7 @@ export function extractFilename(url, fallback = 'Uploaded Document') {
   if (!url) return fallback;
   try {
     const cleanUrl = url.split('?')[0].split('#')[0];
-    const segment = cleanUrl.rstrip ? cleanUrl.rstrip('/').split('/').pop() : cleanUrl.split('/').pop();
+    const segment = cleanUrl.replace(/\/+$/, '').split('/').pop();
     if (!segment) return fallback;
     return decodeURIComponent(segment) || fallback;
   } catch {

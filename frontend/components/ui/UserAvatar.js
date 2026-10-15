@@ -2,7 +2,7 @@
 
 /**
  * Derives uppercase initials from any full name string.
- * Examples: "Abhiraj Sharma" -> "AS", "Alex Mercer" -> "AM", "Alaya" -> "AL"
+ * Examples: "Your profile" -> "AS", "Alex Mercer" -> "AM", "Alaya" -> "AL"
  */
 export function getInitials(name) {
   if (!name || typeof name !== "string") return "A";
@@ -16,7 +16,7 @@ export function getInitials(name) {
  * Shared User Avatar component displaying dynamically calculated initials.
  */
 export default function UserAvatar({
-  name = "Abhiraj Sharma",
+  name = "Your profile",
   size = "md",
   className = "",
 }) {

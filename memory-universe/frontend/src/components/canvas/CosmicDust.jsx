@@ -1,6 +1,7 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useReducedMotion } from '../../hooks/useReducedMotion.js';
 
 /**
  * Decorative Deep-Space Dust
@@ -13,10 +14,7 @@ export function CosmicDust({ count = 2000, radiusMin = 75, radiusMax = 220 }) {
   const pointsRef = useRef(null);
 
   // Check user preference for reduced motion
-  const prefersReducedMotion = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }, []);
+  const prefersReducedMotion = useReducedMotion();
 
   // Generate spherical point cloud coordinates
   const { positions, colors } = useMemo(() => {
@@ -82,5 +80,3 @@ export function CosmicDust({ count = 2000, radiusMin = 75, radiusMax = 220 }) {
     </points>
   );
 }
-
-export default CosmicDust;

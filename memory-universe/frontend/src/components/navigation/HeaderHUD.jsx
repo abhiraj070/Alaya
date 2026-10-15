@@ -6,12 +6,11 @@ import {
   ExternalLink,
   Layers,
   Activity,
-  LogOut,
-  Info,
 } from 'lucide-react';
 import { Button } from '../ui/Button.jsx';
 import { Badge } from '../ui/Badge.jsx';
 import { SearchControl } from './SearchControl.jsx';
+import { ALAYA_URL } from '../../config.js';
 
 /**
  * Top floating HUD for Memory Universe
@@ -23,10 +22,9 @@ export function HeaderHUD({
   clusterCount = 0,
   loading = false,
   recomputing = false,
-  isDemo = false,
+  connected = true,
   onRefresh,
   onRecompute,
-  onExitDemo,
   onSelectSearchResult,
 }) {
   return (
@@ -48,26 +46,14 @@ export function HeaderHUD({
           <div className="h-3 w-px bg-[rgba(255,255,255,0.08)] mx-0.5" />
 
           {/* Persistent DEMO Badge OR Online Status */}
-          {isDemo ? (
-            <div
-              className="flex items-center gap-1.5"
-              title="Sample universe · Your real memories will appear here once processed."
-            >
-              <Badge variant="warning" size="sm" dot dotColor="bg-[#F59E0B]">
-                DEMO
-              </Badge>
-              <span className="text-[10px] font-mono text-[#F59E0B] uppercase tracking-wider hidden lg:inline">
-                SAMPLE DATA
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5" title="Backend API Connected">
+          {(
+            <div className="flex items-center gap-1.5" title={connected ? "Backend API Connected" : "Backend API Unavailable"}>
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#38BDF8] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#38BDF8]"></span>
               </span>
               <span className="text-[10px] font-mono text-[#737D89] uppercase tracking-wider hidden lg:inline">
-                ONLINE
+                {connected ? "ONLINE" : "CONNECTING"}
               </span>
             </div>
           )}
@@ -104,18 +90,7 @@ export function HeaderHUD({
 
           <div className="flex items-center gap-2 bg-[#0D1014]/80 backdrop-blur-md p-1 rounded-md border border-[rgba(255,255,255,0.08)] shadow-lg">
             {/* If in Demo mode, display Exit Demo button */}
-            {isDemo ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onExitDemo}
-                icon={LogOut}
-                title="Exit demonstration and return to real universe"
-                className="text-[#F59E0B] hover:text-[#FBBF24]"
-              >
-                <span className="hidden sm:inline">Exit Demo</span>
-              </Button>
-            ) : null}
+            {null}
 
             {/* Refresh Data (Queries real backend for knowledge updates) */}
             <Button
@@ -123,7 +98,7 @@ export function HeaderHUD({
               size="sm"
               onClick={onRefresh}
               disabled={loading || recomputing}
-              title={isDemo ? 'Check for real memories in backend' : 'Refresh universe nodes'}
+              title={'Refresh universe nodes'}
               icon={RefreshCw}
               className={loading ? 'text-[#38BDF8]' : ''}
             >
@@ -147,7 +122,7 @@ export function HeaderHUD({
 
             {/* Return to Alaya Chat / Knowledge Base */}
             <a
-              href="http://localhost:3000"
+              href={ALAYA_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono text-[#A1AAB5] hover:text-[#38BDF8] transition-colors rounded-sm"

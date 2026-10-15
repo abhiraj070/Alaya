@@ -1,12 +1,12 @@
 import React from 'react';
-import { Orbit, Plus, FileText, Sparkles, Compass } from 'lucide-react';
+import { Orbit, Plus, FileText, Sparkles } from 'lucide-react';
 import { Card } from '../ui/Card.jsx';
-import { Button } from '../ui/Button.jsx';
+import { ALAYA_URL } from '../../config.js';
 
 /**
  * Empty state displayed when authenticated user has no knowledge chunks in database
  */
-export function EmptyState({ onExploreDemo = null }) {
+export function EmptyState() {
   return (
     <div className="absolute inset-0 flex items-center justify-center p-6 z-20 pointer-events-auto select-none">
       <Card
@@ -50,7 +50,7 @@ export function EmptyState({ onExploreDemo = null }) {
 
           <div className="flex flex-col gap-2.5 w-full">
             <a
-              href="http://localhost:3000"
+              href={ALAYA_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full inline-flex items-center justify-center gap-2 bg-[#38BDF8] text-[#050505] font-mono text-xs font-semibold py-2 px-4 rounded-sm hover:bg-[#7DD3FC] transition-colors shadow-[0_0_15px_rgba(56,189,248,0.25)]"
@@ -59,17 +59,7 @@ export function EmptyState({ onExploreDemo = null }) {
               <span>Open Alaya to Add Knowledge</span>
             </a>
 
-            {typeof onExploreDemo === 'function' && (
-              <Button
-                variant="secondary"
-                size="md"
-                onClick={onExploreDemo}
-                icon={Compass}
-                className="w-full"
-              >
-                Explore Sample Demo Universe
-              </Button>
-            )}
+
           </div>
         </div>
       </Card>

@@ -4,7 +4,8 @@ import re
 
 from app.db.connect import SessionLocal
 from app.db.model.user import User
-from app.db.model.chat import Knowledge, Embedding, EmbeddingKind, KnowledgeCoordinate
+from app.db.model.chat import Knowledge, Embedding, EmbeddingKind
+from app.db.model.universe import KnowledgeCoordinate
 from app.db.model.uploaded_data import UploadedData, DataType
 
 

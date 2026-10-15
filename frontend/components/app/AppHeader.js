@@ -13,7 +13,7 @@ export default function AppHeader({
   activeTab = "chat",
   user,
 }) {
-  const userName = user?.name || "Abhiraj Sharma";
+  const userName = user?.name || "Your profile";
 
   return (
     <header className="relative z-20 flex h-14 shrink-0 items-center justify-between border-b border-border-subtle bg-bg-secondary/90 px-3 sm:px-4 backdrop-blur-md select-none">

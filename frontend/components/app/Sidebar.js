@@ -5,7 +5,7 @@ import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 import SidebarItem from "@/components/app/SidebarItem";
 import UserAvatar from "@/components/ui/UserAvatar";
-import ChatItem from "@/components/app/ChatItem";
+import SidebarChatList from "@/components/app/SidebarChatList";
 
 export default function Sidebar({
   isCollapsed = false,
@@ -79,11 +79,9 @@ export default function Sidebar({
     </svg>
   );
 
-  const userName = user?.name || "Abhiraj Sharma";
-  const userUsername = user?.username ? `@${user.username.replace(/^@/, "")}` : "@abhiraj";
+  const userName = user?.name || "Your profile";
+  const userUsername = user?.username ? `@${user.username.replace(/^@/, "")}` : "@user";
 
-  const pinnedChats = chats.filter((c) => pinnedChatIds.includes(c.id));
-  const unpinnedChats = chats.filter((c) => !pinnedChatIds.includes(c.id));
 
   return (
     <aside
@@ -196,114 +194,10 @@ export default function Sidebar({
           <div className="my-3 mx-1 border-t border-border-subtle shrink-0" role="separator" />
 
           {/* Whole Scrollable Chats Section: Pinned Chats + All Chats */}
-          <div
-            ref={chatListRef}
-            className="flex-1 min-h-0 overflow-y-auto chat-scrollbar flex flex-col space-y-2.5 pr-0.5"
-            style={{ touchAction: "pan-y" }}
-          >
-            {/* Pinned Chats Section (Displayed above and out of All Chats box) */}
-            {pinnedChats.length > 0 && (
-              <div className="flex flex-col shrink-0 rounded-xl border border-accent-sky/25 bg-surface-secondary/70 p-2 shadow-xs">
-                {/* Header: Pinned Chats with Pin Icon */}
-                <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] font-semibold tracking-wider text-accent-sky uppercase shrink-0">
-                  <span className="flex items-center gap-1.5">
-                    <svg
-                      className="h-3 w-3 text-accent-sky"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <line x1="12" y1="17" x2="12" y2="22" />
-                      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
-                    </svg>
-                    Pinned Chats
-                  </span>
-                  <span className="text-[10px] font-mono font-normal text-accent-sky/80">
-                    {pinnedChats.length}
-                  </span>
-                </div>
-
-                {/* List of Pinned Chats */}
-                <div className="space-y-1">
-                  {pinnedChats.map((chat) => (
-                    <ChatItem
-                      key={`pinned-${chat.id}`}
-                      chat={chat}
-                      isPinned={true}
-                      isCurrent={activeChatId === chat.id && activeTab === "chat"}
-                      isDeleting={deletingChatId === chat.id}
-                      onSelect={() => {
-                        onSelectChat(chat.id);
-                        onSelectTab("chat");
-                      }}
-                      onUpdateTitle={onUpdateChatTitle}
-                      onDelete={onDeleteChat}
-                      onTogglePin={onTogglePinChat}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* All Chats Container */}
-            <div
-              className={`flex flex-col grow shrink-0 ${
-                pinnedChats.length === 0 ? "min-h-full" : "min-h-0"
-              } rounded-xl border border-border-strong/40 bg-surface-secondary/70 p-2 shadow-xs`}
-            >
-              {/* Header: All Chats */}
-              <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] font-semibold tracking-wider text-text-muted uppercase shrink-0">
-                <span className="flex items-center gap-1.5">
-                  <svg className="h-3 w-3 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  All Chats
-                </span>
-                <span className="text-[10px] font-mono font-normal text-text-muted/80">{unpinnedChats.length}</span>
-              </div>
-
-              {/* List of Unpinned Chats */}
-              <div className="space-y-1">
-                {isLoadingChats ? (
-                  <div className="flex flex-col items-center justify-center py-8 gap-2 text-text-muted">
-                    <div
-                      className="h-5 w-5 animate-spin rounded-full border-2 border-accent-sky border-t-transparent"
-                      role="status"
-                      aria-label="Loading chats..."
-                    />
-                    <span className="text-[11px] text-text-muted font-medium tracking-wide">
-                      Loading chats...
-                    </span>
-                  </div>
-                ) : unpinnedChats.length === 0 ? (
-                  <div className="px-2 py-3 text-center text-xs text-text-muted italic">
-                    {pinnedChats.length > 0 ? "No other chats" : "No chats yet"}
-                  </div>
-                ) : (
-                  unpinnedChats.map((chat) => (
-                    <ChatItem
-                      key={chat.id}
-                      chat={chat}
-                      isPinned={false}
-                      isCurrent={activeChatId === chat.id && activeTab === "chat"}
-                      isDeleting={deletingChatId === chat.id}
-                      onSelect={() => {
-                        onSelectChat(chat.id);
-                        onSelectTab("chat");
-                      }}
-                      onUpdateTitle={onUpdateChatTitle}
-                      onDelete={onDeleteChat}
-                      onTogglePin={onTogglePinChat}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
+          <SidebarChatList listRef={chatListRef} mobile={false} chats={chats} pinnedChatIds={pinnedChatIds}
+            activeChatId={activeChatId} activeTab={activeTab} deletingChatId={deletingChatId} isLoadingChats={isLoadingChats}
+            onSelectChat={onSelectChat} onSelectTab={onSelectTab} onUpdateChatTitle={onUpdateChatTitle}
+            onDeleteChat={onDeleteChat} onTogglePinChat={onTogglePinChat} />
         </div>
 
       {/* User Identity Section - Anchored at the bottom */}

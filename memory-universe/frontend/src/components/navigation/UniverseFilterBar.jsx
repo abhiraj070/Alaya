@@ -1,11 +1,10 @@
 import React, { useMemo } from 'react';
-import { Filter, X, FileText, Layers, Tag } from 'lucide-react';
+import { Filter, X } from 'lucide-react';
 import {
   getDistinctSources,
   getDistinctClusters,
   getDistinctKnowledgeTypes,
 } from '../../utils/searchFilter.js';
-import { Badge } from '../ui/Badge.jsx';
 
 /**
  * Multifaceted Filter Controls Bar

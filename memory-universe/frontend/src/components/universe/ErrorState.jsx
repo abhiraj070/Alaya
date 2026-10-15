@@ -2,6 +2,7 @@ import React from 'react';
 import { ShieldAlert, WifiOff, RefreshCw, LogIn } from 'lucide-react';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
+import { ALAYA_URL } from '../../config.js';
 
 /**
  * Robust error and authentication state display
@@ -59,7 +60,7 @@ export function ErrorState({ error, onRetry, retrying = false }) {
             {isUnauthorized ? (
               <>
                 <a
-                  href="http://localhost:3000/auth/login"
+                  href={`${ALAYA_URL}/auth?mode=signin`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#38BDF8] text-[#050505] font-mono text-xs font-semibold py-2 px-4 rounded-sm hover:bg-[#7DD3FC] transition-colors"

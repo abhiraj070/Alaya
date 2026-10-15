@@ -201,51 +201,13 @@ export function getDistinctKnowledgeTypes(nodes) {
     .sort((a, b) => b.count - a.count);
 }
 
-/**
- * Find semantically related chunks using 3D UMAP coordinate proximity and cluster affiliation.
- * (In UMAP space, 3D Euclidean distance directly approximates high-dimensional semantic similarity).
- *
- * @param {object} currentNode - The active selected node
- * @param {Array<object>} allNodes - All loaded universe nodes
- * @param {number} [limit=4] - Max related results to return
- * @returns {Array<{ node: object, distance: number, proximityPercent: number, sameCluster: boolean }>}
- */
+/** Find nearby displayed nodes, with a preference for the same sector. */
 export function getRelatedChunks(currentNode, allNodes, limit = 4) {
-  if (!currentNode || !Array.isArray(allNodes) || allNodes.length <= 1) {
-    return [];
-  }
-
-  const { id, x, y, z, cluster_id } = currentNode;
-  const candidates = [];
-
-  for (let i = 0; i < allNodes.length; i++) {
-    const candidate = allNodes[i];
-    if (candidate.id === id) continue; // Exclude self
-
-    const dx = candidate.x - x;
-    const dy = candidate.y - y;
-    const dz = candidate.z - z;
-    const euclideanDist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-    const sameCluster = cluster_id !== null && candidate.cluster_id === cluster_id;
-
-    // Weight score: cluster alignment provides an extra affinity boost
-    const weightedDist = sameCluster ? euclideanDist * 0.75 : euclideanDist;
-
-    // Approximate semantic similarity percentage (max bounding sphere radius ~ 80 units)
-    const proximityPercent = Math.max(10, Math.min(99, Math.round(100 - (euclideanDist / 80) * 100)));
-
-    candidates.push({
-      node: candidate,
-      distance: Number(euclideanDist.toFixed(2)),
-      weightedDist,
-      proximityPercent,
-      sameCluster,
-    });
-  }
-
-  // Sort by closest distance first
-  candidates.sort((a, b) => a.weightedDist - b.weightedDist);
-
-  return candidates.slice(0, limit);
+  if (!currentNode) return [];
+  return allNodes.filter((node) => node.id !== currentNode.id).map((node) => {
+    const distance = Math.hypot(node.x - currentNode.x, node.y - currentNode.y, node.z - currentNode.z);
+    const sameCluster = currentNode.cluster_id != null && node.cluster_id === currentNode.cluster_id;
+    return { node, distance, sameCluster };
+  }).sort((a, b) => (a.sameCluster ? a.distance * 0.75 : a.distance)
+    - (b.sameCluster ? b.distance * 0.75 : b.distance)).slice(0, limit);
 }

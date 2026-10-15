@@ -1,62 +1,64 @@
-/**
- * Alaya Memory Universe — useUniverseData Hook
- *
- * Custom React hook subscribing to the universe state store and exposing
- * data, mode flags (real vs demo), disclaimer controls, search, and camera navigation triggers.
- */
-
-import { useEffect, useSyncExternalStore, useCallback } from 'react';
+import { useEffect, useSyncExternalStore, useCallback, useRef, useState } from 'react';
+import { universeApi } from '../api/universeApi.js';
 import {
-  getState,
-  subscribe,
-  fetchUniverseNodes,
-  triggerRecompute,
-  selectStar,
-  clearSelection,
-  setSearchQuery,
-  setFacetFilter,
-  clearAllFilters,
-  navigateToStar,
-  enterDemoMode,
-  exitDemoMode,
-  dismissDisclaimer,
+  getState, subscribe, applyUniverseSnapshot,
+  selectStar, clearSelection, setFacetFilter, clearAllFilters, navigateToStar,
 } from '../store/universeStore.js';
 
-export function useUniverseData({ autoFetch = true } = {}) {
-  // Subscribe to external store with React's native useSyncExternalStore
-  const storeState = useSyncExternalStore(subscribe, getState, getState);
+// REST lifecycle lives here; the store and 3D components have no network dependency.
+export function useUniverseData() {
+  const snapshot = useSyncExternalStore(subscribe, getState, getState);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [recomputing, setRecomputing] = useState(false);
+  const nodesRequest = useRef(null);
+  const projectionRequest = useRef(null);
 
-  // Initial data loading on mount
-  useEffect(() => {
-    if (autoFetch && storeState.nodes.length === 0 && !storeState.error && !storeState.isDemo) {
-      fetchUniverseNodes().catch(() => {
-        // Error is captured in storeState.error
-      });
+  const refresh = useCallback(async () => {
+    nodesRequest.current?.abort();
+    const controller = new AbortController();
+    nodesRequest.current = controller;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await universeApi.getNodes({ signal: controller.signal });
+      if (!controller.signal.aborted) applyUniverseSnapshot(data);
+    } catch (err) {
+      if (!controller.signal.aborted) setError(err);
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
     }
-  }, [autoFetch, storeState.nodes.length, storeState.error, storeState.isDemo]);
-
-  const refresh = useCallback(() => {
-    return fetchUniverseNodes();
   }, []);
 
-  const recompute = useCallback(() => {
-    return triggerRecompute();
-  }, []);
+  const recompute = useCallback(async () => {
+    if (projectionRequest.current) return;
+    const controller = new AbortController();
+    projectionRequest.current = controller;
+    setRecomputing(true);
+    setError(null);
+    try {
+      await universeApi.recomputeCoordinates({ signal: controller.signal });
+      // The endpoint returns after committing coordinates; no timer or polling needed.
+      if (!controller.signal.aborted) await refresh();
+    } catch (err) {
+      if (!controller.signal.aborted) setError(err);
+    } finally {
+      if (projectionRequest.current === controller) projectionRequest.current = null;
+      if (!controller.signal.aborted) setRecomputing(false);
+    }
+  }, [refresh]);
+
+  useEffect(() => {
+    refresh();
+    return () => {
+      nodesRequest.current?.abort();
+      projectionRequest.current?.abort();
+      projectionRequest.current = null;
+    };
+  }, [refresh]);
 
   return {
-    ...storeState,
-    refresh,
-    recompute,
-    selectStar,
-    clearSelection,
-    setSearchQuery,
-    setFacetFilter,
-    clearAllFilters,
-    navigateToStar,
-    enterDemoMode,
-    exitDemoMode,
-    dismissDisclaimer,
+    ...snapshot, loading, error, recomputing, refresh, recompute,
+    selectStar, clearSelection, setFacetFilter, clearAllFilters, navigateToStar,
   };
 }
-
-export default useUniverseData;

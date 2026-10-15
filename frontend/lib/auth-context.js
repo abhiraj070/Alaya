@@ -1,158 +1,62 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useSyncExternalStore } from "react";
-import { authApi, getStoredAccessToken, clearAllAuthTokens, cleanToken } from "@/lib/api";
-import {
-  getStoredUser,
-  updateStoredUser,
-  clearStoredUser,
-  subscribeUserStorage,
-} from "@/mock/users";
+import { createContext, useContext, useCallback, useSyncExternalStore } from "react";
+import { authApi } from "@/lib/api";
+import { getStoredUser, updateStoredUser, clearStoredUser, subscribeUserStorage } from "@/lib/user-store";
 
-const AuthContext = createContext({
-  user: null,
-  isLoading: false,
-  error: null,
-  login: async () => {},
-  register: async () => {},
-  logout: async () => {},
-  updateUser: async () => {},
-  deleteAccount: async () => {},
-  refreshUser: async () => {},
-});
+const AuthContext = createContext(null);
+const serverUser = () => null;
+const subscribeReady = () => () => {};
 
 export function AuthProvider({ children }) {
-  const user = useSyncExternalStore(
-    subscribeUserStorage,
-    getStoredUser,
-    () => null
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const user = useSyncExternalStore(subscribeUserStorage, getStoredUser, serverUser);
+  const ready = useSyncExternalStore(subscribeReady, () => true, () => false);
 
-  // Update user profile (persists to backend API and local storage)
+  const login = useCallback(async (username, password) => {
+    const profile = await authApi.login({ username, password });
+    return updateStoredUser(profile);
+  }, []);
+
+  const register = useCallback((data) => authApi.register(data), []);
+
+  const logout = useCallback(async () => {
+    const current = getStoredUser();
+    try {
+      if (current?.id) await authApi.logout(current.id);
+    } catch (error) {
+      console.warn("Could not clear the backend session:", error.message);
+    } finally {
+      clearStoredUser();
+    }
+  }, []);
+
   const updateUser = useCallback(async (updates) => {
     const current = getStoredUser();
-    if (current?.id && typeof current.id === "number" && current.isAuthenticated) {
-      const payload = {};
-      if (typeof updates.name === "string") payload.name = updates.name;
-      if (typeof updates.username === "string") payload.username = updates.username;
-
-      const updatedBackend = await authApi.updateUser(current.id, payload);
-      return updateStoredUser({
-        ...updates,
-        ...updatedBackend,
-      });
-    }
-    return updateStoredUser(updates);
+    if (!current?.id) throw new Error("Please sign in to update your profile.");
+    const profile = await authApi.updateUser(current.id, updates);
+    return updateStoredUser(profile);
   }, []);
 
-  // Login handler
-  const login = useCallback(
-    async (username, password) => {
-      setError(null);
-      try {
-        const res = await authApi.login({ username, password });
-        const candidateToken =
-          res?.access_token ||
-          res?.token ||
-          res?.accessToken ||
-          getStoredAccessToken();
-        const token = cleanToken(candidateToken);
-
-        const authenticatedUser = {
-          id: res.id,
-          name: res.name,
-          username: res.username,
-          email: res.email || "",
-          isAuthenticated: true,
-          ...(token ? { access_token: token } : {}),
-        };
-
-        if (token) {
-          try {
-            localStorage.setItem("access_token", token);
-            sessionStorage.setItem("access_token", token);
-          } catch {}
-        }
-
-        updateStoredUser(authenticatedUser);
-        return authenticatedUser;
-      } catch (err) {
-        throw err;
-      }
-    },
-    []
-  );
-
-  // Register handler
-  const register = useCallback(async ({ name, username, password }) => {
-    setError(null);
-    return await authApi.register({ name, username, password });
-  }, []);
-
-  // Logout handler: asynchronously clears backend session, cookies, and local storage tokens
-  const logout = useCallback(async () => {
-    try {
-      const current = getStoredUser();
-      const currentUserId =
-        current?.id && typeof current.id === "number" ? current.id : null;
-      await authApi.logout(currentUserId);
-    } catch {
-      // Backend logout failed or server offline
-    } finally {
-      clearAllAuthTokens();
-      clearStoredUser();
-    }
-  }, []);
-
-  // Delete account handler: deletes user from backend, then clears all tokens and storage
   const deleteAccount = useCallback(async () => {
-    try {
-      const current = getStoredUser();
-      const currentUserId =
-        current?.id && typeof current.id === "number" ? current.id : null;
-      if (currentUserId) {
-        await authApi.deleteUser(currentUserId);
-      }
-    } catch {
-      // Continue to wipe local state even if backend error occurs
-    } finally {
-      clearAllAuthTokens();
-      clearStoredUser();
-    }
+    const current = getStoredUser();
+    if (!current?.id) throw new Error("Please sign in to delete your account.");
+    await authApi.deleteUser(current.id);
+    clearStoredUser();
   }, []);
 
-  // Refresh user data from backend/storage
   const refreshUser = useCallback(async () => {
     const current = getStoredUser();
-    if (current?.id && typeof current.id === "number" && current.isAuthenticated) {
-      try {
-        const fresh = await authApi.getUser(current.id);
-        if (fresh && fresh.id) {
-          return updateStoredUser(fresh);
-        }
-      } catch {
-        // Fallback to cached user
-      }
+    if (!current?.id) return null;
+    try {
+      return updateStoredUser(await authApi.getUser(current.id));
+    } catch (error) {
+      if (error.status === 401) clearStoredUser();
+      return getStoredUser();
     }
-    return current;
   }, []);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        error,
-        login,
-        register,
-        logout,
-        updateUser,
-        deleteAccount,
-        refreshUser,
-      }}
-    >
+    <AuthContext.Provider value={{ user, ready, login, register, logout, updateUser, deleteAccount, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -160,8 +64,6 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }

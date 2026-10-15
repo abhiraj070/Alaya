@@ -3,6 +3,10 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
+  {
+    files: ["**/*.{js,mjs}"],
+    rules: { "no-undef": "error" },
+  },
   globalIgnores([
     ".next/**",
     "out/**",
