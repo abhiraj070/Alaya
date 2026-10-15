@@ -1,4 +1,3 @@
-import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 
@@ -15,15 +14,6 @@ export default function RootLayout({ children }) {
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
-      <head>
-        <Script
-          id="alaya-theme-init"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('alaya_theme');if(t==='light'){document.documentElement.classList.add('light');document.documentElement.classList.remove('dark');}}catch(e){}})();`,
-          }}
-        />
-      </head>
       <body
         className="min-h-screen bg-bg-primary text-text-primary antialiased"
         suppressHydrationWarning

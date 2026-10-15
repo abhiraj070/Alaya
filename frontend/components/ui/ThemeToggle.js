@@ -1,81 +1,76 @@
 "use client";
 
-import { useSyncExternalStore, useCallback, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const THEME_KEY = "alaya_theme";
 
-const emptySubscribe = () => () => {};
-
-function useMounted() {
-  return useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
-}
-
-function subscribeTheme(callback) {
-  window.addEventListener("storage", callback);
-  window.addEventListener("alaya-theme-change", callback);
-  return () => {
-    window.removeEventListener("storage", callback);
-    window.removeEventListener("alaya-theme-change", callback);
-  };
-}
-
-function getThemeSnapshot() {
-  if (typeof window === "undefined") return "dark";
-  const saved = localStorage.getItem(THEME_KEY);
-  if (saved) return saved;
-  return document.documentElement.classList.contains("light") ? "light" : "dark";
-}
-
-function getThemeServerSnapshot() {
-  return "dark";
-}
-
 export default function ThemeToggle({ className = "" }) {
-  const isMounted = useMounted();
-  const theme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, getThemeServerSnapshot);
+  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState("dark");
 
-  // Synchronize DOM classes with theme without calling setState in effect
   useEffect(() => {
-    if (theme === "light") {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.classList.add("light");
-      document.body.classList.remove("dark");
-      document.body.classList.add("light");
-    } else {
-      document.documentElement.classList.remove("light");
-      document.documentElement.classList.add("dark");
-      document.body.classList.remove("light");
-      document.body.classList.add("dark");
-    }
-  }, [theme]);
+    const syncTheme = () => {
+      try {
+        const saved = localStorage.getItem(THEME_KEY);
+        const isLight = saved === "light" || document.documentElement.classList.contains("light");
+        const currentTheme = isLight ? "light" : "dark";
+        setTheme(currentTheme);
+
+        if (isLight) {
+          document.documentElement.classList.remove("dark");
+          document.documentElement.classList.add("light");
+          document.body?.classList?.remove("dark");
+          document.body?.classList?.add("light");
+        } else {
+          document.documentElement.classList.remove("light");
+          document.documentElement.classList.add("dark");
+          document.body?.classList?.remove("light");
+          document.body?.classList?.add("dark");
+        }
+      } catch {}
+    };
+
+    const raf = requestAnimationFrame(() => {
+      setMounted(true);
+      syncTheme();
+    });
+
+    window.addEventListener("storage", syncTheme);
+    window.addEventListener("alaya-theme-change", syncTheme);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("storage", syncTheme);
+      window.removeEventListener("alaya-theme-change", syncTheme);
+    };
+  }, []);
 
   const toggleTheme = useCallback(() => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    if (nextTheme === "light") {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.classList.add("light");
-      document.body.classList.remove("dark");
-      document.body.classList.add("light");
-    } else {
-      document.documentElement.classList.remove("light");
-      document.documentElement.classList.add("dark");
-      document.body.classList.remove("light");
-      document.body.classList.add("dark");
-    }
-    try {
-      localStorage.setItem(THEME_KEY, nextTheme);
-      window.dispatchEvent(new Event("alaya-theme-change"));
-    } catch {
-      // Safe storage fallback
-    }
-  }, [theme]);
+    setTheme((prevTheme) => {
+      const nextTheme = prevTheme === "dark" ? "light" : "dark";
+
+      if (nextTheme === "light") {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.classList.add("light");
+        document.body?.classList?.remove("dark");
+        document.body?.classList?.add("light");
+      } else {
+        document.documentElement.classList.remove("light");
+        document.documentElement.classList.add("dark");
+        document.body?.classList?.remove("light");
+        document.body?.classList?.add("dark");
+      }
+
+      try {
+        localStorage.setItem(THEME_KEY, nextTheme);
+        window.dispatchEvent(new Event("alaya-theme-change"));
+      } catch {}
+
+      return nextTheme;
+    });
+  }, []);
 
   // Before mounting on client, render a stable button matching SSR exactly to prevent hydration mismatch
-  if (!isMounted) {
+  if (!mounted) {
     return (
       <button
         type="button"
