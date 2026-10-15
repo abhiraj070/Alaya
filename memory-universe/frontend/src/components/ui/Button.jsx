@@ -16,7 +16,7 @@ export function Button({
   ...props
 }) {
   const baseClasses =
-    'relative inline-flex items-center justify-center font-mono font-medium tracking-wide transition-all duration-200 select-none outline-none focus-visible:ring-1 focus-visible:ring-[#38BDF8] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer';
+    'relative inline-flex items-center justify-center font-medium transition-all duration-200 select-none outline-none focus-visible:ring-1 focus-visible:ring-[#38BDF8] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer';
 
   const sizeClasses = {
     sm: 'text-xs px-2.5 py-1 rounded-sm gap-1.5',

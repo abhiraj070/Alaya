@@ -17,11 +17,11 @@ export function RelatedKnowledgeSection({ currentNode, allNodes = [], onSelectRe
   if (relatedChunks.length === 0) {
     return (
       <div>
-        <span className="text-[11px] font-mono text-[#737D89] uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+        <span className="text-[11px] text-[#737D89] block mb-2 flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-[#38BDF8]" />
           <span>Semantically Related Knowledge</span>
         </span>
-        <div className="bg-[#11161B] border border-[rgba(255,255,255,0.06)] rounded-md p-4 text-xs text-[#737D89] text-center font-mono">
+        <div className="bg-[#11161B] border border-[rgba(255,255,255,0.06)] rounded-md p-4 text-xs text-[#737D89] text-center ">
           No neighboring knowledge records found in this sector.
         </div>
       </div>
@@ -31,12 +31,12 @@ export function RelatedKnowledgeSection({ currentNode, allNodes = [], onSelectRe
   return (
     <div>
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-[11px] font-mono text-[#737D89] uppercase tracking-wider flex items-center gap-1.5">
+        <span className="text-[11px] text-[#737D89] flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-[#38BDF8]" />
           <span>Semantically Related Knowledge</span>
         </span>
-        <span className="text-[10px] font-mono text-[#737D89]">
-          3D SEMANTIC PROXIMITY
+        <span className="text-[10px] text-[#737D89]">
+          3D semantic proximity
         </span>
       </div>
 
@@ -53,7 +53,7 @@ export function RelatedKnowledgeSection({ currentNode, allNodes = [], onSelectRe
           >
             {/* Header: Title and Proximity Pill */}
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-mono font-semibold text-[#F5F7FA] group-hover:text-[#38BDF8] transition-colors truncate">
+              <span className="text-xs font-semibold text-[#F5F7FA] group-hover:text-[#38BDF8] transition-colors truncate">
                 {node.title}
               </span>
               <div className="flex items-center gap-1 shrink-0">
@@ -69,12 +69,12 @@ export function RelatedKnowledgeSection({ currentNode, allNodes = [], onSelectRe
             </div>
 
             {/* Excerpt preview */}
-            <p className="text-[11px] font-sans text-[#737D89] group-hover:text-[#A1AAB5] line-clamp-2 leading-relaxed transition-colors">
+            <p className="text-[11px] text-[#737D89] group-hover:text-[#A1AAB5] line-clamp-2 leading-relaxed transition-colors">
               {node.preview}
             </p>
 
             {/* Footer: Source and Navigation Trigger */}
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-[rgba(255,255,255,0.04)] text-[10px] font-mono text-[#737D89]">
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-[rgba(255,255,255,0.04)] text-[10px] text-[#737D89]">
               <div className="flex items-center gap-1.5 truncate">
                 {node.has_source ? (
                   <FileText className="w-3 h-3 text-[#38BDF8] shrink-0" />

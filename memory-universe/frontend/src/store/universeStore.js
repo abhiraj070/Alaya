@@ -3,12 +3,14 @@ import { filterUniverseNodes } from '../utils/searchFilter.js';
 
 const defaultFilters = () => ({ source: 'all', cluster: 'all', knowledgeType: 'all' });
 const initialState = () => ({
+  isDemo: false,
   nodes: [],
   totalStars: 0,
   unprojectedCount: 0,
   selectedStarId: null,
   navigationTarget: null,
   filters: defaultFilters(),
+  uploadedData: [],
 });
 
 let state = initialState();
@@ -28,14 +30,17 @@ function setState(partial) {
 }
 
 /** Replace the displayed collection with a /api/universe/nodes snapshot. */
-export function applyUniverseSnapshot({ nodes, total_stars, unprojected_count }) {
-  const selectionExists = nodes.some((node) => node.id === state.selectedStarId);
+export function applyUniverseSnapshot({ nodes, total_stars, unprojected_count }, { isDemo = false } = {}) {
+  const modeChanged = state.isDemo !== isDemo;
+  const selectionExists = !modeChanged && nodes.some((node) => node.id === state.selectedStarId);
   setState({
+    isDemo,
     nodes,
     totalStars: total_stars ?? nodes.length,
     unprojectedCount: unprojected_count ?? 0,
     selectedStarId: selectionExists ? state.selectedStarId : null,
     navigationTarget: null,
+    filters: modeChanged ? defaultFilters() : state.filters,
   });
 }
 
@@ -53,6 +58,10 @@ export function setFacetFilter(facet, value) {
 
 export function clearAllFilters() {
   setState({ filters: defaultFilters() });
+}
+
+export function setUploadedData(uploadedData) {
+  setState({ uploadedData });
 }
 
 export function navigateToStar(node) {

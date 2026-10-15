@@ -86,6 +86,10 @@ export function UniverseCanvas({
   const handlePointerDown = useCallback((e) => {
     pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
     wasDraggingRef.current = false;
+    const canvas = e.currentTarget?.querySelector('canvas') || (e.target?.tagName === 'CANVAS' ? e.target : null);
+    if (canvas) {
+      canvas.style.cursor = 'grabbing';
+    }
   }, []);
 
   const handlePointerUp = useCallback((e) => {
@@ -94,7 +98,11 @@ export function UniverseCanvas({
     const distSq = dx * dx + dy * dy;
     // If pointer moved more than 6px (36px squared), treat as a camera drag, not an intentional star click
     wasDraggingRef.current = distSq > 36;
-  }, []);
+    const canvas = e.currentTarget?.querySelector('canvas') || (e.target?.tagName === 'CANVAS' ? e.target : null);
+    if (canvas) {
+      canvas.style.cursor = hoveredStarId !== null ? 'pointer' : 'grab';
+    }
+  }, [hoveredStarId]);
 
   const handleStarClick = useCallback(
     (node, e) => {
@@ -106,8 +114,19 @@ export function UniverseCanvas({
     [onStarClick]
   );
 
+  useEffect(() => {
+    const canvas = document.querySelector('canvas');
+    if (canvas) {
+      canvas.style.cursor = hoveredStarId !== null ? 'pointer' : 'grab';
+    }
+  }, [hoveredStarId]);
+
   const handleStarHover = useCallback(
     (node, e) => {
+      const canvas = document.querySelector('canvas');
+      if (canvas) {
+        canvas.style.cursor = 'pointer';
+      }
       if (typeof onStarHover === 'function') {
         if (rafHoverRef.current) cancelAnimationFrame(rafHoverRef.current);
         rafHoverRef.current = requestAnimationFrame(() => {
@@ -120,6 +139,10 @@ export function UniverseCanvas({
 
   const handleStarOut = useCallback(
     (e) => {
+      const canvas = document.querySelector('canvas');
+      if (canvas) {
+        canvas.style.cursor = 'grab';
+      }
       if (rafHoverRef.current) cancelAnimationFrame(rafHoverRef.current);
       if (typeof onStarUnhover === 'function') {
         onStarUnhover(e);
@@ -153,7 +176,7 @@ export function UniverseCanvas({
   return (
     <WebGLErrorBoundary>
       <div
-        className="w-full h-full relative overflow-hidden bg-[#050505] select-none"
+        className="w-full h-full relative overflow-hidden bg-[#050505] select-none cursor-grab active:cursor-grabbing"
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
       >
@@ -210,7 +233,6 @@ export function UniverseCanvas({
           onToggleGrid={handleToggleGrid}
           bloomEnabled={bloomEnabled}
           onToggleBloom={handleToggleBloom}
-          nodeCount={filteredNodeIds ? filteredNodeIds.size : nodes.length}
         />
       </div>
     </WebGLErrorBoundary>

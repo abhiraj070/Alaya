@@ -374,7 +374,7 @@ async def feed_knowledge(
     db.add(uploaded_data)
     db.commit()
     try:
-        await queue.enqueue_job("create_knowledge_embedding", text_content, user_id)
+        await queue.enqueue_job("create_knowledge_embedding", text_content, user_id, uploaded_data.id)
     except Exception:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File upload failed")
     return {"message": "Knowledge queued for processing"}

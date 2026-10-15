@@ -65,3 +65,23 @@ test('an empty snapshot clears previous collection counts and selection', () => 
   assert.equal(getState().unprojectedCount, 0);
   assert.equal(getState().selectedStarId, null);
 });
+
+test('switching demo and real snapshots clears selection and filters even when IDs overlap', () => {
+  applyUniverseSnapshot({ nodes }, { isDemo: true });
+  navigateToStar(nodes[0]);
+  setFacetFilter('cluster', '0');
+  assert.equal(getState().isDemo, true);
+  applyUniverseSnapshot({ nodes });
+  assert.equal(getState().isDemo, false);
+  assert.equal(getState().selectedStarId, null);
+  assert.equal(getState().navigationTarget, null);
+  assert.equal(getState().filters.cluster, 'all');
+  selectStar(1);
+  setFacetFilter('source', 'notes.pdf');
+  applyUniverseSnapshot({ nodes }, { isDemo: true });
+  assert.equal(getState().selectedStarId, null);
+  assert.equal(getState().filters.source, 'all');
+  resetStore();
+  assert.equal(getState().isDemo, false);
+  assert.equal(getState().nodes.length, 0);
+});

@@ -43,8 +43,57 @@ function Workspace({ user }) {
   const [chatToDelete, setChatToDelete] = useState(null);
   const [isDeletingChat, setIsDeletingChat] = useState(false);
   const [error, setError] = useState("");
-  const [deleteError, setDeleteError] = useState("");
   const createRequest = useRef(false);
+  const wsRef = useRef(null);
+
+  useEffect(() => {
+    let socket = null;
+    let isMounted = true;
+    let reconnectTimeout = null;
+
+    const connect = () => {
+      if (!isMounted) return;
+      try {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || `${protocol}//${window.location.hostname}:8000/ws?client=app`;
+        socket = new WebSocket(wsUrl);
+        wsRef.current = socket;
+
+        socket.onclose = () => {
+          wsRef.current = null;
+          if (isMounted) {
+            reconnectTimeout = setTimeout(connect, 3000);
+          }
+        };
+
+        socket.onerror = () => {
+          socket?.close();
+        };
+      } catch {
+        if (isMounted) {
+          reconnectTimeout = setTimeout(connect, 3000);
+        }
+      }
+    };
+
+    connect();
+
+    return () => {
+      isMounted = false;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (socket) {
+        socket.onclose = null;
+        socket.close();
+      }
+      wsRef.current = null;
+    };
+  }, [user.id]);
+
+  const handleOpenUniverse = useCallback(() => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ action: "open_universe" }));
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -171,7 +220,8 @@ function Workspace({ user }) {
       <MobileDrawer {...navigation} isOpen={isMobileDrawerOpen} onClose={() => setIsMobileDrawerOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-bg-primary">
         <AppHeader isSidebarCollapsed={isSidebarCollapsed} isMobileDrawerOpen={isMobileDrawerOpen}
-          onToggleSidebar={toggleSidebar} onNewChat={newChat} isCreatingChat={isCreatingChat} activeTab={activeTab} user={user} />
+          onToggleSidebar={toggleSidebar} onNewChat={newChat} isCreatingChat={isCreatingChat} activeTab={activeTab} user={user}
+          onOpenUniverse={handleOpenUniverse} />
         {error && <div role="alert" className="flex items-center justify-between gap-3 border-b border-rose-500/30 p-3 text-xs text-rose-400">
           {error}<button type="button" onClick={() => window.location.reload()} className="underline">Retry</button>
         </div>}

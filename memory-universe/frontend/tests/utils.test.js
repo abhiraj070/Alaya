@@ -53,3 +53,29 @@ test('selected and hovered stars retain their visual emphasis', () => {
   assert.equal(getStarColor(node, true, false).getHexString(), '7dd3fc');
   assert.equal(getStarColor(node, false, true).getHexString(), 'ffffff');
 });
+
+test('star colors are determined by content type: documents red, images blue, text yellow', () => {
+  const docNode = { id: 10, source_type: 'docs', cluster_id: 1 };
+  const imgNode = { id: 11, source_type: 'img', cluster_id: 2 };
+  const textNode = { id: 12, source_type: 'text', cluster_id: 3 };
+  const directNode = { id: 13, has_source: false, cluster_id: 0 };
+  const unknownNode = { id: 14, source_type: 'audio', cluster_id: 0 };
+
+  // Documents: #EF4444
+  assert.equal(getStarColor(docNode).getHexString(), 'ef4444');
+  // Images: #3B82F6
+  assert.equal(getStarColor(imgNode).getHexString(), '3b82f6');
+  // Text: #FACC15
+  assert.equal(getStarColor(textNode).getHexString(), 'facc15');
+  // Direct text knowledge (no source): #FACC15
+  assert.equal(getStarColor(directNode).getHexString(), 'facc15');
+  // Unknown / unsupported type: neutral fallback #94A3B8
+  assert.equal(getStarColor(unknownNode).getHexString(), '94a3b8');
+
+  // Verify cluster_id does NOT dictate star color
+  const docCluster0 = { id: 20, source_type: 'docs', cluster_id: 0 };
+  const docCluster5 = { id: 21, source_type: 'docs', cluster_id: 5 };
+  assert.equal(getStarColor(docCluster0).getHexString(), 'ef4444');
+  assert.equal(getStarColor(docCluster5).getHexString(), 'ef4444');
+});
+

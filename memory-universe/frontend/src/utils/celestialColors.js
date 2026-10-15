@@ -20,6 +20,14 @@ export const CLUSTER_SPECTRAL_PALETTE = [
   '#E2E8F0', // Sector 7: Pearl White
 ];
 
+export const CONTENT_TYPE_COLORS = {
+  docs: '#EF4444', // Documents: Red
+  img: '#3B82F6',  // Images: Blue
+  text: '#FACC15', // Text: Yellow
+};
+
+export const NEUTRAL_FALLBACK_COLOR = '#94A3B8'; // Neutral Slate/Grey fallback
+
 // Pre-allocated THREE.Color instances to avoid GC allocations during render passes
 const colorCache = new Map();
 
@@ -36,7 +44,59 @@ export function getCachedColor(hex) {
 }
 
 /**
- * Determine the visual color of a star based on cluster metadata and state
+ * Determine the authoritative content type of a node: 'docs' | 'img' | 'text' | null
+ *
+ * Checks authoritative source metadata (source_type, content_type, or UploadedData data_type).
+ * For records without an UploadedData source (has_source === false or no source metadata),
+ * ingestion semantics represent direct text knowledge ('text').
+ * Unknown/unsupported types return null so they receive the neutral fallback.
+ *
+ * @param {object} node
+ * @returns {'docs' | 'img' | 'text' | null}
+ */
+export function getContentType(node) {
+  if (!node || typeof node !== 'object') return null;
+
+  // Prefer authoritative backend metadata: source_type, content_type, or node.source?.data_type
+  const rawType =
+    node.source_type ??
+    node.content_type ??
+    node.source?.data_type ??
+    node.uploaded_data?.data_type;
+
+  if (typeof rawType === 'string') {
+    const normalized = rawType.trim().toLowerCase();
+    if (normalized === 'docs' || normalized === 'document' || normalized === 'documents') {
+      return 'docs';
+    }
+    if (normalized === 'img' || normalized === 'image' || normalized === 'images') {
+      return 'img';
+    }
+    if (normalized === 'text') {
+      return 'text';
+    }
+    // Unsupported or unrecognized string type - do not silently misclassify
+    return null;
+  }
+
+  // If no source metadata is present at all, check ingestion semantics:
+  // Knowledge records without an UploadedData source (has_source: false or null source) represent direct text knowledge.
+  if (node.has_source === false || (!node.source && !node.uploaded_data)) {
+    return 'text';
+  }
+
+  return null;
+}
+
+/**
+ * Determine the visual color of a star based on content type and interaction state
+ *
+ * - Documents: Red (#EF4444)
+ * - Images: Blue (#3B82F6)
+ * - Text: Yellow (#FACC15)
+ * - Unknown/unsupported: Neutral fallback (#94A3B8)
+ * - Selected: Bright Sky Blue (#7DD3FC)
+ * - Hovered: Bright White (#FFFFFF)
  *
  * @param {object} node - Universe node
  * @param {boolean} isSelected - Whether star is currently selected
@@ -54,14 +114,13 @@ export function getStarColor(node, isSelected = false, isHovered = false) {
     return getCachedColor('#FFFFFF');
   }
 
-  // If node has a cluster_id, apply restrained spectral tint
-  if (node.cluster_id !== null && node.cluster_id !== undefined) {
-    const paletteIndex = Math.abs(node.cluster_id) % CLUSTER_SPECTRAL_PALETTE.length;
-    return getCachedColor(CLUSTER_SPECTRAL_PALETTE[paletteIndex]);
+  const contentType = getContentType(node);
+  if (contentType && CONTENT_TYPE_COLORS[contentType]) {
+    return getCachedColor(CONTENT_TYPE_COLORS[contentType]);
   }
 
-  // Default knowledge star: crisp, bright white/silver
-  return getCachedColor('#F1F5F9');
+  // Neutral fallback for unknown or unsupported types
+  return getCachedColor(NEUTRAL_FALLBACK_COLOR);
 }
 
 /**

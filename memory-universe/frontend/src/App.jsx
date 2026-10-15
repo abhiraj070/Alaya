@@ -5,6 +5,6 @@ import { UniverseView } from './UniverseView.jsx';
 
 export default function App() {
   const universe = useUniverseData();
-  const detailState = useChunkDetail(universe.selectedStarId);
-  return <UniverseView universe={universe} detailState={detailState} />;
+  const detailState = useChunkDetail(universe.selectedStarId, universe.isDemo);
+  return <UniverseView key={universe.isDemo ? 'demo' : 'real'} universe={universe} detailState={detailState} />;
 }

@@ -25,7 +25,7 @@ export function Spinner({ size = 'md', className = '', label = null }) {
         />
       </div>
       {label && (
-        <span className="text-xs font-mono text-[#A1AAB5] tracking-widest uppercase">
+        <span className="text-xs text-[#A1AAB5]">
           {label}
         </span>
       )}

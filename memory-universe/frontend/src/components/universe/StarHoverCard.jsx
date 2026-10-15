@@ -56,23 +56,23 @@ export function StarHoverCard({ node, position }) {
         <Badge variant="sky" size="xs">
           {node.cluster_name || (node.cluster_id !== null ? `Sector ${node.cluster_id}` : 'Celestial Star')}
         </Badge>
-        <span className="text-[10px] font-mono text-[#737D89] uppercase tracking-wider truncate max-w-[120px]">
+        <span className="text-[10px] text-[#737D89] truncate max-w-[120px]">
           {node.knowledge_type?.replace(/_/g, ' ') || 'Knowledge'}
         </span>
       </div>
 
       {/* Star Title */}
-      <h4 className="text-xs font-mono font-semibold text-[#F5F7FA] mb-1.5 truncate">
+      <h4 className="text-xs font-semibold text-[#F5F7FA] mb-1.5 truncate">
         {node.title || 'Knowledge Chunk'}
       </h4>
 
       {/* Snippet preview */}
-      <p className="text-[11px] font-sans text-[#A1AAB5] leading-relaxed line-clamp-3 mb-2.5">
+      <p className="text-[11px] text-[#A1AAB5] leading-relaxed line-clamp-3 mb-2.5">
         {node.preview}
       </p>
 
       {/* Footer: Source Lineage & Interaction Prompt */}
-      <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-[rgba(255,255,255,0.06)] font-mono text-[10px]">
+      <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-[rgba(255,255,255,0.06)] text-[10px]">
         <div className="flex items-center gap-1.5 text-[#737D89] truncate max-w-[170px]" title={node.source_name || 'Direct Knowledge Entry'}>
           <SourceIconComponent className="w-3 h-3 text-[#38BDF8] shrink-0" />
           <span className="truncate">

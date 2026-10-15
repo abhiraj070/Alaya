@@ -1,14 +1,15 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { HeaderHUD } from './components/navigation/HeaderHUD.jsx';
-import { UniverseFilterBar } from './components/navigation/UniverseFilterBar.jsx';
 import { UniverseCanvas } from './components/canvas/UniverseCanvas.jsx';
 import { StarHoverCard } from './components/universe/StarHoverCard.jsx';
 import { ChunkDetailDrawer } from './components/universe/ChunkDetailDrawer.jsx';
 import { StatusBanner } from './components/universe/StatusBanner.jsx';
 import { EmptyState } from './components/universe/EmptyState.jsx';
 import { ErrorState } from './components/universe/ErrorState.jsx';
+import { DemoDisclaimerModal } from './components/universe/DemoDisclaimerModal.jsx';
+import { DemoSourceViewerModal } from './components/universe/DemoSourceViewerModal.jsx';
 import { Spinner } from './components/ui/Spinner.jsx';
-import { filterUniverseNodes, getDistinctClusters } from './utils/searchFilter.js';
+import { filterUniverseNodes } from './utils/searchFilter.js';
 
 export function UniverseView({ universe, detailState }) {
   const {
@@ -28,9 +29,17 @@ export function UniverseView({ universe, detailState }) {
     navigateToStar,
     refresh,
     recompute,
+    isDemo,
+    showDisclaimer,
+    demoNotice,
+    exploreDemo,
+    enterDemoMode,
+    exitDemoMode,
+    dismissDisclaimer,
   } = universe;
 
   const [hoverState, setHoverState] = useState(null);
+  const [demoDocViewer, setDemoDocViewer] = useState(null);
   const hoveredNode = hoverState && nodes.find((node) => node.id === hoverState.node.id);
 
   const {
@@ -55,8 +64,6 @@ export function UniverseView({ universe, detailState }) {
     if (!hasFilter) return null;
     return new Set(filteredNodes.map((n) => n.id));
   }, [filteredNodes, filters]);
-
-  const clusters = useMemo(() => getDistinctClusters(nodes), [nodes]);
 
   const handleStarClick = useCallback(
     (node) => { selectStar(node.id); setHoverState(null); },
@@ -83,26 +90,14 @@ export function UniverseView({ universe, detailState }) {
     <div className="w-screen h-screen relative overflow-hidden bg-[#050505] text-[#F5F7FA]">
       <HeaderHUD
         nodes={nodes}
-        totalStars={totalStars}
-        projectedCount={nodes.length}
-        clusterCount={clusters.length}
         loading={loading}
         connected={!loading && !error}
         recomputing={recomputing}
+        isDemo={isDemo}
+        onExitDemo={exitDemoMode}
         onRefresh={refresh}
-        onRecompute={recompute}
         onSelectSearchResult={handleNavigateToStar}
       />
-
-      {nodes.length > 0 && (
-        <UniverseFilterBar
-          nodes={nodes}
-          filteredCount={filteredNodes.length}
-          filters={filters}
-          onSetFilter={setFacetFilter}
-          onClearFilters={clearAllFilters}
-        />
-      )}
 
       <main className="w-full h-full relative">
         <UniverseCanvas
@@ -131,6 +126,8 @@ export function UniverseView({ universe, detailState }) {
             onClose={clearSelection}
             onRetry={retryDetail}
             onSelectRelatedStar={handleNavigateToStar}
+            onViewDemoSource={(sourceName, pageNumber) => setDemoDocViewer({ sourceName, pageNumber: pageNumber || 1 })}
+            sourceViewerOpen={Boolean(demoDocViewer)}
           />
         )}
 
@@ -140,20 +137,33 @@ export function UniverseView({ universe, detailState }) {
           </div>
         )}
 
-        {error && (
-          <ErrorState error={error} onRetry={refresh} retrying={loading} />
+        {error && !isDemo && (
+          <ErrorState error={error} onRetry={refresh} retrying={loading} onExploreDemo={exploreDemo} />
         )}
 
-        {!loading && !error && totalStars === 0 && (
-          <EmptyState />
+        {!loading && !error && !isDemo && totalStars === 0 && (
+          <EmptyState onExploreDemo={exploreDemo} />
         )}
 
-        {!error && <StatusBanner
+        {!error && !isDemo && <StatusBanner
           unprojectedCount={unprojectedCount}
           recomputing={recomputing}
           onRecompute={recompute}
         />}
+
+        {isDemo && demoNotice && (
+          <div role="status" className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 max-w-md w-[90%] p-3 bg-[#0D1014]/95 border border-[#F59E0B]/30 rounded-md text-xs text-[#F59E0B] text-center ">
+            {demoNotice}
+          </div>
+        )}
       </main>
+
+      {showDisclaimer && (
+        <DemoDisclaimerModal onContinueToDemo={enterDemoMode} onNotNow={dismissDisclaimer} />
+      )}
+      {isDemo && demoDocViewer && (
+        <DemoSourceViewerModal {...demoDocViewer} onClose={() => setDemoDocViewer(null)} />
+      )}
     </div>
   );
 }

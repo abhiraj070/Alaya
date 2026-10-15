@@ -36,19 +36,21 @@ export function ChunkDetailDrawer({
   onClose,
   onRetry,
   onSelectRelatedStar,
+  onViewDemoSource,
+  sourceViewerOpen = false,
 }) {
   const drawerRef = useRef(null);
 
   // Close on Escape key press
   useEffect(() => {
     function handleKeyDown(e) {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && !sourceViewerOpen) {
         onClose();
       }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, sourceViewerOpen]);
 
   if (!node) return null;
 
@@ -188,7 +190,12 @@ export function ChunkDetailDrawer({
                     </span>
                   </div>
 
-                  {sourceViewUrl ? (
+                  {detail.is_demo ? (
+                    <Button variant="secondary" size="md" className="w-full text-[#38BDF8]" icon={BookOpen}
+                      onClick={() => onViewDemoSource(node.source_name, pageNumber)}>
+                      {pageNumber ? `Open Document at Page ${pageNumber}` : 'Open Original Document'}
+                    </Button>
+                  ) : sourceViewUrl ? (
                     <a
                       href={sourceViewUrl}
                       target="_blank"

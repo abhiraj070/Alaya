@@ -1,4 +1,5 @@
 import React, { useRef, useMemo, useEffect } from 'react';
+import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { getStarColor, getStarScale } from '../../utils/celestialColors.js';
 
@@ -24,6 +25,7 @@ export function Starfield({
   onClick = null,
 }) {
   const meshRef = useRef(null);
+  const { gl } = useThree();
 
   // Filter and sanitize nodes with valid 3D coordinates
   const validNodes = useMemo(() => {
@@ -92,6 +94,9 @@ export function Starfield({
       args={[undefined, undefined, count]}
       frustumCulled={false}
       onPointerOver={(e) => {
+        if (gl?.domElement) {
+          gl.domElement.style.cursor = 'pointer';
+        }
         if (typeof onPointerOver === 'function' && e.instanceId !== undefined) {
           e.stopPropagation();
           const node = validNodes[e.instanceId];
@@ -99,6 +104,9 @@ export function Starfield({
         }
       }}
       onPointerMove={(e) => {
+        if (gl?.domElement) {
+          gl.domElement.style.cursor = 'pointer';
+        }
         if (typeof onPointerMove === 'function' && e.instanceId !== undefined) {
           e.stopPropagation();
           const node = validNodes[e.instanceId];
@@ -106,6 +114,9 @@ export function Starfield({
         }
       }}
       onPointerOut={(e) => {
+        if (gl?.domElement) {
+          gl.domElement.style.cursor = 'grab';
+        }
         if (typeof onPointerOut === 'function') {
           e.stopPropagation();
           onPointerOut(e);

@@ -12,6 +12,8 @@ settings = get_settings()
 def VerifyJWT(connection: HTTPConnection, db: Annotated[Session, Depends(get_db)]):
     authorization= connection.headers.get('Authorization')
     access_token= authorization.split(" ", 1)[1] if authorization and authorization.startswith("Bearer ") else connection.cookies.get('access_token')
+    if access_token is None and hasattr(connection, 'query_params'):
+        access_token = connection.query_params.get('token')
     if access_token is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing access token")
     try:

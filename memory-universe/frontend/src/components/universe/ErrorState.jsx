@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, WifiOff, RefreshCw, LogIn } from 'lucide-react';
+import { ShieldAlert, WifiOff, RefreshCw, LogIn, Compass } from 'lucide-react';
 import { Card } from '../ui/Card.jsx';
 import { Button } from '../ui/Button.jsx';
 import { ALAYA_URL } from '../../config.js';
@@ -7,7 +7,7 @@ import { ALAYA_URL } from '../../config.js';
 /**
  * Robust error and authentication state display
  */
-export function ErrorState({ error, onRetry, retrying = false }) {
+export function ErrorState({ error, onRetry, retrying = false, onExploreDemo }) {
   const isUnauthorized = error?.status === 401 || error?.isUnauthorized;
   const isNetwork = error?.status === 0 || error?.isNetworkError;
 
@@ -42,7 +42,7 @@ export function ErrorState({ error, onRetry, retrying = false }) {
             )}
           </div>
 
-          <h2 className="text-base font-mono font-semibold tracking-wider text-[#F5F7FA] mb-2 uppercase">
+          <h2 className="text-base font-semibold text-[#F5F7FA] mb-2">
             {isUnauthorized
               ? 'Authentication Required'
               : isNetwork
@@ -50,7 +50,7 @@ export function ErrorState({ error, onRetry, retrying = false }) {
               : 'Celestial Signal Lost'}
           </h2>
 
-          <p className="text-xs text-[#A1AAB5] leading-relaxed mb-6 font-sans">
+          <p className="text-xs text-[#A1AAB5] leading-relaxed mb-6">
             {isUnauthorized
               ? 'Memory Universe reads your knowledge securely through Alaya HTTP-only session credentials. Please log into Alaya in your browser.'
               : error?.message || 'An unexpected error occurred while communicating with the backend.'}
@@ -63,7 +63,7 @@ export function ErrorState({ error, onRetry, retrying = false }) {
                   href={`${ALAYA_URL}/auth?mode=signin`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#38BDF8] text-[#050505] font-mono text-xs font-semibold py-2 px-4 rounded-sm hover:bg-[#7DD3FC] transition-colors"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#38BDF8] text-[#050505] text-xs font-semibold py-2 px-4 rounded-sm hover:bg-[#7DD3FC] transition-colors"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Log Into Alaya</span>
@@ -93,9 +93,13 @@ export function ErrorState({ error, onRetry, retrying = false }) {
             )}
           </div>
 
+          <Button variant="secondary" size="md" onClick={onExploreDemo} icon={Compass} className="w-full mt-3">
+            Explore Sample Demo Universe
+          </Button>
+
           {error?.status ? (
-            <span className="text-[10px] font-mono text-[#737D89] mt-6 tracking-widest uppercase">
-              STATUS CODE: {error.status}
+            <span className="text-[10px] text-[#737D89] mt-6 ">
+              Status code: {error.status}
             </span>
           ) : null}
         </div>

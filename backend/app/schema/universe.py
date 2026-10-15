@@ -25,6 +25,8 @@ class UniverseNode(BaseModel):
     source_name: Optional[str] = None
     has_source: bool
     created_at: datetime
+    content_type: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class UniverseNodesResponse(BaseModel):

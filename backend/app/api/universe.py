@@ -90,11 +90,12 @@ def get_universe_nodes(
         source_name = None
         has_source = False
 
-        if source:
+        if source and source.data_type.value != "text":
             has_source = True
+            fallback_label = f"Document #{source.id}" if source.data_type.value == "docs" else f"Image #{source.id}"
             source_name = extract_filename_from_url(
                 source.data_source,
-                fallback=f"Document #{source.id}",
+                fallback=fallback_label,
             )
 
         title = derive_chunk_title(k.text_content, k.knowledge_metadata, k.knowledge_type)
@@ -114,6 +115,8 @@ def get_universe_nodes(
                 source_name=source_name,
                 has_source=has_source,
                 created_at=k.created_at,
+                content_type=source_type,
+                metadata=k.knowledge_metadata or {},
             )
         )
 

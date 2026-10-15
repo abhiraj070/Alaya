@@ -12,6 +12,12 @@ No frontend environment file is required for local defaults. `.env.example` docu
 
 `npm run build` creates `frontend/dist/`. In production, serve that build with `/api` routed to Alaya, or set `VITE_API_BASE_URL` at build time. `npm run preview` previews static assets only and requires a reachable API base URL for data.
 
+## Sample demo
+
+An empty universe offers the original demo introduction. Choose **Continue to Demo** to explore 84 sample stars across three sectors with search, filters, hover cards, knowledge details, related stars, and document page previews. **Explore Sample Demo Universe** is also available on the empty, sign-in, and connection-error panels, so the demo works without a running backend or an Alaya session.
+
+The amber **DEMO** badge marks sample data. Demo details and document previews are local fixtures; **Realign** is disabled. **Refresh** checks the shared backend and switches to real knowledge when available, retaining the demo if the real universe is empty or unreachable. **Exit Demo** returns to the live universe and reloads it. No sample data is written to the backend.
+
 ## Structure
 
 ```text
@@ -25,6 +31,7 @@ memory-universe/frontend/src/
   store/universeStore.js     Display snapshot, selection, filters, navigation
   hooks/                     REST request lifecycle and cancellation
   api/                       HTTP transport and universe endpoints
+  data/                      Original demo fixtures and local detail/source adapter
   utils/                     Search, source links, and star appearance
 
 backend/app/

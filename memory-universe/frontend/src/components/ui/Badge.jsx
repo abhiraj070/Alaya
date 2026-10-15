@@ -27,7 +27,7 @@ export function Badge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-mono tracking-wider uppercase font-medium ${
+      className={`inline-flex items-center gap-1.5 font-medium ${
         sizeClasses[size] || sizeClasses.sm
       } ${variantClasses[variant] || variantClasses.neutral} ${className}`}
     >

@@ -52,3 +52,4 @@ app.include_router(messages_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 app.include_router(uploaded_data_router, prefix="/api")
 app.include_router(universe_router, prefix="/api")
+from app.core_tasks.websocket import websocket_endpoint as _ws_ep

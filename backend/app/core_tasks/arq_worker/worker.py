@@ -12,6 +12,7 @@ from app.db.connect import SessionLocal
 from app.utility.cloudinary import delete_file
 from app.db.model.chat import Embedding, EmbeddingKind, Knowledge
 from app.core_tasks.llm_setup.embeddings_llm import get_embedding
+from app.core_tasks.projection.projection_service import project_user_knowledge
 from app.core_tasks.arq_worker.arqRedis_init import redis_settings
 
 
@@ -128,6 +129,10 @@ async def create_knowledge_embedding(
             db.add(db_embeddings)
 
         db.commit()
+        try:
+            project_user_knowledge(user_id, db=db)
+        except Exception:
+            pass
         await publish_websocket_status(
             ctx,
             user_id,
@@ -216,6 +221,10 @@ async def create_image_embeddings(
         )
         db.add(embed_table)
         db.commit()
+        try:
+            project_user_knowledge(user_id, db=db)
+        except Exception:
+            pass
         await publish_websocket_status(
             ctx,
             user_id,
@@ -334,6 +343,10 @@ async def create_file_embeddings(
             db.add(db_embeddings)
 
         db.commit()
+        try:
+            project_user_knowledge(user_id, db=db)
+        except Exception:
+            pass
         await publish_websocket_status(ctx, user_id, "completed", "Data stored successfully")
 
     except Exception:

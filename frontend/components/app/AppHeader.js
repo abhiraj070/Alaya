@@ -12,6 +12,7 @@ export default function AppHeader({
   isCreatingChat = false,
   activeTab = "chat",
   user,
+  onOpenUniverse,
 }) {
   const userName = user?.name || "Your profile";
 
@@ -120,6 +121,7 @@ export default function AppHeader({
           href={process.env.NEXT_PUBLIC_MEMORY_UNIVERSE_URL || "http://localhost:5173"}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => onOpenUniverse?.()}
           className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-accent-sky/30 hover:border-accent-sky/60 bg-accent-sky/10 hover:bg-accent-sky/20 text-accent-sky text-xs font-semibold tracking-wide transition-all duration-200 shadow-xs group"
           title="Open 3D Memory Universe"
         >
