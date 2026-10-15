@@ -138,7 +138,7 @@ export function UniverseView({ universe, detailState }) {
         )}
 
         {error && !isDemo && (
-          <ErrorState error={error} onRetry={refresh} retrying={loading} onExploreDemo={exploreDemo} />
+          <ErrorState error={error} onRetry={refresh} retrying={loading} />
         )}
 
         {!loading && !error && !isDemo && totalStars === 0 && (

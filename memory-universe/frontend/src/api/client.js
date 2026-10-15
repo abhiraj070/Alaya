@@ -18,8 +18,26 @@ export class ApiError extends Error {
   get isUnauthorized() { return this.status === 401; }
 }
 
+export function getStoredToken() {
+  try {
+    if (typeof window !== 'undefined' && window.location?.search) {
+      const params = new URLSearchParams(window.location.search);
+      const tokenFromUrl = params.get('token');
+      if (tokenFromUrl) {
+        window.sessionStorage?.setItem('universe_token', tokenFromUrl);
+        return tokenFromUrl;
+      }
+    }
+    const storage = typeof window !== 'undefined' ? window.sessionStorage : globalThis.sessionStorage;
+    return storage?.getItem('universe_token') || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function apiClient(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
+  const token = getStoredToken();
 
   const config = {
     ...options,
@@ -27,6 +45,7 @@ export async function apiClient(endpoint, options = {}) {
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
   };

@@ -120,3 +120,8 @@ export const uploadedDataApi = {
   getUploads: (id, options) => request(`/api/uploaded_data/get_uploads/${id}`, options),
   deleteUpload: (id) => request(`/api/uploaded_data/delete_upload/${id}`, { method: "DELETE" }),
 };
+
+export const universeApi = {
+  getToken: (options) => request("/api/universe/token", options),
+};
+

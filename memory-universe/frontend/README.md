@@ -13,6 +13,6 @@ See [the Memory Universe README](../README.md) for setup, architecture, data con
 
 Optional environment overrides are listed in [`.env.example`](.env.example). No websocket client is implemented here yet.
 
-The original 84-star demo is available from the empty and error panels via **Explore Sample Demo Universe**. It includes local knowledge details and document previews and works without authentication or a running backend. **Exit Demo** returns to live data; **Refresh** checks for real memories.
+The client reads `/api/universe/uploads` on entry and refresh. Every saved upload becomes a star, without waiting for embeddings or projection. The original 84-star demo is offered only after an authenticated query confirms there are no uploads. Authentication and network failures show errors instead of demo data. **Exit Demo** returns to live data; **Refresh** checks for real uploads.
 
 `src/config.js` owns the link back to Alaya (`VITE_ALAYA_URL`). The original filters, cards, hover previews, and empty/error panels are preserved. The renderer owns its scene resources. Nearby knowledge is ranked by display coordinates and sector; its distance badge reports display units rather than a semantic match percentage.

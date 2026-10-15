@@ -577,13 +577,15 @@ html.light .btn-primary:hover svg,
 /* Guarantee Alaya wordmark L & Y visibility in both light and dark modes */
 html.light [data-wordmark-char="text"],
 .light [data-wordmark-char="text"],
-body.light [data-wordmark-char="text"] {
+body.light [data-wordmark-char="text"],
+html:not(.dark) [data-wordmark-char="text"],
+[data-theme="light"] [data-wordmark-char="text"] {
   color: #000000 !important;
 }
 
 html.dark [data-wordmark-char="text"],
-:root:not(.light) [data-wordmark-char="text"],
-body:not(.light) [data-wordmark-char="text"] {
+body.dark [data-wordmark-char="text"],
+.dark [data-wordmark-char="text"] {
   color: #F5F7FA !important;
 }
 

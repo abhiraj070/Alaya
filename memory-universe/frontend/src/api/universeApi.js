@@ -5,6 +5,10 @@
 import { apiClient } from './client.js';
 
 export const universeApi = {
+  getUploads(options = {}) {
+    return apiClient('/api/universe/uploads', { ...options, cache: 'no-store' });
+  },
+
   getNodes(options = {}) {
     return apiClient('/api/universe/nodes', options);
   },

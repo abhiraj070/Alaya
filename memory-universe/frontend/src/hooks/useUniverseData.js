@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore, useCallback, useRef, useState } from 'react';
 import { universeApi } from '../api/universeApi.js';
+import { getStoredToken } from '../api/client.js';
 import { demoUniverse } from '../data/demoUniverse.js';
 import {
   getState, subscribe, applyUniverseSnapshot,
@@ -19,30 +20,35 @@ export function useUniverseData() {
   const nodesRequest = useRef(null);
   const projectionRequest = useRef(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (allowDemo = true) => {
     nodesRequest.current?.abort();
     const controller = new AbortController();
     nodesRequest.current = controller;
     setLoading(true);
     setError(null);
     setDemoNotice(null);
+    setShowDisclaimer(false);
     try {
-      const data = await universeApi.getNodes({ signal: controller.signal });
+      const uploads = await universeApi.getUploads({ signal: controller.signal });
       if (controller.signal.aborted) return;
-      if (getState().isDemo && data.total_stars === 0) {
+      if (!Array.isArray(uploads)) throw new Error('Invalid upload response from the Alaya backend.');
+      if (uploads.length > 0) {
+        setUploadedData(uploads);
+      } else if (allowDemo !== false || getState().isDemo) {
+        applyUniverseSnapshot(demoUniverse.getNodes(), { isDemo: true });
         setDemoNotice('Your real universe is still empty. You are exploring sample data.');
-      } else {
-        applyUniverseSnapshot(data);
-        setShowDisclaimer(false);
-        if (data.total_stars === 0 && !disclaimerOffered.current) {
+        if (!disclaimerOffered.current) {
           disclaimerOffered.current = true;
           setShowDisclaimer(true);
         }
+      } else {
+        setUploadedData([]);
       }
     } catch (err) {
       if (!controller.signal.aborted) {
-        if (getState().isDemo) setDemoNotice('Could not reach your real universe. The local demo is still available.');
-        else setError(err);
+        // Authentication and network errors never count as an empty database.
+        resetStore();
+        setError(err);
       }
     } finally {
       if (!controller.signal.aborted) setLoading(false);
@@ -68,25 +74,21 @@ export function useUniverseData() {
   }, [refresh]);
 
   const enterDemoMode = useCallback(() => {
-    nodesRequest.current?.abort();
-    projectionRequest.current?.abort();
-    projectionRequest.current = null;
     disclaimerOffered.current = true;
-    setShowDisclaimer(false);
-    setDemoNotice(null);
-    setError(null);
-    setLoading(false);
-    setRecomputing(false);
-    applyUniverseSnapshot(demoUniverse.getNodes(), { isDemo: true });
-  }, []);
+    // Recheck: an upload may have arrived while the introduction was open.
+    return refresh(true);
+  }, [refresh]);
 
   const exitDemoMode = useCallback(() => {
     resetStore();
     setShowDisclaimer(false);
-    refresh();
+    refresh(false);
   }, [refresh]);
 
-  const exploreDemo = useCallback(() => setShowDisclaimer(true), []);
+  const exploreDemo = useCallback(() => {
+    disclaimerOffered.current = false;
+    return refresh();
+  }, [refresh]);
   const dismissDisclaimer = useCallback(() => setShowDisclaimer(false), []);
 
   useEffect(() => {
@@ -106,27 +108,28 @@ export function useUniverseData() {
     const connectWs = () => {
       if (!isMounted) return;
       try {
+        const token = getStoredToken();
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const defaultWsUrl = `${protocol}//${window.location.hostname}:8000/ws?client=universe`;
+        const defaultWsUrl = `${protocol}//${window.location.hostname}:8000/ws?client=universe${token ? `&token=${encodeURIComponent(token)}` : ''}`;
         const envUrl = import.meta.env?.VITE_WS_URL;
         let wsUrl;
         if (envUrl) {
           const parsed = new URL(envUrl, window.location.origin);
           parsed.searchParams.set('client', 'universe');
+          if (token) parsed.searchParams.set('token', token);
           wsUrl = parsed.toString();
         } else {
           wsUrl = defaultWsUrl;
         }
 
         socket = new WebSocket(wsUrl);
-
         socket.onmessage = (event) => {
+          if (!isMounted) return;
           try {
             const message = JSON.parse(event.data);
-            if (message.type === 'uploaded_data' || message.uploaded_data) {
-              const data = message.data || message.uploaded_data || [];
-              setUploadedData(data);
-            }
+            // Treat socket events as invalidations. REST is the sole snapshot writer,
+            // so socket timing and old payloads cannot overwrite a fresh DB result.
+            if (message.type === 'uploaded_data' || message.uploaded_data) refresh();
           } catch {
             // Ignore non-json
           }
@@ -158,7 +161,7 @@ export function useUniverseData() {
         socket.close();
       }
     };
-  }, []);
+  }, [refresh]);
 
   return {
     ...snapshot, loading, error, recomputing, refresh, recompute,

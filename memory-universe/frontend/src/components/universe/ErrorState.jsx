@@ -52,7 +52,7 @@ export function ErrorState({ error, onRetry, retrying = false, onExploreDemo }) 
 
           <p className="text-xs text-[#A1AAB5] leading-relaxed mb-6">
             {isUnauthorized
-              ? 'Memory Universe reads your knowledge securely through Alaya HTTP-only session credentials. Please log into Alaya in your browser.'
+              ? 'Please sign in to Alaya, then reopen Memory Universe using the Memory Universe button.'
               : error?.message || 'An unexpected error occurred while communicating with the backend.'}
           </p>
 
@@ -93,9 +93,11 @@ export function ErrorState({ error, onRetry, retrying = false, onExploreDemo }) 
             )}
           </div>
 
-          <Button variant="secondary" size="md" onClick={onExploreDemo} icon={Compass} className="w-full mt-3">
-            Explore Sample Demo Universe
-          </Button>
+          {onExploreDemo && (
+            <Button variant="secondary" size="md" onClick={onExploreDemo} icon={Compass} className="w-full mt-3">
+              Explore Sample Demo Universe
+            </Button>
+          )}
 
           {error?.status ? (
             <span className="text-[10px] text-[#737D89] mt-6 ">

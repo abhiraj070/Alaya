@@ -11,8 +11,9 @@ import KnowledgeBaseManager from "@/components/app/KnowledgeBaseManager";
 import DeleteChatModal from "@/components/app/DeleteChatModal";
 import { useAuth } from "@/lib/auth-context";
 import { useLocalStorage } from "@/lib/use-local-storage";
-import { chatApi, messagesApi } from "@/lib/api";
+import { chatApi, messagesApi, universeApi } from "@/lib/api";
 import { normalizeChat, normalizeMessages, sortChats } from "@/lib/chat-data";
+import { openMemoryUniverse } from "@/lib/open-universe";
 
 const EMPTY_PINS = [];
 
@@ -42,9 +43,21 @@ function Workspace({ user }) {
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [chatToDelete, setChatToDelete] = useState(null);
   const [isDeletingChat, setIsDeletingChat] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [error, setError] = useState("");
+  const [universeToken, setUniverseToken] = useState(null);
   const createRequest = useRef(false);
   const wsRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    universeApi.getToken().then((res) => {
+      if (isMounted && res?.token) {
+        setUniverseToken(res.token);
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, [user.id]);
 
   useEffect(() => {
     let socket = null;
@@ -55,7 +68,8 @@ function Workspace({ user }) {
       if (!isMounted) return;
       try {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || `${protocol}//${window.location.hostname}:8000/ws?client=app`;
+        const tokenParam = universeToken ? `&token=${encodeURIComponent(universeToken)}` : "";
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || `${protocol}//${window.location.hostname}:8000/ws?client=app${tokenParam}`;
         socket = new WebSocket(wsUrl);
         wsRef.current = socket;
 
@@ -87,12 +101,10 @@ function Workspace({ user }) {
       }
       wsRef.current = null;
     };
-  }, [user.id]);
+  }, [user.id, universeToken]);
 
   const handleOpenUniverse = useCallback(() => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ action: "open_universe" }));
-    }
+    openMemoryUniverse().catch((err) => setError(err.message));
   }, []);
 
   useEffect(() => {

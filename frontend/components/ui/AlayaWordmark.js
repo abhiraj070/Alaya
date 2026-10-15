@@ -6,7 +6,8 @@ export default function AlayaWordmark({ className = "" }) {
       </span>
       <span
         data-wordmark-char="text"
-        className="text-text-primary text-black dark:text-white"
+        className="text-black dark:text-white"
+        style={{ color: "var(--text-primary, #000000)" }}
       >
         L
       </span>
@@ -15,7 +16,8 @@ export default function AlayaWordmark({ className = "" }) {
       </span>
       <span
         data-wordmark-char="text"
-        className="text-text-primary text-black dark:text-white"
+        className="text-black dark:text-white"
+        style={{ color: "var(--text-primary, #000000)" }}
       >
         Y
       </span>

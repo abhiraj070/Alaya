@@ -10,6 +10,8 @@ from app.auth.VerifyJWT import VerifyJWT
 from app.core_tasks.projection.projection_service import project_user_knowledge
 from app.db.connect import get_db
 from app.db.model.chat import Knowledge
+from app.db.model.uploaded_data import UploadedData
+from app.schema.uploaded_data import UploadedDataResponse
 from app.schema.universe import (
     ChunkDetailResponse,
     RecomputeResponse,
@@ -17,8 +19,21 @@ from app.schema.universe import (
     UniverseNode,
     UniverseNodesResponse,
 )
+from app.api.user import generate_tokens
 
 router = APIRouter(prefix="/universe", tags=["universe"])
+
+
+@router.get("/uploads", response_model=list[UploadedDataResponse])
+def get_universe_uploads(
+    authenticated_user_id: Annotated[int, Depends(VerifyJWT)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Read every upload, including records whose knowledge processing is pending."""
+    statement = select(UploadedData).where(
+        UploadedData.user_id == authenticated_user_id,
+    ).order_by(UploadedData.id.asc())
+    return db.execute(statement).scalars().all()
 
 
 def extract_filename_from_url(url: str, fallback: str = "Uploaded Document") -> str:
@@ -197,3 +212,11 @@ def recompute_coordinates(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Coordinate recomputation failed: {str(exc)}",
         )
+
+
+@router.get("/token")
+def get_universe_token(
+    authenticated_user_id: Annotated[int, Depends(VerifyJWT)],
+):
+    tokens = generate_tokens(authenticated_user_id)
+    return {"token": tokens["access_token"]}

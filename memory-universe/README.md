@@ -14,9 +14,9 @@ No frontend environment file is required for local defaults. `.env.example` docu
 
 ## Sample demo
 
-An empty universe offers the original demo introduction. Choose **Continue to Demo** to explore 84 sample stars across three sectors with search, filters, hover cards, knowledge details, related stars, and document page previews. **Explore Sample Demo Universe** is also available on the empty, sign-in, and connection-error panels, so the demo works without a running backend or an Alaya session.
+An authenticated database query must confirm there are no uploads before the demo introduction is offered. The demo contains 84 sample stars across three sectors, with local details and document previews. Entering demo mode rechecks the database, so an upload added while the introduction was open takes priority. Authentication and connection errors are shown as errors and never authorize demo mode.
 
-The amber **DEMO** badge marks sample data. Demo details and document previews are local fixtures; **Realign** is disabled. **Refresh** checks the shared backend and switches to real knowledge when available, retaining the demo if the real universe is empty or unreachable. **Exit Demo** returns to the live universe and reloads it. No sample data is written to the backend.
+The amber **Demo** badge marks sample data. **Refresh** checks the shared backend and replaces the demo whenever at least one upload exists. **Exit Demo** returns to the live universe and reloads it. No sample data is written to the backend.
 
 ## Structure
 
@@ -46,10 +46,12 @@ backend/app/
 ## Data flow and extension point
 
 ```text
-REST adapter -> data hook -> applyUniverseSnapshot(snapshot) -> display store -> 3D view
+GET /api/universe/uploads -> data hook -> setUploadedData(records) -> display store -> 3D view
 ```
 
-`applyUniverseSnapshot` accepts a complete snapshot shaped like `GET /api/universe/nodes`:
+Every click on Alaya's Memory Universe button requests a fresh access token and opens a new client, which reads the authenticated user's `uploaded_data` rows without HTTP caching. One upload produces one star, even before knowledge extraction, embeddings, or projection exist. Upload positions are deterministic display coordinates. Upload details use the upload's own source record; upload IDs are never passed to the knowledge chunk endpoint.
+
+The store also retains `applyUniverseSnapshot`, accepting snapshots shaped like `GET /api/universe/nodes`, for projected knowledge consumers:
 
 ```js
 applyUniverseSnapshot({
@@ -65,12 +67,14 @@ applyUniverseSnapshot({
 });
 ```
 
-A future websocket adapter can call this same function. It replaces the displayed collection, preserves an existing selection, and clears a selection when its node disappears. It does not open a connection, merge deltas, or invent an event protocol. The current websocket implementation is unchanged. Detail loading remains a separate REST request; `UniverseView` receives its data through props and has no transport dependency.
+Universe WebSocket upload messages invalidate the displayed data and trigger the same authenticated REST query. They do not write a second competing snapshot. Request cancellation prevents superseded reads from replacing newer results. `UniverseView` receives its data through props and has no transport dependency.
 
 ## Existing REST endpoints
 
 All routes use Alaya's existing authentication and scope data to the authenticated user.
 
+- `GET /api/universe/uploads`: reads every uploaded source for the authenticated user, including unprocessed uploads. This is the default universe's source of truth.
+- `GET /api/universe/token`: issues the access token used when opening the standalone client.
 - `GET /api/universe/nodes`: reads saved coordinates and summary metadata. It does not run projection or write to the database.
 - `GET /api/universe/chunks/{knowledge_id}`: reads full chunk text and source lineage.
 - `POST /api/universe/recompute`: calculates and commits coordinates before returning `status: "completed"`. The client then refreshes immediately. This is currently a synchronous operation handled in FastAPI's thread pool, not an ARQ job.
