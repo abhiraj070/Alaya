@@ -13,12 +13,12 @@ export default defineConfig({
     host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: process.env.VITE_BACKEND_URL || 'http://localhost:8000',
+        target: process.env.VITE_BACKEND_URL || 'http://localhost:8001',
         changeOrigin: true,
         secure: false,
       },
       '/ws': {
-        target: (process.env.VITE_BACKEND_URL || 'http://localhost:8000').replace(/^http/, 'ws'),
+        target: (process.env.VITE_BACKEND_URL || 'http://localhost:8001').replace(/^http/, 'ws'),
         ws: true,
       },
     },

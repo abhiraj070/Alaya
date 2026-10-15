@@ -49,8 +49,6 @@ export default function Navbar() {
 
         {/* Right: Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
-          <ThemeToggle />
-
           <a
             href={process.env.NEXT_PUBLIC_MEMORY_UNIVERSE_URL || "http://localhost:5173"}
             target="_blank"
@@ -72,6 +70,8 @@ export default function Navbar() {
             </svg>
             <span>Memory Universe</span>
           </a>
+
+          <ThemeToggle />
 
           {isClient && user?.isAuthenticated ? (
             <div className="flex items-center gap-3">
