@@ -128,7 +128,7 @@ async def retrieve_queries(db, user_id: int, queries: list[str], strategies: lis
         elif strategy=="hybrid":
             semantic= semantic_search(db, user_id, embeddings[i]["vector"])
             knowledge_ids= [item["data"]["id"] for item in semantic]
-            data= sql_search(db, user_id, get_plan(queries[i], schema), schema, knowledge_ids)
+            data= sql_search(db, user_id, await get_plan(queries[i], schema), schema, knowledge_ids)
         else:
             raise ValueError("Invalid retrieval strategy")
         similar_question= semantic_to_find_similar_question(db, user_id, message_id, embeddings[i]["vector"])

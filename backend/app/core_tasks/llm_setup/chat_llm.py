@@ -22,3 +22,11 @@ client = AsyncOpenAI(
 )
 MODEL = config["model"]
 VISION_MODEL = "gpt-5.6-luna"
+
+def get_completion_options(model: str, max_tokens: int = 1024, temperature: float = 0.2) -> dict:
+    options= {"max_completion_tokens": max_tokens}
+    if model.startswith(("gpt-5", "gpt-6")):
+        options["reasoning_effort"]= "none"
+    else:
+        options["temperature"]= temperature
+    return options

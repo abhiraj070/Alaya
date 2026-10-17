@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import StreamingResponse
 from app.auth.VerifyJWT import VerifyJWT
-from app.core_tasks.llm_setup.chat_llm import client, MODEL, VISION_MODEL
+from app.core_tasks.llm_setup.chat_llm import client, MODEL, VISION_MODEL, get_completion_options
 from app.core_tasks.llm_setup.embeddings_llm import get_embedding
 from app.core_tasks.arq_worker.get_queue import get_queue
 from app.core_tasks.search.retrieval import retrieve_queries
@@ -59,8 +59,7 @@ async def send_prompt_to_normalize(user_query: str) -> str:
             {"role": "system", "content": f"{normalization_prompt}\nCurrent date: {current_date}"},
             {"role": "user", "content": user_query},
         ],
-        max_tokens=1024,
-        temperature=0.7,
+        **get_completion_options(MODEL, temperature=0.7),
     )
     return response.choices[0].message.content
 
@@ -71,8 +70,7 @@ async def send_prompt_to_standardise(user_queries: list[str]) -> str:
             {"role": "system", "content": f"{structure_knowledge}"},
             {"role": "user", "content": json.dumps(user_queries)},
         ],
-        max_tokens=1024,
-        temperature=0.7,
+        **get_completion_options(MODEL, temperature=0.7),
     )
     return response.choices[0].message.content
 
@@ -96,8 +94,7 @@ async def send_prompt_to_read_image(image_url: str) -> str:
                 ],
             },
         ],
-        max_tokens=1024,
-        temperature=0.7,
+        **get_completion_options(VISION_MODEL, temperature=0.7),
     )
     return response.choices[0].message.content
 
@@ -111,8 +108,7 @@ async def send_prompt_to_decide(user_queries: list[str]) -> list[str]:
             {"role": "system", "content": retrieval_decision_prompt},
             {"role": "user", "content": json.dumps(user_queries)},
         ],
-        max_tokens=1024,
-        temperature=0.2,
+        **get_completion_options(MODEL),
     )
     strategies= json.loads(response.choices[0].message.content)["strategies"]
     if not isinstance(strategies, list) or len(strategies) != len(user_queries) or any(item not in criteria for item in strategies):
@@ -153,8 +149,7 @@ async def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
             {"role": "system", "content": sql_retrieval_prompt},
             {"role": "user", "content": json.dumps({"query": user_query, "schema": schema})},
         ],
-        max_tokens=1024,
-        temperature=0.2,
+        **get_completion_options(MODEL),
     )
     return json.loads(response.choices[0].message.content)
 
@@ -165,8 +160,7 @@ async def send_prompt_for_response(data: list[dict[str,Any]], chat_id: int, user
             {"role": "system", "content": response_prompt},
             {"role": "user", "content": json.dumps(data)},
         ],
-        max_tokens=1024,
-        temperature=0.2,
+        **get_completion_options(MODEL),
         stream=True
     )
     full_response=""
@@ -198,7 +192,7 @@ async def stream_default_response(user_query: str, chat_id: int, user_id: int, d
 
     default_text = (
         f"{greeting}\n\n"
-        "*(Note: OpenAI API credits are currently exhausted. This is a default response so you can test sending, editing, and deleting messages. Once OpenAI credits are refilled, live AI responses with retrieval will resume!)*"
+        "*(The live AI response is unavailable because a request or retrieval step failed. Please try again.)*"
     )
 
     words = default_text.split(" ")

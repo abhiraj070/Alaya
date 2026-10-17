@@ -6,7 +6,7 @@ from app.db.connect import get_db
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.core_tasks.llm_setup.chat_llm import client, MODEL
+from app.core_tasks.llm_setup.chat_llm import client, MODEL, get_completion_options
 from app.schema.chat import ChatResponse, ChatRequest, ChatUpdateRequest
 from app.db.model.chat import Chat
 from app.auth.VerifyJWT import VerifyJWT
@@ -68,8 +68,7 @@ async def update_chat_title(chat_id: int, request: ChatUpdateRequest,
                                           "without quotation marks or explanations."},
             {"role": "user", "content": request.first_chat}
         ],
-        max_tokens=30,
-        temperature=0.2,
+        **get_completion_options(MODEL, max_tokens=30),
     )
     title= response.choices[0].message.content.strip().strip('"')
     if not title:
