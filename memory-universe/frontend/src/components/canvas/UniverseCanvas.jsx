@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, Component } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Starfield } from './Starfield.jsx';
+import { StarConnections } from './StarConnections.jsx';
 import { CosmicDust } from './CosmicDust.jsx';
 import { CelestialGrid } from './CelestialGrid.jsx';
 import { CameraRig } from './CameraRig.jsx';
@@ -211,6 +212,8 @@ export function UniverseCanvas({
 
           {/* Sparse decorative cosmic dust in distant sphere */}
           <CosmicDust count={2500} radiusMin={75} radiusMax={230} />
+
+          <StarConnections nodes={nodes} filteredNodeIds={filteredNodeIds} selectedStarId={selectedStarId} />
 
           {/* Core Knowledge Stars (InstancedMesh) */}
           <Starfield

@@ -60,7 +60,7 @@ function useUploadDraft(kind, onQueued) {
   return { draft, dragging, setDragging, busy, error, inputRef, choose, submit };
 }
 
-export function useKnowledgeBase() {
+export function useKnowledgeBase(onUploadQueued) {
   const { user } = useAuth();
   const userId = user?.id;
   const [items, setItems] = useState([]);
@@ -105,7 +105,7 @@ export function useKnowledgeBase() {
   }, [toast]);
 
   const onQueued = (message) => {
-    setToast({ type: "success", message });
+    onUploadQueued?.(message);
     listRequest.current?.abort();
     const controller = new AbortController();
     listRequest.current = controller;

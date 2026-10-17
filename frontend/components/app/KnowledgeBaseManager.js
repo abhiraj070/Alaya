@@ -6,7 +6,7 @@ import KnowledgeCard from "@/components/app/KnowledgeCard";
 import { getExtBadgeStyle } from "@/lib/knowledge-presentation";
 import { useKnowledgeBase } from "@/lib/use-knowledge-base";
 
-export default function KnowledgeBaseManager() {
+export default function KnowledgeBaseManager({ onUploadQueued }) {
   const {
     items, toast, setToast, activeInputMode, setActiveInputMode, stagedFile, isFileDragging, setIsFileDragging,
     isFilesProcessing, fileProcessingStep, fileError, fileInputRef, handleFileSelected, handleIngestFileSubmit,
@@ -15,7 +15,7 @@ export default function KnowledgeBaseManager() {
     isTextSubmitting, textError, setTextError, tagsList, handleTextSubmit, activeFilter, setActiveFilter, searchQuery, setSearchQuery,
     docCount, imgCount, memCount, filteredItems, searchInputRef, itemToDelete, setItemToDelete, isDeletingItem,
     handleConfirmDelete, isLoadingUploads, deleteError,
-  } = useKnowledgeBase();
+  } = useKnowledgeBase(onUploadQueued);
 
   return (
     <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">

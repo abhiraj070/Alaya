@@ -9,6 +9,7 @@ import Chat from "@/components/app/Chat";
 import ChatEmptyState from "@/components/app/ChatEmptyState";
 import KnowledgeBaseManager from "@/components/app/KnowledgeBaseManager";
 import DeleteChatModal from "@/components/app/DeleteChatModal";
+import ProcessingNotifications from "@/components/app/ProcessingNotifications";
 import { useAuth } from "@/lib/auth-context";
 import { useLocalStorage } from "@/lib/use-local-storage";
 import { chatApi, messagesApi, universeApi } from "@/lib/api";
@@ -46,6 +47,7 @@ function Workspace({ user }) {
   const [deleteError, setDeleteError] = useState("");
   const [error, setError] = useState("");
   const [universeToken, setUniverseToken] = useState(null);
+  const [notifications, setNotifications] = useState([]);
   const createRequest = useRef(false);
   const wsRef = useRef(null);
 
@@ -73,6 +75,21 @@ function Workspace({ user }) {
         socket = new WebSocket(wsUrl);
         wsRef.current = socket;
 
+        socket.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            const data = JSON.parse(event.data);
+            const status = data?.status?.toLowerCase();
+            if (!["completed", "failed"].includes(status) || typeof data.message !== "string") return;
+            const notification = { id: crypto.randomUUID(), status, message: data.message };
+            setNotifications((previous) => {
+              const pendingIndex = previous.findIndex((item) => item.status === "processing");
+              return pendingIndex === -1 ? [...previous, notification]
+                : previous.map((item, index) => index === pendingIndex ? { ...notification, id: item.id } : item);
+            });
+          } catch {}
+        };
+
         socket.onclose = () => {
           wsRef.current = null;
           if (isMounted) {
@@ -96,6 +113,7 @@ function Workspace({ user }) {
       isMounted = false;
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (socket) {
+        socket.onmessage = null;
         socket.onclose = null;
         socket.close();
       }
@@ -225,6 +243,8 @@ function Workspace({ user }) {
 
   return (
     <div className="relative flex h-screen w-screen overflow-hidden bg-bg-primary text-text-primary selection:bg-accent-sky/25 selection:text-text-primary">
+      <ProcessingNotifications notifications={notifications}
+        onDismiss={(id) => setNotifications((previous) => previous.filter((notification) => notification.id !== id))} />
       <Sidebar {...navigation} isCollapsed={isSidebarCollapsed} onToggleCollapse={toggleSidebar}
         sidebarWidth={dragWidth ?? Math.min(460, Math.max(220, Number(sidebarWidth) || 260))}
         isResizing={isResizing} onStartResize={(event) => { event.preventDefault(); setIsResizing(true); }}
@@ -238,7 +258,9 @@ function Workspace({ user }) {
           {error}<button type="button" onClick={() => window.location.reload()} className="underline">Retry</button>
         </div>}
         <main id="main-workspace-content" className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-primary transition-all duration-300 motion-reduce:transition-none" aria-label={activeTab === "chat" ? "Ask workspace" : "Knowledge base"}>
-          {activeTab === "knowledge" ? <div className="flex-1 min-h-0 overflow-y-auto chat-scrollbar flex flex-col"><KnowledgeBaseManager /></div>
+          {activeTab === "knowledge" ? <div className="flex-1 min-h-0 overflow-y-auto chat-scrollbar flex flex-col"><KnowledgeBaseManager
+              onUploadQueued={() => setNotifications((previous) => [...previous,
+                { id: crypto.randomUUID(), status: "processing", message: "Your data is being processed. You can keep using Alaya." }])} /></div>
             : isLoadingChats || isLoadingMessages ? <div className="flex-1 flex flex-col items-center justify-center gap-3 animate-fadeIn">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-sky border-t-transparent" role="status" aria-label="Loading conversation..." />
                 <span className="text-xs text-text-muted font-medium">{isLoadingChats ? "Loading chats..." : "Loading messages..."}</span>
