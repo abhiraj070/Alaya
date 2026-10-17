@@ -388,7 +388,7 @@ curl -b cookies.txt -X POST \
   -F 'file=@notes.pdf'
 ```
 
-The API returns HTTP `201` with `{"message":"File queued for processing"}` after saving the file under a generated filename in `temp_files/` and queueing `create_file_embeddings`. Processing happens in the worker; completion or failure is reported over the WebSocket.
+The API returns HTTP `201` with `{"message":"File queued for processing"}` after saving a temporary file, uploading the original to Cloudinary, persisting an `UploadedData` record, and queueing `create_file_embeddings`. The saved upload can appear in Memory Universe before extraction and embedding finish. Processing happens in the worker; completion or failure is reported over the WebSocket.
 
 `app/core_tasks/extraction/extractor.py` dispatches local file paths by extension:
 
@@ -415,6 +415,7 @@ The worker deletes the local file in its cleanup block after success or failure.
 - **Chat** groups messages for one user.
 - **Message** stores user/LLM content, its sender, owner, and creation time.
 - **Knowledge** stores a normalized text fact, extracted image content, or document chunk, together with its dynamic JSONB metadata, fact type, and owner.
+- **UploadedData** stores the original text or uploaded file URL, content type, format tag, owner, and creation time. It is the default Memory Universe view's source of truth and can exist without any processed knowledge.
 - **Embedding** links a 1,536-dimensional vector to either a message or knowledge record.
 - **KnowledgeCoordinate** in `backend/app/db/model/universe.py` stores one saved 3D position per knowledge chunk in `knowledge_coordinates`.
 
@@ -422,34 +423,38 @@ Deleting a user cascades to chats and messages at the ORM level. Deleting a chat
 
 ## Configuration notes
 
-- CORS currently targets a local frontend at `http://localhost:3000`.
+- CORS permits local Alaya and Universe origins on ports 3000, 3001, and 5173, using either `localhost` or `127.0.0.1`.
 - The active chat provider is OpenAI. A Grok provider configuration exists in `app/core_tasks/llm_setup/chat_llm.py` but is not selected.
-- Access and refresh tokens currently expire after 15 minutes and 30 days respectively; these durations are hard-coded in token generation even though matching environment settings exist.
+- Access and refresh token lifetimes use `ACCESS_TOKEN_EXPIRE_MINUTES` and `REFRESH_TOKEN_EXPIRE_DAYS`. Restart backend processes after changing settings.
 - Login cookies use `secure=False` for local HTTP development. Production deployments should enable secure cookies and use HTTPS.
-- WebSocket connections currently allow only the local frontend origin `http://localhost:3000`.
+- Additional deployment origins must be configured in both the HTTP CORS and WebSocket origin allowlists.
 
 ## Current limitations
 
-- The message-update handler calls the async retrieval function without awaiting it, so its streamed response is currently broken.
 - Usernames are not currently declared unique at the database level.
-- Refresh-token rotation and a refresh endpoint are not implemented; the database refresh-token field is not populated during login.
+- Login stores the refresh token, but a refresh endpoint and refresh-token rotation are not implemented. Sign in again when the access token expires.
 - The request schemas contain some fields that are ignored by the handlers (for example, the supplied chat title and message user ID).
 - Document uploads are chunked, but direct text ingestion through `feed_knowledge` does not yet chunk large inputs.
 - Document uploads have no file-size limit or extension validation before queueing. Scanned PDFs require OCR, which is not implemented.
 - Document jobs require a shared filesystem, request all embeddings in one batch, and use the default ARQ timeout. Very large documents may exceed processing limits.
 - File cleanup depends on the worker's cleanup block running; an abrupt process termination can leave temporary files behind.
 - Active WebSocket connections and Redis pub/sub notifications are not durable; reconnecting clients do not receive missed notifications.
-- There is no automated test suite or containerized full-stack development environment yet.
+- The current checkout has no `backend/tests/`, `frontend/tests/`, or `memory-universe/frontend/tests/` directories. Both frontend packages retain `npm test` scripts targeting missing files; they are not a working regression suite in this checkout.
+- A containerized full-stack development environment is not included.
 
 These constraints make the current code suitable for local development and experimentation, not a production deployment.
 
 ## Development checks
 
-Run a fast syntax check across the application and migration code:
+From `backend/`, run a fast syntax check across the application and migration code:
 
 ```bash
 python -m compileall app alembic
 ```
+
+From `frontend/`, run `npm run lint` and `npm run build`. From `memory-universe/frontend/`, run `npm run build` and optionally `npm run benchmark`. The benchmark uses synthetic data; it is not an end-to-end application test.
+
+For a manual Universe check, open it from a signed-in Alaya session: at least one saved upload must show real stars; a confirmed empty upload list must show sample data; an authentication or connection failure must show an error. Upload processing and knowledge retrieval additionally require a running ARQ worker and configured external services.
 
 When changing the database models, create and inspect a real Alembic revision before applying it:
 

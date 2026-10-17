@@ -5,8 +5,8 @@ The standalone 3D client for Alaya. Keep one backend, one database, and one coor
 ## Run locally
 
 1. Configure the main backend using the repository README. From `backend/`, install `requirements.txt`, run `alembic upgrade head`, and start `uvicorn app.main:app --reload --port 8000`. Start Redis and the existing ARQ worker as required by Alaya.
-2. Log in through the Alaya frontend at `http://localhost:3000`. Use `localhost` consistently for the frontend, API, and universe so the session cookie is available.
-3. From `memory-universe/frontend/`, run `npm ci` and `npm run dev`. Open `http://localhost:5173`.
+2. From `memory-universe/frontend/`, run `npm ci` and `npm run dev` to start the 3D client at `http://localhost:5173`.
+3. Start the Alaya frontend, sign in at `http://localhost:3000`, and click **Memory Universe**. The button requests a fresh token before opening a new tab. Use `localhost` consistently rather than mixing it with `127.0.0.1` for cookie-based sessions.
 
 No frontend environment file is required for local defaults. `.env.example` documents optional overrides. `/api` is proxied to the main backend. If an existing `.env` points `VITE_API_BASE_URL` at the old port 8001, remove that override or change it to the main backend.
 
@@ -14,7 +14,7 @@ No frontend environment file is required for local defaults. `.env.example` docu
 
 ## Sample demo
 
-An authenticated database query must confirm there are no uploads before the demo introduction is offered. The demo contains 84 sample stars across three sectors, with local details and document previews. Entering demo mode rechecks the database, so an upload added while the introduction was open takes priority. Authentication and connection errors are shown as errors and never authorize demo mode.
+An authenticated database query must confirm there are no uploads before sample data and the demo introduction appear. The demo contains 84 sample stars across three sectors, with local details and document previews. Choosing **Explore Universe** in the introduction rechecks the database, so an upload added while the introduction was open takes priority. Authentication and connection errors are shown as errors and never authorize demo mode.
 
 The amber **Demo** badge marks sample data. **Refresh** checks the shared backend and replaces the demo whenever at least one upload exists. **Exit Demo** returns to the live universe and reloads it. No sample data is written to the backend.
 
@@ -23,9 +23,9 @@ The amber **Demo** badge marks sample data. **Refresh** checks the shared backen
 ```text
 memory-universe/frontend/src/
   App.jsx                    Connects the data hooks to the view
-  UniverseView.jsx           Layout, selection, hover, search, and filters
+  UniverseView.jsx           Layout, selection, hover, search, and dialogs
   components/canvas/         Existing Three.js scene and camera controls
-  components/navigation/     Search and filter controls
+  components/navigation/     Header and search controls
   components/universe/       Hover, detail drawer, and load/error states
   components/ui/             Shared display primitives
   store/universeStore.js     Display snapshot, selection, filters, navigation
@@ -79,23 +79,21 @@ All routes use Alaya's existing authentication and scope data to the authenticat
 - `GET /api/universe/chunks/{knowledge_id}`: reads full chunk text and source lineage.
 - `POST /api/universe/recompute`: calculates and commits coordinates before returning `status: "completed"`. The client then refreshes immediately. This is currently a synchronous operation handled in FastAPI's thread pool, not an ARQ job.
 
-Use **Project** or **Realign** when knowledge has no coordinates. Small datasets use deterministic positions; larger datasets use UMAP and KMeans. Raw embeddings stay on the backend.
+The projection endpoint is separate from the default upload view. It uses deterministic positions for small knowledge datasets and UMAP/KMeans for larger datasets. Raw embeddings stay on the backend. Running projection is not required to display uploaded records.
 
 ## Checks
 
 From `memory-universe/frontend/`:
 
 ```sh
-npm test
 npm run build
 npm run benchmark
 ```
 
-From `backend/`, with its dependencies and settings available:
+From `backend/`:
 
 ```sh
-python -m unittest discover -s tests -p test_universe.py
 python -m compileall -q app
 ```
 
-The focused backend tests do not connect to PostgreSQL or Redis. The existing lineage integration tests require a configured database.
+The frontend's `npm test` script targets `tests/*.test.js`, but no test files are included in the current checkout; `backend/tests/` is also absent. For a manual check, verify one saved upload renders, an empty account loads the demo, and a failed request shows an error. The benchmark is synthetic and does not verify authentication or database access.
