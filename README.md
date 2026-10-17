@@ -131,6 +131,30 @@ Alaya/
 - A TypeSafe API key for retrieval-strategy classification
 - Cloudinary credentials for image and document uploads (also required by settings at startup)
 
+## Docker Compose
+
+Create `backend/.env` with the API keys and application settings described below, then run from the repository root:
+
+```bash
+docker compose up --build -d
+docker compose ps -a
+docker compose logs -f backend worker
+```
+
+Open Alaya at `http://localhost:3000`, then use its **Memory Universe** button to open the 3D client at `http://localhost:5173`. The API documentation is at `http://localhost:8000/docs`. Stop any local development servers using these ports before starting the Compose stack.
+
+Compose starts PostgreSQL with pgvector, Redis, a one-shot Alembic migration, the API, the ARQ worker, and both frontends. The API and worker wait for migrations to succeed and Redis to become healthy. The frontends wait for the API health check. The API and worker use the same backend image and share `/app/temp_files` so document jobs can read uploaded files.
+
+PostgreSQL and Redis are available only inside the Compose network. PostgreSQL data, Redis queue data, and shared document files use named volumes. This setup uses its own PostgreSQL database, overriding `backend/.env`'s `DATABASE_URL`; existing host or remote database records are not copied. Optional `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` values are read from the root `.env` or shell, defaulting to `postgres`, `postgres`, and `alaya`. If changing credentials, use URL-safe values because they are interpolated into the database URL.
+
+Frontend API requests are proxied to the `backend` service. `NEXT_PUBLIC_MEMORY_UNIVERSE_URL` can override the link at image build time; use a browser-reachable address, not a Compose service name. Custom browser origins also require updating the backend's CORS and WebSocket allowlists.
+
+```bash
+docker compose down
+```
+
+This stops the stack while retaining its named volumes. The Next.js image runs its standalone server; the Universe image serves its static build through Nginx. Environment files and local dependency directories are excluded from image build contexts.
+
 ## Local setup
 
 ### 1. Create and activate a virtual environment
@@ -440,7 +464,6 @@ Deleting a user cascades to chats and messages at the ORM level. Deleting a chat
 - File cleanup depends on the worker's cleanup block running; an abrupt process termination can leave temporary files behind.
 - Active WebSocket connections and Redis pub/sub notifications are not durable; reconnecting clients do not receive missed notifications.
 - The current checkout has no `backend/tests/`, `frontend/tests/`, or `memory-universe/frontend/tests/` directories. Both frontend packages retain `npm test` scripts targeting missing files; they are not a working regression suite in this checkout.
-- A containerized full-stack development environment is not included.
 
 These constraints make the current code suitable for local development and experimentation, not a production deployment.
 
