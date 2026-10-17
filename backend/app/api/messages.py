@@ -46,6 +46,7 @@ normalization_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_pro
 structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "structure_knowledge_metadeta.md").read_text(encoding="utf-8")
 criteria= json.loads((Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "criteria_decision.md").read_text(encoding="utf-8"))
 instruction= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "instruction_decision.md").read_text(encoding="utf-8")
+retrieval_decision_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "retrieval_decision.md").read_text(encoding="utf-8")
 sql_retrieval_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "sql_retrieval.md").read_text(encoding="utf-8")
 response_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "response_prompt.md").read_text(encoding="utf-8")
 image_read_prompt=(Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "read_image.md").read_text(encoding="utf-8")
@@ -103,7 +104,28 @@ async def send_prompt_to_read_image(image_url: str) -> str:
 
 
 
+async def send_prompt_to_decide(user_queries: list[str]) -> list[str]:
+    response = await client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": retrieval_decision_prompt},
+            {"role": "user", "content": json.dumps(user_queries)},
+        ],
+        max_tokens=1024,
+        temperature=0.2,
+    )
+    strategies= json.loads(response.choices[0].message.content)["strategies"]
+    if not isinstance(strategies, list) or len(strategies) != len(user_queries) or any(item not in criteria for item in strategies):
+        raise ValueError("Invalid retrieval strategies")
+    return strategies
+
+
 async def decide_retrieval_strategy(user_queries: list[str]) -> list[str]:
+    try:
+        return await send_prompt_to_decide(user_queries)
+    except Exception:
+        pass
+
     strategies: list[str] = []
 
     async with AsyncTypeSafeClient(api_key=settings.TYPESAFE_API_KEY) as jev_client:
