@@ -1,6 +1,6 @@
 # Alaya
 
-Alaya is a personal knowledge and conversational retrieval API. It lets each user store free-form facts, converts those facts into structured metadata and vector embeddings, and answers later questions using semantic search, deterministic PostgreSQL queries, or a combination of both.
+Alaya is a personal knowledge platform with a Next.js workspace, a standalone Memory Universe 3D client, and one shared FastAPI backend. It stores text, images, and documents, turns their content into structured knowledge and vector embeddings, and answers questions using semantic search, PostgreSQL queries, or a combination of both.
 
 The backend is built with FastAPI, PostgreSQL/pgvector, Redis, ARQ, SQLAlchemy, and OpenAI.
 
@@ -23,6 +23,19 @@ The [Alaya frontend](frontend/README.md) and standalone [Memory Universe 3D clie
 - Reports background text, image, and document-processing status over WebSockets.
 - Chooses semantic, SQL, or hybrid retrieval for each question.
 - Streams an LLM-generated response back to the client.
+- Displays saved uploads as interactive stars in Memory Universe, including uploads that have not been processed yet.
+
+## Memory Universe
+
+Start the [3D client](memory-universe/README.md), sign in to Alaya, and click **Memory Universe** in the workspace. Each click requests a fresh access token and opens the standalone client. The client queries the authenticated user's `uploaded_data` records through `GET /api/universe/uploads`, without HTTP caching.
+
+- Every saved upload becomes a star, even if there is only one record and no processed knowledge or embeddings exist.
+- Documents are red, images are blue, and text entries are yellow; hover and selection highlights temporarily override these colors.
+- A successful empty response loads the 84-star sample universe and its introduction. Real uploads always take priority, including when entering or refreshing the demo.
+- Authentication and connection failures show an error; they never count as an empty database.
+- WebSocket upload messages trigger the same REST refresh. Initial loading works independently of WebSocket delivery.
+
+Upload positions are deterministic display coordinates. They do not require the separate knowledge projection pipeline or represent measured semantic similarity. Upload details retain their own source IDs; they are not looked up as knowledge chunk IDs.
 
 ## How the retrieval pipeline works
 
@@ -64,6 +77,8 @@ All knowledge and retrieval queries are scoped to the authenticated user.
 | Layer | Technology |
 | --- | --- |
 | API | FastAPI, Uvicorn |
+| Alaya frontend | Next.js, React, Tailwind CSS |
+| Memory Universe | Vite, React Three Fiber, Three.js, Tailwind CSS |
 | Validation | Pydantic |
 | Database | PostgreSQL, SQLAlchemy |
 | Vector search | pgvector (`vector(1536)`) |
@@ -75,35 +90,35 @@ All knowledge and retrieval queries are scoped to the authenticated user.
 | Image extraction | OpenAI vision model configured by `VISION_MODEL` |
 | Embeddings | OpenAI `text-embedding-3-small` |
 | Retrieval classification | JEV through the TypeSafe SDK |
-| Image storage | Cloudinary |
+| Uploaded file storage | Cloudinary |
 | Document extraction | PyMuPDF, python-docx, pandas, openpyxl, python-pptx |
 
 ## Project structure
 
 ```text
-alaya/
-├── alembic/                     # Database migration environment and revisions
-├── app/
-│   ├── api/                     # User, chat, and message/knowledge endpoints
-│   ├── auth/                    # JWT request dependency
-│   ├── core_tasks/
-│   │   ├── arq_worker/          # ARQ queue configuration and background jobs
-│   │   ├── chunking/            # Recursive text splitting and overlap
-│   │   ├── extraction/          # Local document and tabular text extractors
-│   │   ├── llm_setup/           # Chat and embedding model clients
-│   │   ├── redis_pubsub/        # Native Redis client and notification listener
-│   │   ├── search/              # Semantic, SQL, and hybrid retrieval
-│   │   ├── websocket/           # WebSocket endpoint and active connections
-│   │   └── system_prompts/      # Prompts used by the retrieval pipeline
-│   ├── db/
-│   │   ├── model/               # SQLAlchemy models
-│   │   └── connect.py           # Engine and session setup
-│   ├── env_config/              # Environment-backed settings
-│   ├── schema/                  # Pydantic request/response models
-│   ├── utility/                 # Cloudinary upload and deletion helpers
-│   └── main.py                  # FastAPI application entry point
-├── alembic.ini
-└── requirements.txt
+Alaya/
+├── backend/
+│   ├── app/
+│   │   ├── api/                # Users, chats, messages, uploads, and universe routes
+│   │   ├── auth/               # JWT verification
+│   │   ├── core_tasks/         # Ingestion, extraction, chunking, retrieval, projection,
+│   │   │                      # ARQ jobs, Redis notifications, and WebSockets
+│   │   ├── db/                 # SQLAlchemy models, engine, and sessions
+│   │   ├── env_config/         # Environment-backed settings
+│   │   ├── schema/             # Pydantic request/response models
+│   │   ├── utility/            # Cloudinary helpers
+│   │   └── main.py             # Shared FastAPI application
+│   ├── alembic/                # Database migrations
+│   ├── alembic.ini
+│   └── requirements.txt
+├── frontend/                   # Next.js Alaya workspace, auth, profile, and uploads
+│   ├── app/
+│   ├── components/
+│   └── lib/
+└── memory-universe/
+    └── frontend/               # Standalone Vite 3D client
+        ├── src/                # Scene, views, hooks, store, API, and demo fixtures
+        └── public/fonts/       # Locally hosted Inter font and license
 ```
 
 ## Prerequisites
@@ -111,15 +126,19 @@ alaya/
 - Python 3.10 or newer for the source syntax; the existing local environment uses Python 3.14. Check that the pinned dependencies support your chosen version.
 - PostgreSQL with the [pgvector](https://github.com/pgvector/pgvector) extension available
 - Redis
+- Node.js and npm for the two frontends; use a Node.js version supported by the checked-in Next.js and Vite versions.
 - An OpenAI API key
 - A TypeSafe API key for retrieval-strategy classification
-- Cloudinary credentials for image uploads (also required by settings at startup)
+- Cloudinary credentials for image and document uploads (also required by settings at startup)
 
 ## Local setup
 
 ### 1. Create and activate a virtual environment
 
+Run backend setup commands from `backend/`:
+
 ```bash
+cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -128,6 +147,7 @@ pip install -r requirements.txt
 On Windows PowerShell, create and activate the environment with:
 
 ```powershell
+cd backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
@@ -135,12 +155,12 @@ python -m pip install -r requirements.txt
 
 ### 2. Configure environment variables
 
-Create a `.env` file in the repository root:
+Create `backend/.env`. The backend loads `.env` relative to its working directory:
 
 ```dotenv
 DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/alaya
 SECRET_KEY=replace-with-a-long-random-secret
-ACCESS_TOKEN_EXPIRE_MINUTES=15
+ACCESS_TOKEN_EXPIRE_MINUTES=10080
 REFRESH_TOKEN_EXPIRE_DAYS=30
 OPENAI_API_KEY=your-openai-api-key
 XAI_API_KEY=
@@ -152,7 +172,7 @@ CLOUDINARY_API_KEY=your-cloudinary-api-key
 CLOUDINARY_API_SECRET=your-cloudinary-api-secret
 ```
 
-`DATABASE_URL`, `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`, `OPENAI_API_KEY`, `TYPESAFE_API_KEY`, and the three `CLOUDINARY_*` values are currently required when the application imports its settings. `XAI_API_KEY` is optional and reserved for the configured Grok provider.
+`DATABASE_URL`, `SECRET_KEY`, `OPENAI_API_KEY`, `TYPESAFE_API_KEY`, and the three `CLOUDINARY_*` values are required when the application imports its settings. Token lifetimes default to 10,080 minutes (seven days) for access tokens and 30 days for refresh tokens. `XAI_API_KEY` is optional and reserved for the configured Grok provider.
 
 Do not commit `.env`; it is already excluded by `.gitignore`.
 
@@ -195,12 +215,32 @@ ARQ worker:
 arq app.core_tasks.arq_worker.worker.WorkerSettings
 ```
 
-Run the API and worker against the same local filesystem. Document jobs receive an absolute file path, so the worker must be able to read the API's `temp_files/` directory. Run both commands from the repository root so they load the same `.env`.
+Run the API and worker against the same local filesystem. Document jobs receive an absolute file path, so the worker must be able to read the API's `temp_files/` directory. Run both commands from `backend/` so they load the same `.env`.
 
 The API is available at `http://127.0.0.1:8000`. Interactive documentation is available at:
 
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - ReDoc: `http://127.0.0.1:8000/redoc`
+
+### 6. Start both frontends
+
+In separate terminals, starting from the repository root:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+```bash
+cd memory-universe/frontend
+npm ci
+npm run dev
+```
+
+Open Alaya at `http://localhost:3000`, register or sign in, then click **Memory Universe** to open `http://localhost:5173`. Allow the new tab if your browser blocks it. The API runs on port 8000; both clients use this same backend. Use `localhost` consistently rather than mixing it with `127.0.0.1` for cookie-based sessions.
+
+The frontends proxy `/api` to the backend in development. Their optional settings are documented in [frontend/.env.example](frontend/.env.example) and [memory-universe/frontend/.env.example](memory-universe/frontend/.env.example). A separate backend on port 8001 is not required.
 
 ## API overview
 
@@ -213,7 +253,6 @@ HTTP routes are mounted under `/api`. The WebSocket endpoint is available separa
 | `POST` | `/api/user/register` | Register a user |
 | `POST` | `/api/user/login` | Log in and set access/refresh cookies |
 | `GET` | `/api/user/get_user/{user_id}` | Fetch one user |
-| `GET` | `/api/user/get_users` | List users |
 | `PUT` | `/api/user/update_user/{user_id}` | Update a user |
 | `DELETE` | `/api/user/delete_user/{user_id}` | Delete a user |
 | `PUT` | `/api/user/logout/{user_id}` | Clear authentication cookies |
@@ -234,7 +273,7 @@ HTTP routes are mounted under `/api`. The WebSocket endpoint is available separa
 | --- | --- | --- | --- |
 | `POST` | `/api/messages/new_messages/{chat_id}` | Required | Store a question, retrieve context, and stream a response |
 | `GET` | `/api/messages/get_messages/{chat_id}` | Required | List messages in a chat |
-| `PUT` | `/api/messages/update_message/{chat_id}/{message_id}` | Required | Edit a message and regenerate embeddings; response streaming needs an async fix |
+| `PUT` | `/api/messages/update_message/{chat_id}/{message_id}` | Required | Edit a message, regenerate embeddings, and stream a response |
 | `DELETE` | `/api/messages/delete_message/{message_id}` | Required | Delete a message |
 | `POST` | `/api/messages/feed_knowledge` | Required | Queue raw text for normalization, metadata extraction, and embedding |
 | `POST` | `/api/messages/image_upload` | Required | Upload an image and enqueue background extraction and embedding |
@@ -246,19 +285,36 @@ Protected routes accept either an `access_token` cookie or this header:
 Authorization: Bearer <access-token>
 ```
 
+### Uploaded records and Memory Universe
+
+All routes below require authentication and scope records to the authenticated user.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/uploaded_data/get_uploads/{user_id}` | List the user's saved uploads |
+| `DELETE` | `/api/uploaded_data/delete_upload/{upload_id}` | Delete an owned upload record |
+| `GET` | `/api/universe/token` | Issue an access token for opening Memory Universe |
+| `GET` | `/api/universe/uploads` | Read every owned upload; default 3D view's source of truth |
+| `GET` | `/api/universe/nodes` | Read processed knowledge with saved 3D coordinates |
+| `GET` | `/api/universe/chunks/{knowledge_id}` | Read a processed knowledge chunk and its source lineage |
+| `POST` | `/api/universe/recompute` | Calculate and commit coordinates for processed knowledge |
+
+Deleting an upload history record does not currently delete its indexed knowledge. The default upload view does not depend on the projection endpoints.
+
 ### WebSocket notifications
 
-Connect to the WebSocket endpoint with an access-token cookie or, for clients that support custom headers, an `Authorization: Bearer <access-token>` header. The authenticated token determines which user's notifications are delivered:
+Connect with an access-token cookie, an `Authorization: Bearer <access-token>` header where supported, or the `token` query parameter used by the standalone client. The authenticated token determines the user:
 
 ```text
-ws://localhost:8000/ws
+ws://localhost:8000/ws?client=app
+ws://localhost:8000/ws?client=universe&token=<access-token>
 ```
 
-Browser connections are accepted only when the `Origin` header is exactly `http://localhost:3000`. Missing or different origins are rejected with WebSocket policy-violation code `1008`.
+When a browser supplies an `Origin`, it must match the configured local allowlist: `http://localhost` or `http://127.0.0.1` on ports 3000, 3001, or 5173. Other supplied origins are rejected with policy-violation code `1008`. Missing origins are currently accepted after authentication.
 
-For browser clients, log in through `http://localhost:8000` so the cookie is available on the same host as the WebSocket. A `user_id` query parameter does not select the notification recipient.
+Log in through the Alaya frontend. Cookies are shared across ports on the same hostname; `localhost` and `127.0.0.1` are different hosts. Alaya's Memory Universe button obtains a fresh token and passes it to the standalone client, which stores it in the tab's session storage and attaches it to REST requests. A `user_id` query parameter does not select the notification recipient.
 
-The API process uses a native `redis.asyncio.Redis` client to subscribe to the Redis `websocket_messages` channel, while an ARQ pool handles queued jobs. After an ARQ text, image, or document job finishes, the worker publishes a status message and the API forwards it to the active socket for that user. Client messages are currently ignored; the connection is receive-only from the client's perspective.
+The API process uses a native `redis.asyncio.Redis` client to subscribe to the Redis `websocket_messages` channel, while an ARQ pool handles queued jobs. After an ARQ job finishes, the worker publishes a status message and the API forwards it to the user's app socket. Universe connections receive an `uploaded_data` snapshot on connection. Client actions `open_universe` and `get_uploaded_data` request a fresh upload broadcast to that user's connected universe sockets; the universe client uses these messages to trigger its authoritative REST refresh.
 
 Example server message:
 
