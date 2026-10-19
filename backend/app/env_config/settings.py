@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
     MODEL: str
+    ALAYA_ACCESS_TOKEN: str
 
 @lru_cache
 def get_settings():

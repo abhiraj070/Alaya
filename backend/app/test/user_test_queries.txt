@@ -1,0 +1,29 @@
+1. wat was my favrite progrmming language and wen did i start learning it?
+
+2. How many purchases did I make yesterday, what did I spend last month, and what was I working on recently?
+
+3. I like Python, Java, and Go, but I don't like PHP or Ruby.
+
+4. Find all my projects involving Python, PostgreSQL, and machine learning, and compare their recorded completion dates.
+
+5. What did I discuss last week, and what did I discuss a week ago?
+
+6. How many purchases did I record in 2025, and what was the total amount spent on laptops during 2025?
+
+7. What approach did I consider for making my memory visualization more meaningful, and what problem was I trying to solve?
+
+8. Find the conversations where I discussed reducing API costs, then calculate the total recorded API spending associated with those conversations.
+
+9. What was the serial number of the laptop I bought in 2025?
+
+10. I preferred Python in January 2026, but by September 2026 I preferred Java instead. What was my preference in each month, and when did it change?
+
+11. Rahul told Amit that he preferred Python. What was his favorite programming language?
+
+12. What projects did I work on in June, and how many tasks did I complete in June?
+
+13. What was the name of the mobile app I launched in 2024?
+
+14. I bought 3 monitors for ₹24,000 on October 12, 2026, and sold one monitor for ₹7,000 on October 18, 2026.
+
+15. hey, wat did i spend on laptops last month, which projects did i discuss recently, how many purchases did i make last week, and do i still prefer Python over Java?
