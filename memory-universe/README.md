@@ -36,7 +36,7 @@ memory-universe/frontend/src/
 
 backend/app/
   api/universe.py                         Authenticated universe REST routes
-  schema/universe.py                      Response contracts
+  schema/uploaded_data.py                 Upload response contract
   db/model/universe.py                    KnowledgeCoordinate model
   core_tasks/projection/projection_service.py  Embeddings to display coordinates
 ```
@@ -49,9 +49,9 @@ backend/app/
 GET /api/universe/uploads -> data hook -> setUploadedData(records) -> display store -> 3D view
 ```
 
-Every click on Alaya's Memory Universe button requests a fresh access token and opens a new client, which reads the authenticated user's `uploaded_data` rows without HTTP caching. One upload produces one star, even before knowledge extraction, embeddings, or projection exist. Upload positions are deterministic display coordinates. Upload details use the upload's own source record; upload IDs are never passed to the knowledge chunk endpoint.
+Every click on Alaya's Memory Universe button requests a fresh access token and opens a new client, which reads the authenticated user's `uploaded_data` rows without HTTP caching. One upload produces one star, even before knowledge extraction, embeddings, or projection exist. Upload positions are deterministic display coordinates. Upload details use the upload's own source record and require no additional endpoint.
 
-The store also retains `applyUniverseSnapshot`, accepting snapshots shaped like `GET /api/universe/nodes`, for projected knowledge consumers:
+The store uses `applyUniverseSnapshot` to display nodes built from uploaded records or local demo fixtures:
 
 ```js
 applyUniverseSnapshot({
@@ -63,11 +63,10 @@ applyUniverseSnapshot({
     created_at: '2026-10-15T00:00:00Z',
   }],
   total_stars: 1,
-  unprojected_count: 0,
 });
 ```
 
-Universe WebSocket upload messages invalidate the displayed data and trigger the same authenticated REST query. They do not write a second competing snapshot. Request cancellation prevents superseded reads from replacing newer results. `UniverseView` receives its data through props and has no transport dependency.
+Universe fetches through REST on entry, when its tab regains focus, and when Refresh is clicked. It does not open a WebSocket connection. Request cancellation prevents superseded reads from replacing newer results. Alaya's separate WebSocket connection still receives background-processing notifications. `UniverseView` receives its data through props and has no transport dependency.
 
 ## Existing REST endpoints
 
@@ -75,11 +74,8 @@ All routes use Alaya's existing authentication and scope data to the authenticat
 
 - `GET /api/universe/uploads`: reads every uploaded source for the authenticated user, including unprocessed uploads. This is the default universe's source of truth.
 - `GET /api/universe/token`: issues the access token used when opening the standalone client.
-- `GET /api/universe/nodes`: reads saved coordinates and summary metadata. It does not run projection or write to the database.
-- `GET /api/universe/chunks/{knowledge_id}`: reads full chunk text and source lineage.
-- `POST /api/universe/recompute`: calculates and commits coordinates before returning `status: "completed"`. The client then refreshes immediately. This is currently a synchronous operation handled in FastAPI's thread pool, not an ARQ job.
 
-The projection endpoint is separate from the default upload view. It uses deterministic positions for small knowledge datasets and UMAP/KMeans for larger datasets. Raw embeddings stay on the backend. Running projection is not required to display uploaded records.
+The legacy nodes, chunk-detail, and recompute endpoints have been removed. The worker's knowledge-projection pipeline remains separate from this upload-based view. Raw embeddings stay on the backend.
 
 ## Checks
 
@@ -87,6 +83,7 @@ From `memory-universe/frontend/`:
 
 ```sh
 npm run build
+npm test
 npm run benchmark
 ```
 
@@ -94,6 +91,7 @@ From `backend/`:
 
 ```sh
 python -m compileall -q app
+python -m unittest discover -s tests -v
 ```
 
-The frontend's `npm test` script targets `tests/*.test.js`, but no test files are included in the current checkout; `backend/tests/` is also absent. For a manual check, verify one saved upload renders, an empty account loads the demo, and a failed request shows an error. The benchmark is synthetic and does not verify authentication or database access.
+Regression tests cover REST upload loading, local details, the demo, the remaining backend routes, authentication, and app status notifications. For a manual check, verify one saved upload renders, an empty account loads the demo, and a failed request shows an error. The benchmark is synthetic and does not verify authentication or database access.

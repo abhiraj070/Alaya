@@ -33,7 +33,7 @@ Start the [3D client](memory-universe/README.md), sign in to Alaya, and click **
 - Documents are red, images are blue, and text entries are yellow; hover and selection highlights temporarily override these colors.
 - A successful empty response loads the 84-star sample universe and its introduction. Real uploads always take priority, including when entering or refreshing the demo.
 - Authentication and connection failures show an error; they never count as an empty database.
-- WebSocket upload messages trigger the same REST refresh. Initial loading works independently of WebSocket delivery.
+- Universe reads data through REST when opened, when its tab regains focus, and when Refresh is clicked. It does not open a WebSocket connection.
 
 Upload positions are deterministic display coordinates. They do not require the separate knowledge projection pipeline or represent measured semantic similarity. Upload details retain their own source IDs; they are not looked up as knowledge chunk IDs.
 
@@ -319,26 +319,22 @@ All routes below require authentication and scope records to the authenticated u
 | `DELETE` | `/api/uploaded_data/delete_upload/{upload_id}` | Delete an owned upload record |
 | `GET` | `/api/universe/token` | Issue an access token for opening Memory Universe |
 | `GET` | `/api/universe/uploads` | Read every owned upload; default 3D view's source of truth |
-| `GET` | `/api/universe/nodes` | Read processed knowledge with saved 3D coordinates |
-| `GET` | `/api/universe/chunks/{knowledge_id}` | Read a processed knowledge chunk and its source lineage |
-| `POST` | `/api/universe/recompute` | Calculate and commit coordinates for processed knowledge |
 
-Deleting an upload history record does not currently delete its indexed knowledge. The default upload view does not depend on the projection endpoints.
+Deleting an upload history record does not currently delete its indexed knowledge. Universe builds star positions and details from the uploaded records; it does not require projection endpoints.
 
 ### WebSocket notifications
 
-Connect with an access-token cookie, an `Authorization: Bearer <access-token>` header where supported, or the `token` query parameter used by the standalone client. The authenticated token determines the user:
+Connect with an access-token cookie, an `Authorization: Bearer <access-token>` header where supported, or the `token` query parameter used by the Alaya app. The authenticated token determines the user:
 
 ```text
 ws://localhost:8000/ws?client=app
-ws://localhost:8000/ws?client=universe&token=<access-token>
 ```
 
-When a browser supplies an `Origin`, it must match the configured local allowlist: `http://localhost` or `http://127.0.0.1` on ports 3000, 3001, or 5173. Other supplied origins are rejected with policy-violation code `1008`. Missing origins are currently accepted after authentication.
+When a browser supplies an `Origin`, it must match the configured local allowlist: `http://localhost` or `http://127.0.0.1` on ports 3000 or 3001. Other supplied origins are rejected with policy-violation code `1008`. Missing origins are currently accepted after authentication.
 
 Log in through the Alaya frontend. Cookies are shared across ports on the same hostname; `localhost` and `127.0.0.1` are different hosts. Alaya's Memory Universe button obtains a fresh token and passes it to the standalone client, which stores it in the tab's session storage and attaches it to REST requests. A `user_id` query parameter does not select the notification recipient.
 
-The API process uses a native `redis.asyncio.Redis` client to subscribe to the Redis `websocket_messages` channel, while an ARQ pool handles queued jobs. After an ARQ job finishes, the worker publishes a status message and the API forwards it to the user's app socket. Universe connections receive an `uploaded_data` snapshot on connection. Client actions `open_universe` and `get_uploaded_data` request a fresh upload broadcast to that user's connected universe sockets; the universe client uses these messages to trigger its authoritative REST refresh.
+The API process uses a native `redis.asyncio.Redis` client to subscribe to the Redis `websocket_messages` channel, while an ARQ pool handles queued jobs. After an ARQ job finishes, the worker publishes a status message and the API forwards it to the user's app socket. This connection is used for Alaya's processing notifications, not for Universe data transfer.
 
 Example server message:
 

@@ -6,7 +6,6 @@ const initialState = () => ({
   isDemo: false,
   nodes: [],
   totalStars: 0,
-  unprojectedCount: 0,
   selectedStarId: null,
   navigationTarget: null,
   filters: defaultFilters(),
@@ -99,14 +98,13 @@ export function transformUploadedDataToNodes(uploadedData) {
 }
 
 /** Replace the displayed collection. An empty response must clear deleted records. */
-export function applyUniverseSnapshot({ nodes = [], total_stars, unprojected_count }, { isDemo = false } = {}) {
+export function applyUniverseSnapshot({ nodes = [], total_stars }, { isDemo = false } = {}) {
   const modeChanged = state.isDemo !== isDemo;
   const selectionExists = !modeChanged && nodes.some((node) => node.id === state.selectedStarId);
   setState({
     isDemo,
     nodes,
     totalStars: total_stars ?? nodes.length,
-    unprojectedCount: unprojected_count ?? 0,
     selectedStarId: selectionExists ? state.selectedStarId : null,
     navigationTarget: null,
     filters: modeChanged ? defaultFilters() : state.filters,

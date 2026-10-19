@@ -404,7 +404,5 @@ export const DEMO_TOTAL_STARS = DEMO_NODES.length; // 84 Stars
 export const demoDataset = {
   nodes: DEMO_NODES,
   total_stars: DEMO_TOTAL_STARS,
-  is_projected: true,
-  unprojected_count: 0,
 };
 

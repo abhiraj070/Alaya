@@ -1,9 +1,7 @@
-import { universeApi } from '../api/universeApi.js';
 import { demoUniverse } from './demoUniverse.js';
 
-export async function getNodeDetail(id, isDemo, node, options = {}) {
+export async function getNodeDetail(id, isDemo, node) {
   if (isDemo) return demoUniverse.getChunk(id);
-  // Upload and Knowledge primary keys are independent. Never query /chunks with an upload ID.
   if (node?.id === id && node.record_type === 'upload') {
     return {
       id,
@@ -16,5 +14,5 @@ export async function getNodeDetail(id, isDemo, node, options = {}) {
       source: node.source,
     };
   }
-  return universeApi.getChunk(id, options);
+  throw new Error('Upload details are unavailable. Refresh the universe and try again.');
 }

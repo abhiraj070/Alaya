@@ -9,7 +9,7 @@ export function useChunkDetail(knowledgeId, isDemo = false, fallbackNode = null)
     if (knowledgeId == null) return;
     const controller = new AbortController();
     setResult({ id: knowledgeId, isDemo, loading: true });
-    getNodeDetail(knowledgeId, isDemo, fallbackNode, { signal: controller.signal }).then(
+    getNodeDetail(knowledgeId, isDemo, fallbackNode).then(
       (data) => {
         if (!controller.signal.aborted) setResult({ id: knowledgeId, isDemo, data });
       },

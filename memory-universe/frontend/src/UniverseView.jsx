@@ -3,7 +3,6 @@ import { HeaderHUD } from './components/navigation/HeaderHUD.jsx';
 import { UniverseCanvas } from './components/canvas/UniverseCanvas.jsx';
 import { StarHoverCard } from './components/universe/StarHoverCard.jsx';
 import { ChunkDetailDrawer } from './components/universe/ChunkDetailDrawer.jsx';
-import { StatusBanner } from './components/universe/StatusBanner.jsx';
 import { EmptyState } from './components/universe/EmptyState.jsx';
 import { ErrorState } from './components/universe/ErrorState.jsx';
 import { DemoDisclaimerModal } from './components/universe/DemoDisclaimerModal.jsx';
@@ -15,10 +14,8 @@ export function UniverseView({ universe, detailState }) {
   const {
     nodes,
     totalStars,
-    unprojectedCount,
     loading,
     error,
-    recomputing,
     selectedStarId,
     navigationTarget,
     filters,
@@ -28,7 +25,6 @@ export function UniverseView({ universe, detailState }) {
     clearAllFilters,
     navigateToStar,
     refresh,
-    recompute,
     isDemo,
     showDisclaimer,
     demoNotice,
@@ -92,7 +88,6 @@ export function UniverseView({ universe, detailState }) {
         nodes={nodes}
         loading={loading}
         connected={!loading && !error}
-        recomputing={recomputing}
         isDemo={isDemo}
         onExitDemo={exitDemoMode}
         onRefresh={refresh}
@@ -144,12 +139,6 @@ export function UniverseView({ universe, detailState }) {
         {!loading && !error && !isDemo && totalStars === 0 && (
           <EmptyState onExploreDemo={exploreDemo} />
         )}
-
-        {!error && !isDemo && <StatusBanner
-          unprojectedCount={unprojectedCount}
-          recomputing={recomputing}
-          onRecompute={recompute}
-        />}
 
         {isDemo && demoNotice && (
           <div role="status" className="absolute bottom-20 left-1/2 -translate-x-1/2 z-30 max-w-md w-[90%] p-3 bg-[#0D1014]/95 border border-[#F59E0B]/30 rounded-md text-xs text-[#F59E0B] text-center ">

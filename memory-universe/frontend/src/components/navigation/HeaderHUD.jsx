@@ -16,15 +16,12 @@ import { ALAYA_URL } from '../../config.js';
 export function HeaderHUD({
   nodes = [],
   totalStars = 0,
-  projectedCount = 0,
   clusterCount = 0,
   loading = false,
-  recomputing = false,
   connected = true,
   isDemo = false,
   onExitDemo,
   onRefresh,
-  onRecompute,
   onSelectSearchResult,
 }) {
   return (
@@ -85,7 +82,7 @@ export function HeaderHUD({
               variant="ghost"
               size="sm"
               onClick={onRefresh}
-              disabled={loading || recomputing}
+              disabled={loading}
               title={isDemo ? 'Check for real memories in backend' : 'Refresh universe nodes'}
               icon={RefreshCw}
               className={loading ? 'text-[#38BDF8]' : ''}

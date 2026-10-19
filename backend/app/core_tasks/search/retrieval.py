@@ -1,7 +1,9 @@
 from datetime import date
 from decimal import Decimal
 from sqlalchemy import Date, Numeric, cast, func, select
-from app.db.model.chat import Embedding, Knowledge, Message
+from app.db.model.chat import Embedding, Knowledge, Message, Sender
+
+SIMILAR_QUESTION_MAX_DISTANCE = 0.25
 
 def serialize_knowledge(knowledge: Knowledge) -> dict:
     return {"id": knowledge.id, "knowledge_type": knowledge.knowledge_type,
@@ -42,8 +44,9 @@ def semantic_search(db, user_id: int, vector: list[float]) -> list[dict]:
 def semantic_to_find_similar_question(db, user_id: int, message_id: int, vector: list[float]):
     distance = Embedding.vector.cosine_distance(vector)
     message_stmt = select(Message, distance.label("distance")).join(Embedding).where(
-        Message.user_id == user_id, Message.id != message_id, Embedding.kind == "MESSAGE"
-    ).order_by(distance).limit(1)
+        Message.user_id == user_id, Message.id < message_id, Message.sent_by == Sender.USER,
+        Embedding.kind == "MESSAGE", distance <= SIMILAR_QUESTION_MAX_DISTANCE,
+    ).order_by(Message.created_at.desc(), distance).limit(1)
 
     result= db.execute(message_stmt).first()
     if result is None:
