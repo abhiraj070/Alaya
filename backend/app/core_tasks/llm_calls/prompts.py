@@ -22,7 +22,7 @@ sql_retrieval_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / 
 response_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / "response_prompt.md").read_text(encoding="utf-8")
 image_read_prompt=(Path(__file__).resolve().parents[1] / "system_prompts" / "read_image.md").read_text(encoding="utf-8")
 
-async def send_prompt_to_normalize(user_query: str, max_tokens: int = 1024) -> str:
+async def send_prompt_to_normalize(user_query: str, max_tokens: int = 1024, usage: dict | None = None) -> str:
     current_date= date.today().isoformat()
     response = await client.chat.completions.create(
         model=MODEL,
@@ -32,6 +32,10 @@ async def send_prompt_to_normalize(user_query: str, max_tokens: int = 1024) -> s
         ],
         **get_completion_options(MODEL, max_tokens=max_tokens, temperature=0.7),
     )
+    if usage is not None and response.usage is not None:
+        usage.update(input_tokens=response.usage.prompt_tokens,
+                     output_tokens=response.usage.completion_tokens,
+                     total_tokens=response.usage.total_tokens)
     return response.choices[0].message.content
 
 async def send_prompt_to_standardise(user_queries: list[str], max_tokens: int = 1024) -> str:
@@ -124,7 +128,9 @@ async def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
     )
     return json.loads(response.choices[0].message.content)
 
-async def send_prompt_for_response(data: list[dict[str,Any]], chat_id: int, user_id: int, db: Session):
+async def send_prompt_for_response(data: list[dict[str,Any]], chat_id: int, user_id: int, db: Session, usage: dict | None = None):
+    if usage is not None:
+        usage.clear()
     stream = await client.chat.completions.create(
         model=MODEL,
         messages=[
@@ -132,10 +138,17 @@ async def send_prompt_for_response(data: list[dict[str,Any]], chat_id: int, user
             {"role": "user", "content": json.dumps(data)},
         ],
         **get_completion_options(MODEL),
-        stream=True
+        stream=True,
+        stream_options={"include_usage": usage is not None},
     )
     full_response=""
     async for chunk in stream:
+        if usage is not None and chunk.usage is not None:
+            usage.update(input_tokens=chunk.usage.prompt_tokens,
+                         output_tokens=chunk.usage.completion_tokens,
+                         total_tokens=chunk.usage.total_tokens)
+        if not chunk.choices:
+            continue
         content = chunk.choices[0].delta.content
         if content:
             full_response+=content

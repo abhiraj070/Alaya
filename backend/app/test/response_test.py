@@ -30,8 +30,10 @@ def main():
 
             response = client.post(
                 url,
+                params={"include_usage": "true"},
                 json={
                     "message_content": query,
+                    "user_id": 1,
                 },
                 headers={
                     "Authorization": f"Bearer {token}",
@@ -40,7 +42,15 @@ def main():
 
             print(f"\nQuery: {query}")
             print(f"Status: {response.status_code}")
-            print(f"Response: {response.text}")
+            if response.is_success:
+                data = response.json()
+                print(f"Response: {data['response']}")
+                usage = data.get("usage") or {}
+                print("Input tokens:", usage.get("input_tokens", "Not provided by API"))
+                print("Output tokens:", usage.get("output_tokens", "Not provided by API"))
+                print("Total tokens:", usage.get("total_tokens", "Not provided by API"))
+            else:
+                print(f"Response: {response.text}")
             print("Response time:", response.elapsed.total_seconds(), "seconds")
 
 if __name__ == "__main__":

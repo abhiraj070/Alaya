@@ -11,7 +11,7 @@ from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette import status
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import JSONResponse, Response, StreamingResponse
 from app.auth.VerifyJWT import VerifyJWT
 from app.core_tasks.llm_calls.prompts import (
     send_prompt_to_normalize, decide_retrieval_strategy,
@@ -39,7 +39,7 @@ SUPPORTED_IMAGE_SIGNATURES = (
     b"\xff\xd8\xff",
 )
 
-async def stream_default_response(user_query: str, chat_id: int, user_id: int, db: Session):
+async def stream_default_response(user_query: str, chat_id: int, db: Session):
     cleaned = user_query.strip()
     if cleaned.lower() in ("hi", "hello", "hey", "yo", "sup"):
         greeting = f"Hey there! I received your greeting: \"{cleaned}\"."
@@ -57,17 +57,9 @@ async def stream_default_response(user_query: str, chat_id: int, user_id: int, d
         yield chunk
         await asyncio.sleep(0.015)
 
-    db_message = Message(
-        chat_id=chat_id,
-        message_content=default_text,
-        sent_by=Sender.LLM,
-        user_id=user_id,
-    )
-    db.add(db_message)
     chat = db.execute(select(Chat).where(Chat.id == chat_id)).scalar_one_or_none()
     if chat:
         chat.updated_at = func.now()
-    db.commit()
 
 def send_direct_response(text: str, chat_id: int, user_id: int, db: Session):
     if not isinstance(text, str) or not text.strip():
@@ -78,6 +70,13 @@ def send_direct_response(text: str, chat_id: int, user_id: int, db: Session):
         chat.updated_at = func.now()
     db.commit()
     return Response(content=text, media_type="text/plain")
+
+
+async def build_message_response(response_stream, usage: dict | None):
+    if usage is None:
+        return StreamingResponse(response_stream, media_type="text/plain")
+    text= "".join([chunk async for chunk in response_stream])
+    return JSONResponse({"response": text, "usage": usage or None})
 
 
 def is_supported_image(file_path: Path) -> bool:
@@ -95,7 +94,9 @@ async def handle_new_message(chat_id: int,
                             message: MessageRequest,
                             user_id: Annotated[int, Depends(VerifyJWT)],
                             db: Annotated[Session, Depends(get_db)],
+                            include_usage: bool = False,
 ):
+    usage= {} if include_usage else None
     chat = db.execute(
         select(Chat).where(Chat.id == chat_id, Chat.user_id == user_id)
     ).scalar_one_or_none()
@@ -119,12 +120,13 @@ async def handle_new_message(chat_id: int,
 
     # Attempt live OpenAI normalization, embeddings, and retrieval
     try:
-        embeddable_query = await send_prompt_to_normalize(message.message_content)
+        embeddable_query = await send_prompt_to_normalize(message.message_content, usage=usage)
         normalized_data = json.loads(embeddable_query)
         if not isinstance(normalized_data["is_embedding"], bool):
             raise ValueError("is_embedding must be a boolean")
         if normalized_data["is_embedding"] is False:
-            return send_direct_response(normalized_data["direct_response"], chat_id, user_id, db)
+            response= send_direct_response(normalized_data["direct_response"], chat_id, user_id, db)
+            return JSONResponse({"response": normalized_data["direct_response"], "usage": usage}) if include_usage else response
         embeddable_queries = normalized_data["queries"]
 
         embeddings = await get_embedding(embeddable_queries)
@@ -144,15 +146,15 @@ async def handle_new_message(chat_id: int,
             embeddings, db_message.id, send_prompt_to_plan,
         )
 
-        return StreamingResponse(
-            send_prompt_for_response(search_results, chat_id, user_id, db),
-            media_type="text/plain",
+        return await build_message_response(
+            send_prompt_for_response(search_results, chat_id, user_id, db, usage=usage), usage,
         )
     except Exception as exc:
         print(f"[OpenAI pipeline fallback: {exc}] - Streaming default answer.")
-        return StreamingResponse(
-            stream_default_response(message.message_content, chat_id, user_id, db),
-            media_type="text/plain",
+        if usage is not None:
+            usage.clear()
+        return await build_message_response(
+            stream_default_response(message.message_content, chat_id, db), usage,
         )
 
 @router.get("/get_messages/{chat_id}", response_model=list[MessageResponse])
@@ -227,7 +229,7 @@ async def update_message(chat_id: int,
     except Exception as exc:
         print(f"[OpenAI pipeline update fallback: {exc}] - Streaming default answer.")
         return StreamingResponse(
-            stream_default_response(new_message, chat_id, user_id, db),
+            stream_default_response(new_message, chat_id, db),
             media_type="text/plain",
         )
 
