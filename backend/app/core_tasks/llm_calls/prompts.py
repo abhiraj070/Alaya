@@ -14,6 +14,7 @@ from app.env_config.settings import get_settings
 settings = get_settings()
 
 normalization_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / "normalization_prompt.md").read_text(encoding="utf-8")
+normalization_strategy_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / "normalization_strategy_prompt.md").read_text(encoding="utf-8")
 structure_knowledge= (Path(__file__).resolve().parents[1] / "system_prompts" / "structure_knowledge_metadeta.md").read_text(encoding="utf-8")
 criteria= json.loads((Path(__file__).resolve().parents[1] / "system_prompts" / "criteria_decision_jev.md").read_text(encoding="utf-8"))
 instruction= (Path(__file__).resolve().parents[1] / "system_prompts" / "instruction_decision_jev.md").read_text(encoding="utf-8")
@@ -22,21 +23,45 @@ sql_retrieval_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / 
 response_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / "response_prompt.md").read_text(encoding="utf-8")
 image_read_prompt=(Path(__file__).resolve().parents[1] / "system_prompts" / "read_image.md").read_text(encoding="utf-8")
 
-async def send_prompt_to_normalize(user_query: str, max_tokens: int = 1024, usage: dict | None = None) -> str:
+async def send_prompt_to_normalize(user_query: str, max_tokens: int = 1024, usage: dict | None = None,
+                                   classify: bool = False) -> str:
     current_date= date.today().isoformat()
+    prompt= normalization_strategy_prompt if classify else normalization_prompt
     response = await client.chat.completions.create(
         model=MODEL,
         messages=[
-            {"role": "system", "content": f"{normalization_prompt}\nCurrent date: {current_date}"},
+            {"role": "system", "content": f"{prompt}\nCurrent date: {current_date}"},
             {"role": "user", "content": user_query},
         ],
-        **get_completion_options(MODEL, max_tokens=max_tokens, temperature=0.7),
+        **get_completion_options(MODEL, max_tokens=max_tokens, temperature=0.2 if classify else 0.7),
     )
     if usage is not None and response.usage is not None:
         usage.update(input_tokens=response.usage.prompt_tokens,
                      output_tokens=response.usage.completion_tokens,
                      total_tokens=response.usage.total_tokens)
-    return response.choices[0].message.content
+    content= response.choices[0].message.content
+    if not classify:
+        return content
+
+    normalized_data= json.loads(content)
+    if not isinstance(normalized_data, dict):
+        raise ValueError("Normalized response must be an object")
+    queries= normalized_data.get("queries")
+    if not isinstance(queries, list) or not queries or any(not isinstance(query, str) or not query.strip() for query in queries):
+        raise ValueError("Queries must be a non-empty list of strings")
+    if not isinstance(normalized_data.get("is_embedding"), bool):
+        raise ValueError("is_embedding must be a boolean")
+    direct_response= normalized_data.get("direct_response")
+    if not isinstance(direct_response, str) or (not normalized_data["is_embedding"] and not direct_response.strip()):
+        raise ValueError("Invalid direct response")
+    if normalized_data["is_embedding"]:
+        strategies= normalized_data.get("strategies")
+        if not isinstance(strategies, list) or len(strategies) != len(queries) or any(not isinstance(item, str) or item not in criteria for item in strategies):
+            print("[Normalization returned invalid retrieval strategies] - Using classifier fallback.")
+            normalized_data["strategies"]= await decide_retrieval_strategy(queries)
+    else:
+        normalized_data["strategies"]= []
+    return json.dumps(normalized_data)
 
 async def send_prompt_to_standardise(user_queries: list[str], max_tokens: int = 1024) -> str:
     response = await client.chat.completions.create(

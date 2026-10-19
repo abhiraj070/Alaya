@@ -1,0 +1,42 @@
+﻿Query Number,Query,Status,Response,Input Tokens,Output Tokens,Total Tokens,Response Time (seconds)
+1,wat was my favrite progrmming language and wen did i start learning it?,200,"The available information doesn’t identify a favorite programming language; it says your preferences evolved as you gained experience.
+
+You started learning programming during your college years, first experimenting with small scripts and later building more complex applications.",1424,45,1469,19.199685
+2,"How many purchases did I make yesterday, what did I spend last month, and what was I working on recently?",200,"- Purchases on 18 October 2026: 0.
+- Spending from 1–30 September 2026: The available information doesn’t provide a total.
+- Work from 19 August to 19 October 2026: You started the Alaya project on 19 September and were testing it on 17 October. Your project history also includes experiments with backend APIs.",1377,87,1464,21.334359
+3,"I like Python, Java, and Go, but I don't like PHP or Ruby.",200,"The available information doesn’t confirm whether you like Python, Java, or Go, or whether you dislike PHP or Ruby. It only notes that your technology preferences have evolved with experience and that you generally enjoy technologies that help you build practical applications quickly while remaining flexible.",3757,55,3812,12.373908
+4,"Find all my projects involving Python, PostgreSQL, and machine learning, and compare their recorded completion dates.",200,"I couldn’t find any project records matching Python, PostgreSQL, and machine learning, so I can’t compare their completion dates.",746,29,775,15.31142
+5,"What did I discuss last week, and what did I discuss a week ago?",200,"The last time you asked a similar question was on 19 October 2026.
+
+From 12–18 October 2026, the available information says you discussed and tested the Alaya project on 17 October. You had started Alaya on 19 September. The results don’t provide a fuller record of discussions during that date range.",2053,74,2127,13.492128
+6,"How many purchases did I record in 2025, and what was the total amount spent on laptops during 2025?",200,"The last time you asked a similar question was on 19 October 2026.
+
+- You recorded 0 purchases between 1 January and 31 December 2025.
+- The available information doesn’t include a total amount spent on laptops for that period.",908,56,964,18.155849
+7,"What approach did I consider for making my memory visualization more meaningful, and what problem was I trying to solve?",200,"You considered representing individual memories as points in a larger network, using dimensionality reduction and data visualization to show how they relate. You also wanted an interactive spatial display—with movement, clustering, and visual distance—so you could navigate between concepts instead of relying only on lists or folders.
+
+The problem you were trying to solve was how to make connections between memories easier to see and explore, including recognizing when several memories relate to the same subject.",2119,90,2209,14.357525
+8,"Find the conversations where I discussed reducing API costs, then calculate the total recorded API spending associated with those conversations.",200,"I found related notes about API pricing and an evaluation of how models’ token consumption affects operating costs. However, the available information doesn’t identify specific conversations where you discussed reducing API costs.
+
+The total recorded API spending can’t be calculated from the available information; no spending amounts were provided.",1352,60,1412,16.688988
+9,What was the serial number of the laptop I bought in 2025?,200,The available information doesn’t include the laptop’s serial number.,739,15,754,12.290287
+10,"I preferred Python in January 2026, but by September 2026 I preferred Java instead. What was my preference in each month, and when did it change?",200,"The available information doesn’t establish that you preferred Python in January 2026 or Java in September 2026. It says your programming-language preferences have evolved with experience, but it doesn’t specify the languages or when the change occurred.",2538,50,2588,11.151847
+11,Rahul told Amit that he preferred Python. What was his favorite programming language?,200,"1. Rahul’s favorite programming language isn’t established by the available information. The prompt says he preferred Python, but doesn’t confirm it was his favorite.
+2. Amit’s favorite programming language also isn’t specified.",2207,46,2253,10.34667
+12,"What projects did I work on in June, and how many tasks did I complete in June?",200,"The last time you asked a similar question was on 19 October 2026.
+
+- Projects (1–30 June 2026): The available information doesn’t identify any projects.
+- Tasks completed (1–30 June 2026): 0.",895,59,954,17.545746
+13,What was the name of the mobile app I launched in 2024?,200,"The available information doesn’t identify a mobile app launched in 2024. It mentions Alaya, an application that was being developed in 2026.",1326,35,1361,10.76338
+14,"I bought 3 monitors for ₹24,000 on October 12, 2026, and sold one monitor for ₹7,000 on October 18, 2026.",200,"- On October 12, 2026, you bought 3 computer monitors for a combined ₹24,000.
+- On October 18, 2026, you sold 1 monitor for ₹7,000.",1018,54,1072,15.951746
+15,"hey, wat did i spend on laptops last month, which projects did i discuss recently, how many purchases did i make last week, and do i still prefer Python over Java?",200,"- Laptop spending (1–30 September 2026): The available information doesn’t specify an amount.
+- Projects discussed (19 August–19 October 2026): You started and tested Alaya. Your project history also includes experiments with backend APIs and integrations with external services.
+- Purchases (12–18 October 2026): 0 recorded.
+- Python vs. Java preference: The available information doesn’t establish whether you still prefer Python over Java; it only says your preferences have evolved with experience.
+
+The last time you asked a similar question about laptop spending was on 19 October 2026.
+The last time you asked a similar question about projects was on 19 October 2026.
+The last time you asked a similar question about purchases was on 19 October 2026.
+The last time you asked a similar question about your Python and Java preference was on 19 October 2026.",2395,199,2594,16.071873

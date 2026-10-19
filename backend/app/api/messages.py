@@ -14,7 +14,7 @@ from starlette import status
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from app.auth.VerifyJWT import VerifyJWT
 from app.core_tasks.llm_calls.prompts import (
-    send_prompt_to_normalize, decide_retrieval_strategy,
+    send_prompt_to_normalize,
     send_prompt_to_plan, send_prompt_for_response,
 )
 from app.core_tasks.llm_setup.embeddings_llm import get_embedding
@@ -38,22 +38,6 @@ SUPPORTED_IMAGE_SIGNATURES = (
     b"\x89PNG\r\n\x1a\n",
     b"\xff\xd8\xff",
 )
-
-async def get_embeddings_and_strategies(queries: list[str]):
-    # Both operations depend only on normalized queries, not on database writes.
-    tasks = [
-        asyncio.create_task(get_embedding(queries)),
-        asyncio.create_task(decide_retrieval_strategy(queries)),
-    ]
-    try:
-        return await asyncio.gather(*tasks)
-    except BaseException:
-        # gather does not cancel sibling tasks when one raises an exception.
-        for task in tasks:
-            task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
-        raise
-
 
 async def stream_default_response(user_query: str, chat_id: int, db: Session):
     cleaned = user_query.strip()
@@ -136,7 +120,7 @@ async def handle_new_message(chat_id: int,
 
     # Attempt live OpenAI normalization, embeddings, and retrieval
     try:
-        embeddable_query = await send_prompt_to_normalize(message.message_content, usage=usage)
+        embeddable_query = await send_prompt_to_normalize(message.message_content, usage=usage, classify=True)
         normalized_data = json.loads(embeddable_query)
         if not isinstance(normalized_data["is_embedding"], bool):
             raise ValueError("is_embedding must be a boolean")
@@ -144,8 +128,9 @@ async def handle_new_message(chat_id: int,
             response= send_direct_response(normalized_data["direct_response"], chat_id, user_id, db)
             return JSONResponse({"response": normalized_data["direct_response"], "usage": usage}) if include_usage else response
         embeddable_queries = normalized_data["queries"]
+        decisions= normalized_data["strategies"]
 
-        embeddings, decisions = await get_embeddings_and_strategies(embeddable_queries)
+        embeddings = await get_embedding(embeddable_queries)
         for embedding in embeddings:
             db_embeddings = Embedding(
                 message_id=db_message.id,
@@ -212,15 +197,16 @@ async def update_message(chat_id: int,
 
     # Attempt live OpenAI normalization, embeddings, and retrieval
     try:
-        embeddable_query = await send_prompt_to_normalize(new_message)
+        embeddable_query = await send_prompt_to_normalize(new_message, classify=True)
         normalized_data = json.loads(embeddable_query)
         if not isinstance(normalized_data["is_embedding"], bool):
             raise ValueError("is_embedding must be a boolean")
         if normalized_data["is_embedding"] is False:
             return send_direct_response(normalized_data["direct_response"], chat_id, user_id, db)
         embeddable_queries = normalized_data["queries"]
+        decisions= normalized_data["strategies"]
 
-        embeddings, decisions = await get_embeddings_and_strategies(embeddable_queries)
+        embeddings = await get_embedding(embeddable_queries)
         for embedding in embeddings:
             db_embeddings = Embedding(
                 message_id=message.id,

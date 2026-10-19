@@ -1,9 +1,12 @@
+import asyncio
 from datetime import date
 from decimal import Decimal
 from sqlalchemy import Date, Numeric, cast, func, select
+from sqlalchemy.orm import Session
 from app.db.model.chat import Embedding, Knowledge, Message, Sender
 
 SIMILAR_QUESTION_MAX_DISTANCE = 0.25
+MAX_CONCURRENT_RETRIEVALS = 4
 
 def serialize_knowledge(knowledge: Knowledge) -> dict:
     return {"id": knowledge.id, "knowledge_type": knowledge.knowledge_type,
@@ -117,23 +120,62 @@ def sql_search(db, user_id: int, plan: dict, schema: dict, knowledge_ids: list[i
     value= db.execute(stmt).scalar()
     return {"operation": plan.get("operation"), "value": float(value) if isinstance(value, Decimal) else value}
 
+def _read_in_session(engine, operation, *args):
+    with Session(bind=engine, autoflush=False) as search_db:
+        return operation(search_db, *args)
+
+
+async def _database_read(engine, operation, *args):
+    work = asyncio.create_task(asyncio.to_thread(_read_in_session, engine, operation, *args))
+    try:
+        return await asyncio.shield(work)
+    except asyncio.CancelledError:
+        await asyncio.gather(work, return_exceptions=True)
+        raise
+
+
+def _retrieve_query(db, user_id, query, strategy, vector, message_id, plan, schema):
+    if strategy == "semantic":
+        data = semantic_search(db, user_id, vector)
+    elif strategy == "sql":
+        data = sql_search(db, user_id, plan, schema)
+    else:
+        semantic = semantic_search(db, user_id, vector)
+        knowledge_ids = [item["data"]["id"] for item in semantic]
+        data = sql_search(db, user_id, plan, schema, knowledge_ids)
+    similar_question = semantic_to_find_similar_question(db, user_id, message_id, vector)
+    return {"query": query, "strategy": strategy, "results": data, "similar_question": similar_question}
+
+
 async def retrieve_queries(db, user_id: int, queries: list[str], strategies: list[str],
                      embeddings: list[dict], message_id: int, get_plan) -> list[dict]:
-    if len(queries)!=len(strategies) or len(queries)!=len(embeddings):
+    if len(queries) != len(strategies) or len(queries) != len(embeddings):
         raise ValueError("Queries, strategies and embeddings must match")
-    schema= get_knowledge_schema(db, user_id) if any(item in ["sql", "hybrid"] for item in strategies) else None
-    results= []
-    for i, strategy in enumerate(strategies):
-        if strategy=="semantic":
-            data= semantic_search(db, user_id, embeddings[i]["vector"])
-        elif strategy=="sql":
-            data= sql_search(db, user_id, await get_plan(queries[i], schema), schema)
-        elif strategy=="hybrid":
-            semantic= semantic_search(db, user_id, embeddings[i]["vector"])
-            knowledge_ids= [item["data"]["id"] for item in semantic]
-            data= sql_search(db, user_id, await get_plan(queries[i], schema), schema, knowledge_ids)
-        else:
-            raise ValueError("Invalid retrieval strategy")
-        similar_question= semantic_to_find_similar_question(db, user_id, message_id, embeddings[i]["vector"])
-        results.append({"query": queries[i], "strategy": strategy, "results": data, "similar_question": similar_question})
-    return results
+    if any(strategy not in ("semantic", "sql", "hybrid") for strategy in strategies):
+        raise ValueError("Invalid retrieval strategy")
+    if not queries:
+        return []
+
+    engine = db.get_bind().engine
+    schema = await _database_read(engine, get_knowledge_schema, user_id) if any(
+        strategy in ("sql", "hybrid") for strategy in strategies
+    ) else None
+    limit = asyncio.Semaphore(MAX_CONCURRENT_RETRIEVALS)
+
+    async def retrieve_one(query, strategy, embedding):
+        async with limit:
+            plan = await get_plan(query, schema) if strategy in ("sql", "hybrid") else None
+            return await _database_read(
+                engine, _retrieve_query, user_id, query, strategy,
+                embedding["vector"], message_id, plan, schema,
+            )
+
+    tasks = [asyncio.create_task(retrieve_one(query, strategy, embedding))
+             for query, strategy, embedding in zip(queries, strategies, embeddings)]
+    try:
+        return await asyncio.gather(*tasks)
+    except BaseException:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
