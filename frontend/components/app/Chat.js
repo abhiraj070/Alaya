@@ -23,7 +23,11 @@ export default function Chat({ chatId, messages, setMessages, onFirstMessage }) 
   const scrolledUp = useRef(false);
   const isBusy = phase !== "idle";
 
-  useEffect(() => () => requestRef.current?.abort(), []);
+  useEffect(() => () => {
+    if (!requestRef.current) return;
+    requestRef.current.abort();
+    setMessages((previous) => previous.map((message) => message.isStreaming ? { ...message, isStreaming: false } : message));
+  }, [setMessages]);
   useEffect(() => {
     if (!scrolledUp.current) bottomRef.current?.scrollIntoView({ behavior: phase === "streaming" ? "auto" : "smooth" });
   }, [messages, phase]);

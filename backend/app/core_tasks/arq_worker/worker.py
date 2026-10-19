@@ -2,10 +2,11 @@ from sqlalchemy import select
 from fastapi import HTTPException
 from cloudinary.exceptions import Error as CloudinaryError
 from starlette import status
+import asyncio
 import json
 from pathlib import Path
 
-from app.api.messages import send_prompt_to_read_image, send_prompt_to_standardise, send_prompt_to_normalize
+from app.core_tasks.llm_calls.prompts import send_prompt_to_read_image, send_prompt_to_standardise, send_prompt_to_normalize
 from app.core_tasks.chunking.recursive_chunk import recursive_chunk
 from app.core_tasks.extraction.extractor import extract_text
 from app.db.connect import SessionLocal
@@ -174,34 +175,38 @@ async def create_image_embeddings(
                 if attempt == 1:
                     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error in reading the image")
 
-        for attempt in range(2):
-            try:
-                structured_metadata_list = json.loads(await send_prompt_to_standardise([image_string]))
-                if not isinstance(structured_metadata_list, list) or len(structured_metadata_list) != 1:
-                    raise ValueError("Metadata count must match input count")
-                structured_metadata = structured_metadata_list[0]
-                if not isinstance(structured_metadata, dict):
-                    raise ValueError("Metadata must be an object")
-                if not isinstance(structured_metadata.get("fact_type"), str) or not structured_metadata["fact_type"].strip():
-                    raise ValueError("Metadata must contain a fact type")
-                if not isinstance(structured_metadata.get("metadata"), dict):
-                    raise ValueError("Metadata must contain a metadata object")
-                break
-            except Exception:
-                if attempt == 1:
-                    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error in reading the image")
+        async def get_metadata():
+            for attempt in range(2):
+                try:
+                    structured_metadata_list = json.loads(await send_prompt_to_standardise([image_string]))
+                    if not isinstance(structured_metadata_list, list) or len(structured_metadata_list) != 1:
+                        raise ValueError("Metadata count must match input count")
+                    structured_metadata = structured_metadata_list[0]
+                    if not isinstance(structured_metadata, dict):
+                        raise ValueError("Metadata must be an object")
+                    if not isinstance(structured_metadata.get("fact_type"), str) or not structured_metadata["fact_type"].strip():
+                        raise ValueError("Metadata must contain a fact type")
+                    if not isinstance(structured_metadata.get("metadata"), dict):
+                        raise ValueError("Metadata must contain a metadata object")
+                    return structured_metadata
+                except Exception:
+                    if attempt == 1:
+                        raise HTTPException(status_code=502, detail="Metadata generation failed")
 
-        for attempt in range(2):
-            try:
-                embeddings = await get_embedding([image_string])
-                if not isinstance(embeddings, list) or len(embeddings) != 1:
-                    raise ValueError("Embedding count must match input count")
-                if not isinstance(embeddings[0], dict) or "vector" not in embeddings[0]:
-                    raise ValueError("Embedding response is invalid")
-                break
-            except Exception:
-                if attempt == 1:
-                    raise HTTPException(status_code=502, detail="Error while creating embeddings")
+        async def get_image_embedding():
+            for attempt in range(2):
+                try:
+                    embeddings = await get_embedding([image_string])
+                    if not isinstance(embeddings, list) or len(embeddings) != 1:
+                        raise ValueError("Embedding count must match input count")
+                    if not isinstance(embeddings[0], dict) or "vector" not in embeddings[0]:
+                        raise ValueError("Embedding response is invalid")
+                    return embeddings
+                except Exception:
+                    if attempt == 1:
+                        raise HTTPException(status_code=502, detail="Error while creating embeddings")
+
+        structured_metadata, embeddings = await asyncio.gather(get_metadata(), get_image_embedding())
 
         knowledge = Knowledge(knowledge_type=structured_metadata["fact_type"],
                               user_id=user_id,
@@ -221,16 +226,16 @@ async def create_image_embeddings(
         )
         db.add(embed_table)
         db.commit()
-        try:
-            project_user_knowledge(user_id, db=db)
-        except Exception:
-            pass
         await publish_websocket_status(
             ctx,
             user_id,
             "completed",
             "Data stored successfully",
         )
+        try:
+            project_user_knowledge(user_id, db=db)
+        except Exception:
+            pass
 
     except Exception:
         db.rollback()

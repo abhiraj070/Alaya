@@ -207,6 +207,10 @@ export default function ChatItem({
         className="flex-1 min-w-0 text-left text-[13.5px] leading-snug px-2.5 py-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate disabled:cursor-not-allowed flex items-center gap-1.5"
         title={chat.title || "New chat"}
       >
+        {chat.messages?.some((message) => message.isStreaming) && (
+          <span role="status" aria-label="Alaya is responding"
+            className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-accent-sky border-t-transparent" />
+        )}
         {isPinned && (
           <svg
             className="h-3 w-3 shrink-0 text-accent-sky/80"

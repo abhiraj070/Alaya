@@ -1,37 +1,34 @@
 import asyncio
-from datetime import date
 import json
 from uuid import uuid4
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 from starlette.requests import Request
-from typesafe_sdk import AsyncTypeSafeClient, Choice
 from arq import ArqRedis
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette import status
-from starlette.responses import StreamingResponse
+from starlette.responses import Response, StreamingResponse
 from app.auth.VerifyJWT import VerifyJWT
-from app.core_tasks.llm_setup.chat_llm import client, MODEL, VISION_MODEL, get_completion_options
+from app.core_tasks.llm_calls.prompts import (
+    send_prompt_to_normalize, decide_retrieval_strategy,
+    send_prompt_to_plan, send_prompt_for_response,
+)
 from app.core_tasks.llm_setup.embeddings_llm import get_embedding
 from app.core_tasks.arq_worker.get_queue import get_queue
 from app.core_tasks.search.retrieval import retrieve_queries
 from app.db.connect import get_db
 from app.db.model.chat import Chat, Message, Embedding, Sender
 from app.db.model.uploaded_data import UploadedData, DataType
-from app.env_config.settings import get_settings
 from app.schema.messages import MessageResponse, MessageRequest, MessageUpdateRequest
 from cloudinary.exceptions import Error as CloudinaryError
 
 from app.utility.cloudinary import delete_file, upload_file
 
 router = APIRouter(prefix="/messages", tags=["messages"])
-
-settings = get_settings()
-
 
 TEMP_IMAGE_DIR = Path(__file__).resolve().parents[2] / "temp_img"
 TEMP_FILE_DIR = Path(__file__).resolve().parents[2] / "temp_files"
@@ -41,147 +38,6 @@ SUPPORTED_IMAGE_SIGNATURES = (
     b"\x89PNG\r\n\x1a\n",
     b"\xff\xd8\xff",
 )
-
-normalization_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "normalization_prompt.md").read_text(encoding="utf-8")
-structure_knowledge= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "structure_knowledge_metadeta.md").read_text(encoding="utf-8")
-criteria= json.loads((Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "criteria_decision.md").read_text(encoding="utf-8"))
-instruction= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "instruction_decision.md").read_text(encoding="utf-8")
-retrieval_decision_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "retrieval_decision.md").read_text(encoding="utf-8")
-sql_retrieval_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "sql_retrieval.md").read_text(encoding="utf-8")
-response_prompt= (Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "response_prompt.md").read_text(encoding="utf-8")
-image_read_prompt=(Path(__file__).parent.parent / "core_tasks" / "system_prompts" / "read_image.md").read_text(encoding="utf-8")
-
-async def send_prompt_to_normalize(user_query: str) -> str:
-    current_date= date.today().isoformat()
-    response = await client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": f"{normalization_prompt}\nCurrent date: {current_date}"},
-            {"role": "user", "content": user_query},
-        ],
-        **get_completion_options(MODEL, temperature=0.7),
-    )
-    return response.choices[0].message.content
-
-async def send_prompt_to_standardise(user_queries: list[str]) -> str:
-    response = await client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": f"{structure_knowledge}"},
-            {"role": "user", "content": json.dumps(user_queries)},
-        ],
-        **get_completion_options(MODEL, temperature=0.7),
-    )
-    return response.choices[0].message.content
-
-async def send_prompt_to_read_image(image_url: str) -> str:
-    response = await client.chat.completions.create(
-        model=VISION_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": image_read_prompt,
-            },
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": image_url,
-                        },
-                    },
-                ],
-            },
-        ],
-        **get_completion_options(VISION_MODEL, temperature=0.7),
-    )
-    return response.choices[0].message.content
-
-
-
-
-async def send_prompt_to_decide(user_queries: list[str]) -> list[str]:
-    response = await client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": retrieval_decision_prompt},
-            {"role": "user", "content": json.dumps(user_queries)},
-        ],
-        **get_completion_options(MODEL),
-    )
-    strategies= json.loads(response.choices[0].message.content)["strategies"]
-    if not isinstance(strategies, list) or len(strategies) != len(user_queries) or any(item not in criteria for item in strategies):
-        raise ValueError("Invalid retrieval strategies")
-    return strategies
-
-
-async def decide_retrieval_strategy(user_queries: list[str]) -> list[str]:
-    try:
-        return await send_prompt_to_decide(user_queries)
-    except Exception:
-        pass
-
-    strategies: list[str] = []
-
-    async with AsyncTypeSafeClient(api_key=settings.TYPESAFE_API_KEY) as jev_client:
-        for query in user_queries:
-            response = await jev_client.system_one(
-                state={"query": query},
-                questions={
-                    "retrieval_strategy": Choice(
-                        instructions=instruction,
-                        criteria=criteria,
-                    )
-                },
-            )
-            strategies.append(
-                response.answers["retrieval_strategy"].choice
-            )
-
-    return strategies
-
-
-async def send_prompt_to_plan(user_query: str, schema: dict) -> dict:
-    response = await client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": sql_retrieval_prompt},
-            {"role": "user", "content": json.dumps({"query": user_query, "schema": schema})},
-        ],
-        **get_completion_options(MODEL),
-    )
-    return json.loads(response.choices[0].message.content)
-
-async def send_prompt_for_response(data: list[dict[str,Any]], chat_id: int, user_id: int, db: Session):
-    stream = await client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": response_prompt},
-            {"role": "user", "content": json.dumps(data)},
-        ],
-        **get_completion_options(MODEL),
-        stream=True
-    )
-    full_response=""
-    async for chunk in stream:
-        content = chunk.choices[0].delta.content
-        if content:
-            full_response+=content
-            yield content
-
-    if full_response != "":
-        db_message = Message(
-            chat_id=chat_id,
-            message_content=full_response,
-            sent_by=Sender.LLM,
-            user_id=user_id,
-        )
-        db.add(db_message)
-        chat = db.execute(select(Chat).where(Chat.id == chat_id)).scalar_one_or_none()
-        if chat:
-            chat.updated_at = func.now()
-        db.commit()
 
 async def stream_default_response(user_query: str, chat_id: int, user_id: int, db: Session):
     cleaned = user_query.strip()
@@ -212,6 +68,17 @@ async def stream_default_response(user_query: str, chat_id: int, user_id: int, d
     if chat:
         chat.updated_at = func.now()
     db.commit()
+
+def send_direct_response(text: str, chat_id: int, user_id: int, db: Session):
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("Direct response cannot be empty")
+    db.add(Message(chat_id=chat_id, message_content=text, sent_by=Sender.LLM, user_id=user_id))
+    chat = db.execute(select(Chat).where(Chat.id == chat_id)).scalar_one_or_none()
+    if chat:
+        chat.updated_at = func.now()
+    db.commit()
+    return Response(content=text, media_type="text/plain")
+
 
 def is_supported_image(file_path: Path) -> bool:
     with file_path.open("rb") as image_file:
@@ -253,7 +120,12 @@ async def handle_new_message(chat_id: int,
     # Attempt live OpenAI normalization, embeddings, and retrieval
     try:
         embeddable_query = await send_prompt_to_normalize(message.message_content)
-        embeddable_queries = json.loads(embeddable_query)["queries"]
+        normalized_data = json.loads(embeddable_query)
+        if not isinstance(normalized_data["is_embedding"], bool):
+            raise ValueError("is_embedding must be a boolean")
+        if normalized_data["is_embedding"] is False:
+            return send_direct_response(normalized_data["direct_response"], chat_id, user_id, db)
+        embeddable_queries = normalized_data["queries"]
 
         embeddings = await get_embedding(embeddable_queries)
         for embedding in embeddings:
@@ -324,7 +196,12 @@ async def update_message(chat_id: int,
     # Attempt live OpenAI normalization, embeddings, and retrieval
     try:
         embeddable_query = await send_prompt_to_normalize(new_message)
-        embeddable_queries = json.loads(embeddable_query)["queries"]
+        normalized_data = json.loads(embeddable_query)
+        if not isinstance(normalized_data["is_embedding"], bool):
+            raise ValueError("is_embedding must be a boolean")
+        if normalized_data["is_embedding"] is False:
+            return send_direct_response(normalized_data["direct_response"], chat_id, user_id, db)
+        embeddable_queries = normalized_data["queries"]
 
         embeddings = await get_embedding(embeddable_queries)
         for embedding in embeddings:
