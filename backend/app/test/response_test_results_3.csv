@@ -1,0 +1,48 @@
+﻿chat_id,query,status_code,response,input_tokens,output_tokens,total_tokens,response_time_seconds
+22,1. wat was my favrite progrmming language and wen did i start learning it?,200,"I don’t have enough recorded information to verify which programming language was your favorite. You started learning programming during your college years, but I can’t verify that you started learning a particular language then.
+
+The last time you asked a similar question was on October 19, 2026.",1079,60,1139,9.976614
+22,"2. How many purchases did I make yesterday, what did I spend last month, and what was I working on recently?",200,"1. **Purchases on 2026-10-19:** I found no matching records, so I cannot verify the count.  
+   The last time you asked a similar question was on October 19, 2026.
+
+2. **Spending from 2026-09-01 to 2026-09-30:** I don't have enough recorded information to verify that.  
+   The last time you asked a similar question was on October 19, 2026.
+
+3. **What you were working on from 2026-08-20 to 2026-10-20:** The records say you started the Alaya project on September 19, 2026, and were testing it on October 17, 2026. Your project history also mentions experiments with backend APIs, but the record doesn’t specify when those took place.  
+   The last time you asked a similar question was on October 19, 2026.",1305,199,1504,11.607912
+22,"3. I like Python, Java, and Go, but I don't like PHP or Ruby.",200,"I don't have enough recorded information to verify that you like Python, Java, and Go or dislike PHP and Ruby. The recorded information only says that your programming-language preferences have evolved with experience.",997,41,1038,5.324353
+22,"4. Find all my projects involving Python, PostgreSQL, and machine learning, and compare their recorded completion dates.",200,"I found references to backend API experiments, database experiments, and a Python project setup that includes `psycopg2-binary`. The records don’t establish which projects involved PostgreSQL and machine learning or give completion dates, so I can’t identify or compare matching projects.
+
+The last time you asked a similar question was on October 19, 2026.",965,76,1041,8.316786
+22,"5. What did I discuss last week, and what did I discuss a week ago?",200,"From **October 12–18, 2026**, the records say you were testing the **Alaya** project on **October 17**. They also say you started Alaya on **September 19, 2026**. I don’t have enough recorded information to verify what else you discussed during that date range.
+
+The last time you asked a similar question was on **October 19, 2026**.",1705,90,1795,5.74848
+22,"6. How many purchases did I record in 2025, and what was the total amount spent on laptops during 2025?",200,"- **Purchases recorded in 2025:** I found no matching records, so I cannot verify the count. The last time you asked a similar question was on October 19, 2026.
+- **Total spent on laptops in 2025:** I don't have enough recorded information to verify that. The last time you asked a similar question was on October 19, 2026.",627,83,710,11.309675
+22,"7. What approach did I consider for making my memory visualization more meaningful, and what problem was I trying to solve?",200,"You considered using **dimensionality reduction and data visualization** to represent relationships between pieces of information. You were exploring a spatial, interactive network of connected memories—with movement, clustering, and visual distance—so people could navigate between concepts without relying only on lists or folders.
+
+The last time you asked a similar question was on October 19, 2026.",1161,75,1236,5.058373
+22,"8. Find the conversations where I discussed reducing API costs, then calculate the total recorded API spending associated with those conversations.",200,"I don't have enough recorded information to identify conversations about reducing API costs or verify their total recorded spending.
+
+The last time you asked a similar question was on October 19, 2026.",503,41,544,8.479332
+22,9. What was the serial number of the laptop I bought in 2025?,200,"I don't have enough recorded information to verify the laptop’s serial number.
+
+The last time you asked a similar question was on October 19, 2026.",1090,35,1125,6.162327
+22,"10. I preferred Python in January 2026, but by September 2026 I preferred Java instead. What was my preference in each month, and when did it change?",200,"I don't have enough recorded information to verify your preferred language in January or September 2026, or when it changed.
+
+The last time you asked a similar question was on October 19, 2026.",1131,45,1176,6.66449
+22,11. Rahul told Amit that he preferred Python. What was his favorite programming language?,200,"I don't have enough recorded information to verify Rahul’s favorite programming language. The retrieved information says preferences evolved with experience but does not identify a favorite.
+
+The last time you asked a similar question was on October 19, 2026.",1198,50,1248,5.239191
+22,"12. What projects did I work on in June, and how many tasks did I complete in June?",200,"I don’t have enough recorded information to verify which projects you worked on or how many tasks you completed in June 2026.
+
+The last time you asked a similar question was on October 19, 2026.",493,47,540,8.31954
+22,13. What was the name of the mobile app I launched in 2024?,200,"I don't have enough recorded information to verify the name of a mobile app you launched in 2024. The records mention an application called Alaya that you were developing in 2026, but don’t say it was launched in 2024.
+
+The last time you asked a similar question was on October 19, 2026.",1057,71,1128,5.159432
+22,"14. I bought 3 monitors for ₹24,000 on October 12, 2026, and sold one monitor for ₹7,000 on October 18, 2026.",200,"- You bought 3 computer monitors for ₹24,000 in one transaction on October 12, 2026. The last time you asked a similar question was on October 19, 2026.
+- You sold 1 monitor for ₹7,000 on October 18, 2026. The last time you asked a similar question was on October 19, 2026.",887,83,970,8.10242
+22,"15. hey, wat did i spend on laptops last month, which projects did i discuss recently, how many purchases did i make last week, and do i still prefer Python over Java?",200,"1. **Laptop spending (2026-09-01–2026-09-30):** I don't have enough recorded information to verify the amount. The last time you asked a similar question was on October 19, 2026.
+2. **Projects discussed (2026-08-20–2026-10-20):** The records mention Alaya, started on September 19, 2026, and tested on October 17, 2026. They also mention experiments with backend APIs and integrations with external services. The last time you asked a similar question was on October 19, 2026.
+3. **Purchases (2026-10-12–2026-10-18):** The recorded count is 1. The last time you asked a similar question was on October 19, 2026.
+4. **Python over Java:** I don't have enough recorded information to verify whether you still prefer Python over Java. The records say your programming preferences have evolved with experience. The last time you asked a similar question was on October 19, 2026.",2034,230,2264,8.904036
