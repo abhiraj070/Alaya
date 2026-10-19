@@ -63,9 +63,8 @@ async def update_chat_title(chat_id: int, request: ChatUpdateRequest,
     response = await client.chat.completions.create(
         model=MODEL,
         messages=[
-            {"role": "system", "content": "Generate a short, descriptive title based on " 
-                                          "the user's first message. Return only the title, " 
-                                          "without quotation marks or explanations."},
+            {"role": "system", "content": "Title the user's first message briefly and descriptively. "
+                                          "Return only the title, without quotes or commentary."},
             {"role": "user", "content": request.first_chat}
         ],
         **get_completion_options(MODEL, max_tokens=30),

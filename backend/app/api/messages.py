@@ -39,6 +39,22 @@ SUPPORTED_IMAGE_SIGNATURES = (
     b"\xff\xd8\xff",
 )
 
+async def get_embeddings_and_strategies(queries: list[str]):
+    # Both operations depend only on normalized queries, not on database writes.
+    tasks = [
+        asyncio.create_task(get_embedding(queries)),
+        asyncio.create_task(decide_retrieval_strategy(queries)),
+    ]
+    try:
+        return await asyncio.gather(*tasks)
+    except BaseException:
+        # gather does not cancel sibling tasks when one raises an exception.
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+
+
 async def stream_default_response(user_query: str, chat_id: int, db: Session):
     cleaned = user_query.strip()
     if cleaned.lower() in ("hi", "hello", "hey", "yo", "sup"):
@@ -129,7 +145,7 @@ async def handle_new_message(chat_id: int,
             return JSONResponse({"response": normalized_data["direct_response"], "usage": usage}) if include_usage else response
         embeddable_queries = normalized_data["queries"]
 
-        embeddings = await get_embedding(embeddable_queries)
+        embeddings, decisions = await get_embeddings_and_strategies(embeddable_queries)
         for embedding in embeddings:
             db_embeddings = Embedding(
                 message_id=db_message.id,
@@ -140,7 +156,6 @@ async def handle_new_message(chat_id: int,
             db.add(db_embeddings)
         db.commit()
 
-        decisions = await decide_retrieval_strategy(embeddable_queries)
         search_results = await retrieve_queries(
             db, user_id, embeddable_queries, decisions,
             embeddings, db_message.id, send_prompt_to_plan,
@@ -205,7 +220,7 @@ async def update_message(chat_id: int,
             return send_direct_response(normalized_data["direct_response"], chat_id, user_id, db)
         embeddable_queries = normalized_data["queries"]
 
-        embeddings = await get_embedding(embeddable_queries)
+        embeddings, decisions = await get_embeddings_and_strategies(embeddable_queries)
         for embedding in embeddings:
             db_embeddings = Embedding(
                 message_id=message.id,
@@ -216,7 +231,6 @@ async def update_message(chat_id: int,
             db.add(db_embeddings)
         db.commit()
 
-        decisions = await decide_retrieval_strategy(embeddable_queries)
         search_results = await retrieve_queries(
             db, user_id, embeddable_queries, decisions,
             embeddings, message.id, send_prompt_to_plan,
