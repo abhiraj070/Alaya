@@ -22,7 +22,7 @@ sql_retrieval_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / 
 response_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / "response_prompt.md").read_text(encoding="utf-8")
 image_read_prompt=(Path(__file__).resolve().parents[1] / "system_prompts" / "read_image.md").read_text(encoding="utf-8")
 
-async def send_prompt_to_normalize(user_query: str) -> str:
+async def send_prompt_to_normalize(user_query: str, max_tokens: int = 1024) -> str:
     current_date= date.today().isoformat()
     response = await client.chat.completions.create(
         model=MODEL,
@@ -30,18 +30,18 @@ async def send_prompt_to_normalize(user_query: str) -> str:
             {"role": "system", "content": f"{normalization_prompt}\nCurrent date: {current_date}"},
             {"role": "user", "content": user_query},
         ],
-        **get_completion_options(MODEL, temperature=0.7),
+        **get_completion_options(MODEL, max_tokens=max_tokens, temperature=0.7),
     )
     return response.choices[0].message.content
 
-async def send_prompt_to_standardise(user_queries: list[str]) -> str:
+async def send_prompt_to_standardise(user_queries: list[str], max_tokens: int = 1024) -> str:
     response = await client.chat.completions.create(
         model=MODEL,
         messages=[
             {"role": "system", "content": f"{structure_knowledge}"},
             {"role": "user", "content": json.dumps(user_queries)},
         ],
-        **get_completion_options(MODEL, temperature=0.7),
+        **get_completion_options(MODEL, max_tokens=max_tokens, temperature=0.7),
     )
     return response.choices[0].message.content
 
