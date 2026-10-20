@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import AuthCard from "@/components/auth/AuthCard";
 import AuthBackground from "@/components/auth/AuthBackground";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 function AuthCardFallback() {
   return (
@@ -44,6 +45,7 @@ export default function AuthPage() {
           </svg>
           <span>Back to Home</span>
         </Link>
+        <ThemeToggle />
       </header>
 
       {/* Centered Main Form Area */}

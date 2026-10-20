@@ -286,7 +286,7 @@ export default function AuthCard() {
                 aria-busy={isLoggingOut}
                 onClick={async () => {
                   await logout();
-                  handleModeChange("signin");
+                  router.push("/");
                 }}
                 className="w-full text-center py-2 text-xs font-medium text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
               >

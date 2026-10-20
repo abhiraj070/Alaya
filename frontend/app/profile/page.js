@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 import UserAvatar from "@/components/ui/UserAvatar";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/auth-context";
 import DeleteAccountModal from "@/components/profile/DeleteAccountModal";
 
@@ -166,12 +167,12 @@ export default function ProfilePage() {
     }
   };
 
-  // Logout Handler: clears backend session, cookies, and local tokens, then navigates to signin
+  // Logout Handler: clears backend session, cookies, and local tokens, then navigates to landing page
   const handleLogout = async () => {
     try {
       await logout();
     } finally {
-      router.push("/auth?mode=signin");
+      router.push("/");
     }
   };
 
@@ -217,13 +218,16 @@ export default function ProfilePage() {
           <span>Back to Workspace</span>
         </Link>
 
-        <Link
-          href="/app"
-          className="inline-flex items-center group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky rounded px-2 py-1"
-          aria-label="Alaya Application"
-        >
-          <AlayaWordmark className="text-lg sm:text-xl font-extrabold tracking-[0.22em] select-none" />
-        </Link>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <Link
+            href="/app"
+            className="inline-flex items-center group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky rounded px-2 py-1"
+            aria-label="Alaya Application"
+          >
+            <AlayaWordmark className="text-lg sm:text-xl font-extrabold tracking-[0.22em] select-none" />
+          </Link>
+        </div>
       </header>
 
       {/* Main Profile Layout */}
