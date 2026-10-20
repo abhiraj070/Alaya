@@ -51,6 +51,8 @@ async def send_prompt_to_normalize(user_query: str, max_tokens: int = 1024, usag
         raise ValueError("Queries must be a non-empty list of strings")
     if not isinstance(normalized_data.get("is_embedding"), bool):
         raise ValueError("is_embedding must be a boolean")
+    if not isinstance(normalized_data.get("is_similar_question_required"), bool):
+        raise ValueError("is_similar_question_required must be a boolean")
     direct_response= normalized_data.get("direct_response")
     if not isinstance(direct_response, str) or (not normalized_data["is_embedding"] and not direct_response.strip()):
         raise ValueError("Invalid direct response")

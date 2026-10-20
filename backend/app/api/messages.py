@@ -144,6 +144,7 @@ async def handle_new_message(chat_id: int,
         search_results = await retrieve_queries(
             db, user_id, embeddable_queries, decisions,
             embeddings, db_message.id, send_prompt_to_plan,
+            is_similar_question_required=normalized_data["is_similar_question_required"],
         )
 
         return await build_message_response(
@@ -220,6 +221,7 @@ async def update_message(chat_id: int,
         search_results = await retrieve_queries(
             db, user_id, embeddable_queries, decisions,
             embeddings, message.id, send_prompt_to_plan,
+            is_similar_question_required=normalized_data["is_similar_question_required"],
         )
 
         return StreamingResponse(

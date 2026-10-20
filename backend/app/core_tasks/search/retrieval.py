@@ -134,7 +134,8 @@ async def _database_read(engine, operation, *args):
         raise
 
 
-def _retrieve_query(db, user_id, query, strategy, vector, message_id, plan, schema):
+def _retrieve_query(db, user_id, query, strategy, vector, message_id, plan, schema,
+                    is_similar_question_required: bool = False):
     if strategy == "semantic":
         data = semantic_search(db, user_id, vector)
     elif strategy == "sql":
@@ -143,12 +144,13 @@ def _retrieve_query(db, user_id, query, strategy, vector, message_id, plan, sche
         semantic = semantic_search(db, user_id, vector)
         knowledge_ids = [item["data"]["id"] for item in semantic]
         data = sql_search(db, user_id, plan, schema, knowledge_ids)
-    similar_question = semantic_to_find_similar_question(db, user_id, message_id, vector)
+    similar_question = semantic_to_find_similar_question(db, user_id, message_id, vector) if is_similar_question_required else []
     return {"query": query, "strategy": strategy, "results": data, "similar_question": similar_question}
 
 
 async def retrieve_queries(db, user_id: int, queries: list[str], strategies: list[str],
-                     embeddings: list[dict], message_id: int, get_plan) -> list[dict]:
+                     embeddings: list[dict], message_id: int, get_plan,
+                     is_similar_question_required: bool = False) -> list[dict]:
     if len(queries) != len(strategies) or len(queries) != len(embeddings):
         raise ValueError("Queries, strategies and embeddings must match")
     if any(strategy not in ("semantic", "sql", "hybrid") for strategy in strategies):
@@ -167,7 +169,7 @@ async def retrieve_queries(db, user_id: int, queries: list[str], strategies: lis
             plan = await get_plan(query, schema) if strategy in ("sql", "hybrid") else None
             return await _database_read(
                 engine, _retrieve_query, user_id, query, strategy,
-                embedding["vector"], message_id, plan, schema,
+                embedding["vector"], message_id, plan, schema, is_similar_question_required,
             )
 
     tasks = [asyncio.create_task(retrieve_one(query, strategy, embedding))
