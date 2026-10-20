@@ -10,7 +10,7 @@ import DeleteAccountModal from "@/components/profile/DeleteAccountModal";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, updateUser, logout, deleteAccount, refreshUser } = useAuth();
+  const { user, updateUser, logout, isLoggingOut, deleteAccount, refreshUser } = useAuth();
 
   // Active user data
   const currentName = user?.name || "Guest User";
@@ -611,6 +611,8 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={handleLogout}
+              disabled={isLoggingOut}
+              aria-busy={isLoggingOut}
               className="w-full h-12 rounded-xl border border-border-strong/70 bg-surface-secondary/40 text-text-secondary hover:text-text-primary hover:bg-surface-secondary/70 hover:border-border-strong text-xs font-semibold tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky inline-flex items-center justify-center gap-2"
               aria-label="Log out of Alaya"
             >
@@ -628,7 +630,7 @@ export default function ProfilePage() {
                 <polyline points="16 17 21 12 16 7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
-              <span>Log Out</span>
+              <span>{isLoggingOut ? "Logging out..." : "Log Out"}</span>
             </button>
 
             <button

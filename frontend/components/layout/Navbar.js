@@ -12,7 +12,7 @@ const emptySubscribe = () => () => {};
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
-  const { user, logout } = useAuth();
+  const { user, logout, isLoggingOut } = useAuth();
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
@@ -74,6 +74,8 @@ export default function Navbar() {
               </Link>
               <button
                 type="button"
+                disabled={isLoggingOut}
+                aria-busy={isLoggingOut}
                 onClick={async () => {
                   await logout();
                 }}
@@ -197,6 +199,8 @@ export default function Navbar() {
                   </Link>
                   <button
                     type="button"
+                    disabled={isLoggingOut}
+                    aria-busy={isLoggingOut}
                     onClick={async () => {
                       closeMobileMenu();
                       await logout();

@@ -11,7 +11,7 @@ export default function AuthCard() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const { user, login, register, logout } = useAuth();
+  const { user, login, register, logout, isLoggingOut } = useAuth();
 
   const urlMode = searchParams.get("mode") === "signup" ? "signup" : "signin";
   const [activeMode, setActiveMode] = useState(urlMode);
@@ -282,6 +282,8 @@ export default function AuthCard() {
               </Link>
               <button
                 type="button"
+                disabled={isLoggingOut}
+                aria-busy={isLoggingOut}
                 onClick={async () => {
                   await logout();
                   handleModeChange("signin");
