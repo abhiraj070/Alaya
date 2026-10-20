@@ -1,174 +1,298 @@
 # Alaya
 
-Alaya is a personal knowledge platform with a Next.js workspace, a standalone Memory Universe 3D client, and one shared FastAPI backend. It stores text, images, and documents, turns their content into structured knowledge and vector embeddings, and answers questions using semantic search, PostgreSQL queries, or a combination of both.
+A personal knowledge platform for saving information, asking questions about it, and exploring saved memories in 3D.
 
-The backend is built with FastAPI, PostgreSQL/pgvector, Redis, ARQ, SQLAlchemy, and OpenAI.
+1. [Overview: what Alaya is and how it works](#1-overview)
+2. [Backend: flows, endpoints, technologies, and setup](#2-backend)
+3. [Frontend: pages, features, architecture, and setup](#3-frontend)
+4. [Memory Universe: stars, data, controls, and setup](#4-memory-universe)
 
-The [Alaya frontend](frontend/README.md) and standalone [Memory Universe 3D client](memory-universe/README.md) use this same backend and database. Their setup and structure are documented in those directories.
+## 1. Overview
 
-> **Project status:** Alaya is under active development. Text, image, and document ingestion pipelines are implemented, including document chunking and background processing. See [Current limitations](#current-limitations) for outstanding work.
+### What is Alaya?
 
-## What Alaya does
+Alaya is a searchable personal memory. Save notes, images, receipts, and documents, then ask questions such as “How much did I spend on my laptop?” instead of hunting through files yourself.
 
-- Registers users and authenticates them with JWT access/refresh cookies.
-- Creates and manages per-user chat sessions.
-- Stores conversational messages and their embeddings.
-- Accepts free-form knowledge such as purchases, preferences, events, and personal facts.
-- Normalizes compound input into standalone facts.
-- Extracts dynamic structured metadata from those facts.
-- Creates knowledge embeddings asynchronously through an ARQ worker.
-- Reads uploaded images through an OpenAI vision model and stores the extracted knowledge.
-- Accepts PDF, DOCX, TXT, Markdown, CSV, XLSX, and PPTX uploads, extracts their text, and splits it into overlapping chunks.
-- Stores each document chunk with its own structured metadata and embedding.
-- Reports background text, image, and document-processing status over WebSockets.
-- Chooses semantic, SQL, or hybrid retrieval for each question.
-- Streams an LLM-generated response back to the client.
-- Displays saved uploads as interactive stars in Memory Universe, including uploads that have not been processed yet.
+### What does it do?
 
-## Memory Universe
+- Saves text, images, and documents in your account.
+- Reads their contents and organizes useful facts for later retrieval.
+- Answers questions using relevant saved information, including filters and calculations.
+- Keeps conversations and upload history in a workspace.
+- Shows saved uploads as interactive stars in **Memory Universe**.
 
-Start the [3D client](memory-universe/README.md), sign in to Alaya, and click **Memory Universe** in the workspace. Each click requests a fresh access token and opens the standalone client. The client queries the authenticated user's `uploaded_data` records through `GET /api/universe/uploads`, without HTTP caching.
+### How does it work, in plain language?
 
-- Every saved upload becomes a star, even if there is only one record and no processed knowledge or embeddings exist.
-- Documents are red, images are blue, and text entries are yellow; hover and selection highlights temporarily override these colors.
-- A successful empty response loads the 84-star sample universe and its introduction. Real uploads always take priority, including when entering or refreshing the demo.
-- Authentication and connection failures show an error; they never count as an empty database.
-- Universe reads data through REST when opened, when its tab regains focus, and when Refresh is clicked. It does not open a WebSocket connection.
+When you save something, Alaya keeps the original and asks a background helper to read it. The helper breaks the content into manageable pieces, labels useful details such as dates and amounts, and creates a numerical fingerprint of each piece's meaning. When you ask a question, Alaya finds relevant pieces or calculates an answer from those details, then uses AI to explain the result.
 
-Upload positions are deterministic display coordinates. They do not require the separate knowledge projection pipeline or represent measured semantic similarity. Upload details retain their own source IDs; they are not looked up as knowledge chunk IDs.
-
-## How the retrieval pipeline works
+The **frontend** is your everyday workspace, the **backend** stores and processes information, and **Memory Universe** is another way to browse saved uploads. Both interfaces share the same backend and database.
 
 ```text
-Knowledge input
-    -> enqueue raw text in Redis
-    -> ARQ worker normalizes/splits input
-    -> extract structured metadata and create embeddings
-    -> commit knowledge and pgvector embeddings to PostgreSQL
-    -> publish completion status through Redis pub/sub
-    -> deliver status to the user's WebSocket connection
-
-Document upload
-    -> save file locally in temp_files/
-    -> enqueue file path and authenticated user ID in Redis
-    -> ARQ worker extracts text from the saved file
-    -> recursively split text and add overlap
-    -> extract structured metadata one chunk at a time
-    -> create embeddings for the chunks
-    -> commit knowledge and embeddings to PostgreSQL
-    -> publish completion status through Redis pub/sub
-    -> delete the local file when the worker exits
-
-User question
-    -> normalize/split question
-    -> create question embeddings
-    -> select retrieval strategy
-       |-- semantic: nearest vectors
-       |-- SQL: metadata filters/aggregations
-       `-- hybrid: semantic candidates + SQL filtering
-    -> assemble retrieved context
-    -> stream generated answer
+Alaya workspace (port 3000)       Memory Universe (port 5173)
+                    \             /
+                   Shared FastAPI API (port 8000)
+                       |              |
+                  PostgreSQL      Redis queue
+                 facts + vectors      |
+                                  ARQ worker
+                            extraction + AI processing
 ```
 
-All knowledge and retrieval queries are scoped to the authenticated user.
+### Repository and documentation map
 
-## Technology stack
+| Location | Responsibility | Local guide |
+| --- | --- | --- |
+| `backend/` | API, authentication, database, ingestion, retrieval | [Backend README](backend/README.md) |
+| `frontend/` | Landing, sign-in, chat, uploads, profile | [Frontend README](frontend/README.md) |
+| `memory-universe/frontend/` | Standalone 3D upload browser | [Memory Universe README](memory-universe/README.md), [client commands](memory-universe/frontend/README.md) |
+| `backend/alembic/` | Database migrations | [Migration README](backend/alembic/README) |
+| `docker-compose.yml` | Container services | Setup in section 2 below |
 
-| Layer | Technology |
+This root README is the complete project guide. Directory READMEs provide short entry points and commands for working in each part.
+
+## 2. Backend
+
+### Responsibility and structure
+
+The backend authenticates users, manages chats and uploads, turns content into searchable knowledge, and answers questions. Slow ingestion runs in a separate worker so the API can acknowledge uploads before processing finishes.
+
+```text
+backend/
+  app/
+    main.py                 FastAPI app, CORS, Redis startup/shutdown
+    api/                    User, chat, message, upload, and Universe routes
+    auth/                   JWT verification
+    schema/                 Pydantic request/response models
+    db/                     SQLAlchemy engine, sessions, and models
+    env_config/             Settings loaded from backend/.env
+    utility/                Cloudinary helpers
+    core_tasks/
+      arq_worker/           Queue connection and ingestion jobs
+      extraction/           Format-specific document readers
+      chunking/             Recursive text splitting
+      llm_setup/            Chat, vision, and embedding clients
+      llm_calls/            Normalization, metadata, planning, and answers
+      system_prompts/       AI instructions
+      search/               Semantic, SQL, hybrid, similar-question retrieval
+      projection/           Separate knowledge-coordinate pipeline
+      redis_pubsub/         Worker-to-API status messages
+      websocket/            Browser notification connection
+    test/                   Evaluation scripts and recorded results
+  alembic/                  Versioned database migrations
+  requirements.txt          Pinned Python dependencies
+```
+
+### Technologies and how they are used
+
+| Technology | Use in this project |
 | --- | --- |
-| API | FastAPI, Uvicorn |
-| Alaya frontend | Next.js, React, Tailwind CSS |
-| Memory Universe | Vite, React Three Fiber, Three.js, Tailwind CSS |
-| Validation | Pydantic |
-| Database | PostgreSQL, SQLAlchemy |
-| Vector search | pgvector (`vector(1536)`) |
-| Migrations | Alembic |
-| Queue | Redis, ARQ |
-| Realtime notifications | WebSockets, Redis pub/sub |
-| Authentication | JWT (HS256), Argon2 |
-| LLM | OpenAI `gpt-4o-mini` |
-| Image extraction | OpenAI vision model configured by `VISION_MODEL` |
-| Embeddings | OpenAI `text-embedding-3-small` |
-| Retrieval classification | JEV through the TypeSafe SDK |
-| Uploaded file storage | Cloudinary |
-| Document extraction | PyMuPDF, python-docx, pandas, openpyxl, python-pptx |
+| Python, FastAPI, Uvicorn | Define HTTP/WebSocket routes and serve the application. |
+| Pydantic, pydantic-settings | Validate API shapes and load configuration. |
+| PostgreSQL, JSONB | Store accounts, chats, uploads, knowledge, and dynamic fact metadata. |
+| SQLAlchemy, psycopg2 | Map Python models to tables and execute user-scoped queries. |
+| pgvector | Store 1,536-dimensional embeddings and search by cosine distance. |
+| Alembic | Create and evolve the database schema. |
+| Redis, ARQ | Queue ingestion for the separate worker process. |
+| Redis pub/sub, WebSockets | Forward job success/failure notifications to the workspace. |
+| Argon2, PyJWT | Hash passwords and issue/verify HS256 access and refresh tokens. |
+| OpenAI SDK | Normalize facts/questions, extract metadata, plan retrieval, read images, and stream answers. Chat uses required setting `MODEL`; vision currently uses `gpt-5.6-luna` in `chat_llm.py`. |
+| OpenAI `text-embedding-3-small` | Create vectors for meaning-based retrieval. |
+| TypeSafe SDK / JEV | Fallback classifier when OpenAI retrieval-strategy classification fails. |
+| Cloudinary | Store original images/documents and return source URLs. |
+| PyMuPDF, python-docx, pandas, openpyxl, python-pptx | Extract document text. |
+| NumPy, UMAP, scikit-learn KMeans | Compute separate knowledge coordinates and clusters; the upload-based Universe does not consume these. |
+| Docker Compose | Run database, Redis, migrations, API, worker, and both interfaces. |
 
-## Project structure
+The active AI provider is OpenAI; a Grok configuration exists but is not selected. Versions are recorded in [requirements.txt](backend/requirements.txt).
+
+### Overall flows
+
+#### Account and authentication
+
+1. Registration saves the user and hashes the password with Argon2.
+2. Login verifies the password, stores a refresh token, and sets HTTP-only access/refresh cookies.
+3. Protected routes verify the access JWT and enforce the authenticated user's ownership.
+4. Logout clears cookies and the stored refresh token. Account deletion also clears cookies.
+
+Protected requests accept the `access_token` cookie or `Authorization: Bearer <access-token>`. The verifier also accepts a `token` query parameter, used by browser handoff and WebSockets. Access tokens default to seven days; refresh tokens default to 30 days. There is no refresh endpoint or token rotation yet; sign in again after access-token expiry.
+
+#### Saving text, images, and documents
 
 ```text
-Alaya/
-├── backend/
-│   ├── app/
-│   │   ├── api/                # Users, chats, messages, uploads, and universe routes
-│   │   ├── auth/               # JWT verification
-│   │   ├── core_tasks/         # Ingestion, extraction, chunking, retrieval, projection,
-│   │   │                      # ARQ jobs, Redis notifications, and WebSockets
-│   │   ├── db/                 # SQLAlchemy models, engine, and sessions
-│   │   ├── env_config/         # Environment-backed settings
-│   │   ├── schema/             # Pydantic request/response models
-│   │   ├── utility/            # Cloudinary helpers
-│   │   └── main.py             # Shared FastAPI application
-│   ├── alembic/                # Database migrations
-│   ├── alembic.ini
-│   └── requirements.txt
-├── frontend/                   # Next.js Alaya workspace, auth, profile, and uploads
-│   ├── app/
-│   ├── components/
-│   └── lib/
-└── memory-universe/
-    └── frontend/               # Standalone Vite 3D client
-        ├── src/                # Scene, views, hooks, store, API, and demo fixtures
-        └── public/fonts/       # Locally hosted Inter font and license
+Authenticated input -> save UploadedData source -> enqueue Redis job
+  -> acknowledge queue acceptance
+  -> ARQ worker extracts/normalizes content
+  -> generate metadata and embeddings
+  -> commit Knowledge + Embedding rows to PostgreSQL
+  -> attempt separate knowledge projection
+  -> publish status through Redis -> API -> workspace WebSocket
 ```
 
-## Prerequisites
+The source can appear in upload history and Memory Universe before indexing completes. Queue acceptance does not mean the content is ready for questions.
 
-- Python 3.10 or newer for the source syntax; the existing local environment uses Python 3.14. Check that the pinned dependencies support your chosen version.
-- PostgreSQL with the [pgvector](https://github.com/pgvector/pgvector) extension available
-- Redis
-- Node.js and npm for the two frontends; use a Node.js version supported by the checked-in Next.js and Vite versions.
-- An OpenAI API key
-- A TypeSafe API key for retrieval-strategy classification
-- Cloudinary credentials for image and document uploads (also required by settings at startup)
+| Input | Processing |
+| --- | --- |
+| Text | Save text and optional tag. Split into 2,000-character pieces without overlap, normalize into standalone facts, extract metadata in batches of four facts, then embed them. |
+| Image | Check PNG/JPEG/WEBP signatures and a 2 MB limit; upload to Cloudinary and remove the temporary image. Worker reads its URL using vision and creates knowledge, metadata, and an embedding. |
+| Document | Save a local temporary file, upload the original to Cloudinary, save its source, and queue its local path. Worker extracts text, chunks it, creates metadata per chunk and embeddings for the chunk list, then deletes the local file. |
 
-## Docker Compose
+Document chunks target 1,000 characters and prepend up to 150 characters from the preceding chunk. The splitter tries paragraph, line, sentence, and smaller boundaries before character slicing. Later chunks can reach 1,150 characters; sizes count characters, not tokens. Knowledge retains source lineage, chunk index, and PDF page information where available. Generation has bounded retries; failed knowledge transactions roll back.
 
-Create `backend/.env` with the API keys and application settings described below, then run from the repository root:
+| Formats | Extracted content |
+| --- | --- |
+| PDF | Embedded page text with page markers; no scanned-page OCR. |
+| DOCX | Paragraphs and table cells. |
+| TXT, Markdown | UTF-8 text with replacement for invalid characters. |
+| CSV | Non-empty values labeled with column names. |
+| XLSX | Values grouped by sheet; formulas use cached values. |
+| PPTX | Text-bearing shapes grouped by slide. |
 
-```bash
+The document API does not validate extension or size before queueing. Unsupported files or empty extracted text fail in the worker. API and worker must share `backend/temp_files/` because jobs receive local paths.
+
+#### Asking and editing questions
+
+```text
+Question -> verify chat ownership -> save user message
+  -> normalize and decide whether retrieval is needed
+     |-- direct reply -> save and return reply
+     `-- split into subquestions and choose strategies
+          -> embed subquestions
+          -> semantic / SQL / hybrid search
+          -> optionally find a similar earlier question
+          -> generate and stream answer -> save completed assistant reply
+```
+
+- **Semantic:** compare meaning using cosine distance; retrieve five nearest knowledge records.
+- **SQL:** use a validated structured plan to filter or calculate over fact metadata. Supports lists, counts, sums, averages, minimums, maximums, and grouping.
+- **Hybrid:** find semantic candidates first, then apply SQL filters/calculations to those candidates.
+
+Normalization normally supplies strategies. Invalid strategies trigger OpenAI classification, followed by TypeSafe/JEV if needed. Independent subquestion retrievals have a concurrency limit of four. SQL plans are checked against known fields, operations, and filters rather than executed as arbitrary generated SQL.
+
+Editing replaces the message content and embeddings and regenerates an answer. Replies normally stream as plain text. New-message query flag `include_usage=true` collects the answer and returns JSON containing response, usage, and retrieved chunks instead. A backend fallback reply exists for pipeline failures, though error handling still has limitations.
+
+#### Processing notifications
+
+Alaya connects to `/ws`. Workers publish on Redis channel `websocket_messages`; the API's native async Redis subscriber forwards payloads to the user's socket. The ARQ Redis pool handles queued jobs separately.
+
+```json
+{"status":"completed","message":"Data stored successfully"}
+```
+
+Failures use status `Failed`. Notifications are transient and are not replayed after reconnecting. The API tracks one socket per user in process memory. Browser origins allow `localhost` and `127.0.0.1` on ports 3000/3001; other supplied origins are rejected. Universe does not subscribe to this channel.
+
+### All endpoints
+
+These are all application routes declared in the current code. HTTP routes start with `/api`; `/ws` is separate. All application routes require authentication except registration and login. Protected routes enforce ownership or match the path user ID to the authenticated user.
+
+#### Users
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/user/register` | Register with name, username, and password; public. |
+| POST | `/api/user/login` | Verify credentials, set cookies, return profile; public. |
+| GET | `/api/user/get_user/{user_id}` | Read own profile. |
+| PUT | `/api/user/update_user/{user_id}` | Update name or username. |
+| DELETE | `/api/user/delete_user/{user_id}` | Delete own account and clear cookies. |
+| PUT | `/api/user/logout/{user_id}` | Clear stored refresh token and cookies. |
+
+#### Chats
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/chat/create_chat` | Create an owned chat. |
+| GET | `/api/chat/get_chats/{user_id}` | List own chats. |
+| GET | `/api/chat/get_chat/{chat_id}` | Read one owned chat. |
+| PUT | `/api/chat/update_chat/{chat_id}` | Rename a chat or generate a title from its first message. |
+| DELETE | `/api/chat/delete_chat/{chat_id}` | Delete a chat and its messages. |
+
+#### Messages and ingestion
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/messages/new_messages/{chat_id}` | Save question and return answer; optional `include_usage` query flag. |
+| GET | `/api/messages/get_messages/{chat_id}` | List messages in creation order. |
+| PUT | `/api/messages/update_message/{chat_id}/{message_id}` | Edit message, replace embeddings, regenerate answer. |
+| DELETE | `/api/messages/delete_message/{message_id}` | Delete message and its embeddings. |
+| POST | `/api/messages/feed_knowledge` | Queue text; `text_content` and optional `tag` are query parameters. |
+| POST | `/api/messages/image_upload` | Queue image processing; multipart field `file`. |
+| POST | `/api/messages/file_upload` | Queue document processing; multipart field `file`; HTTP 201 on acceptance. |
+
+#### Uploads and Universe
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/uploaded_data/get_uploads/{user_id}` | List saved uploads, newest first. |
+| DELETE | `/api/uploaded_data/delete_upload/{upload_id}` | Delete upload and linked indexed knowledge through ORM cascades. |
+| GET | `/api/universe/token` | Issue access token for the standalone client. |
+| GET | `/api/universe/uploads` | Read all owned uploads in ID order, including unprocessed records. |
+| WebSocket | `/ws` | Receive processing notifications; cookie, bearer header, or `token` query authentication. |
+
+Upload deletion cascades through linked knowledge to embeddings and coordinates. Legacy knowledge without upload lineage is not linked to that deletion. This route does not explicitly delete the original Cloudinary asset.
+
+FastAPI also supplies public `GET /docs`, `/redoc`, `/openapi.json`, and `/docs/oauth2-redirect`. See [Swagger UI](http://localhost:8000/docs) for request/response schemas. There are no active Universe nodes, chunk-detail, or recompute routes.
+
+### Data model
+
+| Model | Stored information |
+| --- | --- |
+| `User` | Profile, Argon2 password hash, refresh token, ownership relationships. |
+| `Chat` | Title, owner, creation and update times. |
+| `Message` | User/assistant content, chat, owner, sender, timestamp. |
+| `UploadedData` | Original text or Cloudinary URL, type (`text`, `img`, `docs`), tag, owner, timestamp. Feeds upload history and live Universe stars. |
+| `Knowledge` | Normalized fact, image-derived text, or document chunk; JSONB metadata, type, owner, source upload, chunk index, optional page number. |
+| `Embedding` | A 1,536-dimensional vector linked to a message or knowledge record, plus embedded text. |
+| `KnowledgeCoordinate` | One persisted 3D position and cluster per knowledge chunk for the separate projection pipeline. |
+
+Models live in [app/db/model](backend/app/db/model). Alembic owns schema changes.
+
+### Setup and configuration
+
+#### Prerequisites and environment
+
+Install Python compatible with the pinned dependencies, Node.js/npm compatible with the frontend packages, PostgreSQL with pgvector, and Redis. The backend Docker image uses Python 3.12. OpenAI, TypeSafe, and Cloudinary credentials are required.
+
+Create `backend/.env`; the settings loader resolves this path from the backend directory:
+
+```dotenv
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/alaya
+SECRET_KEY=replace-with-a-long-random-secret
+ACCESS_TOKEN_EXPIRE_MINUTES=10080
+REFRESH_TOKEN_EXPIRE_DAYS=30
+OPENAI_API_KEY=your-openai-api-key
+MODEL=your-openai-chat-model
+TYPESAFE_API_KEY=your-typesafe-api-key
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
+REDIS_HOST=localhost
+REDIS_PORT=6379
+XAI_API_KEY=
+ALAYA_ACCESS_TOKEN=
+```
+
+Database URL, secret key, OpenAI key, `MODEL`, TypeSafe key, and all three Cloudinary fields are required. `ALAYA_ACCESS_TOKEN` is also a required string in the current settings schema; an empty value satisfies that field for normal startup. `XAI_API_KEY` is optional. Keep credentials out of Git and restart backend processes after changing settings.
+
+#### Docker Compose
+
+The checked-in [Compose file](docker-compose.yml) currently sets `x-backend.env_file` to `./backend/.gitignore`. **Change that path to `./backend/.env` before running Compose.** Application settings belong in `.env`.
+
+From the repository root:
+
+```sh
 docker compose up --build -d
 docker compose ps -a
 docker compose logs -f backend worker
 ```
 
-Open Alaya at `http://localhost:3000`, then use its **Memory Universe** button to open the 3D client at `http://localhost:5173`. The API documentation is at `http://localhost:8000/docs`. Stop any local development servers using these ports before starting the Compose stack.
+Compose starts PostgreSQL/pgvector, Redis, a one-shot migration, API, worker, Next.js, and Universe served by Nginx. API/worker wait for migrations and Redis; interfaces wait for the API health check. Stop local servers using ports 3000, 5173, and 8000 first.
 
-Compose starts PostgreSQL with pgvector, Redis, a one-shot Alembic migration, the API, the ARQ worker, and both frontends. The API and worker wait for migrations to succeed and Redis to become healthy. The frontends wait for the API health check. The API and worker use the same backend image and share `/app/temp_files` so document jobs can read uploaded files.
+PostgreSQL and Redis stay on the internal network. Named volumes retain database/queue data and share `/app/temp_files` between API and worker. Compose overrides `DATABASE_URL` to use its own database; it does not copy host/remote records. Optional `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` come from the root `.env` or shell, defaulting to `postgres`, `postgres`, and `alaya`. Credentials interpolated into the URL must be URL-safe.
 
-PostgreSQL and Redis are available only inside the Compose network. PostgreSQL data, Redis queue data, and shared document files use named volumes. This setup uses its own PostgreSQL database, overriding `backend/.env`'s `DATABASE_URL`; existing host or remote database records are not copied. Optional `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` values are read from the root `.env` or shell, defaulting to `postgres`, `postgres`, and `alaya`. If changing credentials, use URL-safe values because they are interpolated into the database URL.
+Open [Alaya](http://localhost:3000), [Memory Universe](http://localhost:5173), and [API docs](http://localhost:8000/docs). `docker compose down` stops services while retaining named volumes. `NEXT_PUBLIC_MEMORY_UNIVERSE_URL` can override the Universe link at build time; it must be reachable by the browser.
 
-Frontend API requests are proxied to the `backend` service. `NEXT_PUBLIC_MEMORY_UNIVERSE_URL` can override the link at image build time; use a browser-reachable address, not a Compose service name. Custom browser origins also require updating the backend's CORS and WebSocket allowlists.
+#### Local backend
 
-```bash
-docker compose down
-```
-
-This stops the stack while retaining its named volumes. The Next.js image runs its standalone server; the Universe image serves its static build through Nginx. Environment files and local dependency directories are excluded from image build contexts.
-
-## Local setup
-
-### 1. Create and activate a virtual environment
-
-Run backend setup commands from `backend/`:
-
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-On Windows PowerShell, create and activate the environment with:
+From the repository root:
 
 ```powershell
 cd backend
@@ -177,315 +301,237 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-### 2. Configure environment variables
+On macOS/Linux, use `python3 -m venv .venv` and `source .venv/bin/activate`. Create the database, enable pgvector, and migrate from `backend/`:
 
-Create `backend/.env`. The backend loads `.env` relative to its working directory:
-
-```dotenv
-DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/alaya
-SECRET_KEY=replace-with-a-long-random-secret
-ACCESS_TOKEN_EXPIRE_MINUTES=10080
-REFRESH_TOKEN_EXPIRE_DAYS=30
-OPENAI_API_KEY=your-openai-api-key
-XAI_API_KEY=
-TYPESAFE_API_KEY=your-typesafe-api-key
-REDIS_HOST=localhost
-REDIS_PORT=6379
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-cloudinary-api-key
-CLOUDINARY_API_SECRET=your-cloudinary-api-secret
-```
-
-`DATABASE_URL`, `SECRET_KEY`, `OPENAI_API_KEY`, `TYPESAFE_API_KEY`, and the three `CLOUDINARY_*` values are required when the application imports its settings. Token lifetimes default to 10,080 minutes (seven days) for access tokens and 30 days for refresh tokens. `XAI_API_KEY` is optional and reserved for the configured Grok provider.
-
-Do not commit `.env`; it is already excluded by `.gitignore`.
-
-### 3. Initialize PostgreSQL
-
-Create the database, then enable pgvector:
-
-```bash
+```sh
 createdb alaya
 psql alaya -c 'CREATE EXTENSION IF NOT EXISTS vector;'
-```
-
-Create the application schema with Alembic:
-
-```bash
 alembic upgrade head
 ```
 
-### 4. Start Redis
+Start Redis through your service manager or Docker:
 
-Run Redis using your local service manager, or with Docker:
-
-```bash
+```sh
 docker run --name alaya-redis --rm -p 6379:6379 redis:7
 ```
 
-### 5. Start the API and worker
+In two separate terminals with the Python environment activated and working directory `backend/`:
 
-Use two terminals with the virtual environment activated.
-
-API server:
-
-```bash
-uvicorn app.main:app --reload
+```sh
+uvicorn app.main:app --reload --port 8000
 ```
 
-ARQ worker:
-
-```bash
+```sh
 arq app.core_tasks.arq_worker.worker.WorkerSettings
 ```
 
-Run the API and worker against the same local filesystem. Document jobs receive an absolute file path, so the worker must be able to read the API's `temp_files/` directory. Run both commands from `backend/` so they load the same `.env`.
+Keep API and worker on the same filesystem, or share their temporary document directory. Start the interfaces using sections 3 and 4.
 
-The API is available at `http://127.0.0.1:8000`. Interactive documentation is available at:
+### Checks and current limits
 
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- ReDoc: `http://127.0.0.1:8000/redoc`
+Run `python -m compileall app alembic` from `backend/` for syntax validation. Scripts in `app/test/` evaluate responses using real services; they are not an isolated regression suite. There is no `backend/tests/` directory in this checkout.
 
-### 6. Start both frontends
+For schema changes, run `alembic revision --autogenerate -m "describe the schema change"`, inspect the revision, then run `alembic upgrade head`.
 
-In separate terminals, starting from the repository root:
+- Usernames have no database-level uniqueness constraint; refresh-token rotation is not implemented.
+- The message request's supplied user ID does not determine ownership; the access token does.
+- Documents have no API size limit or pre-queue extension check, no scanned-PDF OCR, and request embeddings for the whole chunk list. Large jobs may exceed worker limits.
+- Source records are committed before queueing; failures can leave visible uploads without indexed knowledge. There is no durable per-upload job-status record.
+- Abrupt termination can leave temporary files behind. Pub/sub notifications and socket state are not durable.
+- Login cookies use `secure=False` for local HTTP. HTTP CORS allows local ports 3000, 3001, and 5173; WebSockets allow 3000 and 3001. Deployment requires HTTPS, secure cookies, and appropriate origins.
 
-```bash
+## 3. Frontend
+
+### Pages and features
+
+The Next.js application in `frontend/` is the main interface for accounts, conversations, and managing source material.
+
+| Page | Route | Features |
+| --- | --- | --- |
+| Landing | `/` | Product introduction, workflow examples, FAQ, sign-in/sign-up links. |
+| Authentication | `/auth?mode=signin` or `/auth?mode=signup` | Sign in or register with name, username, and password. `/login` and `/signup` redirect here. |
+| Workspace | `/app` | Conversations, message sending/editing/deletion, knowledge uploads, Memory Universe button. |
+| Profile | `/profile` | Name/username editing, theme control, logout, account-deletion confirmation. |
+
+The workspace sidebar supports conversation search, user-scoped pinned chats, rename/delete actions, resizing, and mobile navigation. Chat shows thinking/streaming states. The knowledge manager accepts documents, images, and tagged text, with drafts, previews, search, type filters, and deletion confirmations. Shared theme controls and dialogs support the surrounding interface.
+
+### Technologies and structure
+
+| Technology | Use |
+| --- | --- |
+| Next.js 16.4 App Router | Routes, layouts, API rewrites, redirects, standalone production server. |
+| React 19.3 | Components, auth context, hooks, external-store subscriptions. |
+| Tailwind CSS 4, global CSS | Layout, light/dark themes, responsive styling, motion. |
+| Lucide React | Interface icons. |
+| Fetch, Streams, AbortController, WebSocket | Authenticated requests, progressive answers, cancellation, processing notifications. |
+| localStorage | Cached display profile and UI preferences, including user-scoped pins; not passwords or auth tokens. |
+
+```text
+frontend/
+  app/                       Landing, auth, workspace, profile, layout, global CSS
+  components/
+    app/                     Shell, sidebar, chat, knowledge manager, notifications
+    auth/                    Authentication forms and background
+    profile/                 Account-deletion confirmation
+    landing/                 Hero, workflow demonstrations, FAQ, calls to action
+    layout/                  Public navigation and footer
+    ui/                      Theme controls, avatar, wordmark
+  lib/
+    api.js                   Shared HTTP, uploads, streamed send/edit decoder
+    auth-context.js          Login, registration, logout, profile actions
+    user-store.js            Cached display-profile subscription
+    chat-data.js             Chat/message normalization
+    knowledge-data.js        Upload normalization, validation, filtering
+    use-knowledge-base.js    Upload drafts, submissions, refresh, deletion
+    knowledge-presentation.js Date and badge presentation helpers
+    open-universe.js         New-tab authentication handoff
+    use-dialog.js            Dialog focus and keyboard behavior
+    use-local-storage.js     UI preferences
+```
+
+### How frontend flows work
+
+**Authentication:** forms call `lib/api.js` with `credentials: "include"`. The backend sets HTTP-only cookies; only a display profile is cached locally. The workspace requires sign-in, while the API validates requests and enforces ownership.
+
+**Conversations:** the workspace loads saved chats and creates a conversation when **New chat** is chosen. Selecting a chat loads messages. Sending/editing uses one streaming decoder to append text as it arrives. After completion, messages reload to reconcile saved content and server IDs. Requests are cancelled when their view is left; failures show errors. The frontend itself does not generate replacement assistant replies.
+
+**Knowledge uploads:** the manager validates files, submits multipart data (or text/tag as query parameters), and reports queue acceptance. Saved uploads reload when the manager mounts and after submission. Worker completion/failure appears through WebSocket notifications. Search/type filters operate locally over loaded uploads. Confirmed deletion removes the server upload and linked knowledge before updating the list.
+
+**Memory Universe handoff:** the button reserves a tab, requests a fresh token from `/api/universe/token`, and navigates to the configured Universe URL with `?token=...`. Authentication failures close the reserved tab and show an error. Popup blocking must allow the new tab. Universe performs its own REST reads after opening.
+
+### Run and configure
+
+Start the backend on port 8000, then run from the repository root:
+
+```sh
 cd frontend
 npm ci
 npm run dev
 ```
 
-```bash
+Open [Alaya](http://localhost:3000). Defaults work without a frontend environment file. Optional overrides go in `frontend/.env.local`; see [.env.example](frontend/.env.example).
+
+| Variable | Default / purpose |
+| --- | --- |
+| `BACKEND_URL` | `http://localhost:8000`; Next.js `/api` proxy target. |
+| `NEXT_PUBLIC_API_URL` | Empty; use same-origin API proxy. Set for a separate API origin. |
+| `NEXT_PUBLIC_WS_URL` | Optional full socket URL. Defaults to browser hostname on port 8000 at `/ws?client=app`, with a token when available. |
+| `NEXT_PUBLIC_MEMORY_UNIVERSE_URL` | `http://localhost:5173`; Universe button destination. |
+| `NEXT_DIST_DIR` | `.next`; optional dedicated build directory. |
+
+Use `localhost` consistently; `127.0.0.1` is a different cookie hostname. Custom origins also need backend CORS/WebSocket configuration. Public settings are exposed to browser code and should contain no secrets.
+
+### Checks and production build
+
+Run `npm run lint` and `npm run build` from `frontend/`. Use `npm start` for the production server; Docker uses standalone output. The `npm test` script targets absent `tests/*.test.js` files and is not currently a working suite.
+
+Manually check registration/login, chat creation/reload, streamed sends/edits, uploads and worker notifications, deletion, profile actions, and the Universe button. Backend authentication/ingestion limitations apply to this interface too.
+
+## 4. Memory Universe
+
+### Purpose and technologies
+
+Memory Universe is the standalone 3D browser in `memory-universe/frontend/`. Saved uploads appear as stars that users can explore, inspect, and open as original documents or images. It shares Alaya's accounts, API, and database; it has no separate backend.
+
+| Technology | Use |
+| --- | --- |
+| Vite 6, React 19 | Development server, static build, interactive panels. |
+| Three.js, React Three Fiber | WebGL scene, stars, connections, dust, coordinate grid. |
+| Drei | Orbit controls and supporting scene utilities. |
+| React Three Postprocessing, postprocessing | Bloom and scene effects. |
+| Tailwind CSS 4, Lucide React | Responsive overlays, styling, icons. |
+| React external store and hooks | Separate snapshots, selection, filters, navigation, and loading. |
+| Fetch, AbortController, sessionStorage | Authenticated REST reads, cancellation, per-tab token storage. |
+| Nginx in Docker | Static hosting and API proxy. |
+
+```text
+memory-universe/frontend/
+  src/
+    App.jsx                    Connect data/detail hooks to the view
+    UniverseView.jsx           Selection, hover, search, layout, dialogs
+    api/                       HTTP client and upload endpoint adapter
+    hooks/                     Loading, local details, reduced motion
+    store/universeStore.js     Upload-to-star mapping and display state
+    components/canvas/         Stars, connections, dust, grid, camera, effects
+    components/navigation/     Header, search, facet controls
+    components/universe/       Hover, details, demo/source/error panels
+    components/ui/             Display primitives
+    data/                      Demo fixtures and local detail/source adapters
+    utils/                     Search, filters, proximity, colors, source links
+    styles/                    Global styling and font registration
+  public/fonts/                Local Inter font and license
+  vite.config.js               Development server and proxy
+  nginx.conf                   Container static hosting and API proxy
+```
+
+### Live data and authentication flow
+
+```text
+Alaya sign-in -> Universe button -> GET /api/universe/token
+  -> new tab with token -> token saved in tab sessionStorage
+  -> GET /api/universe/uploads (no HTTP caching)
+  -> useUniverseData -> setUploadedData -> display store -> 3D view
+```
+
+The API client includes cookies and a bearer token when available. It reads uploads on entry, tab focus, and **Refresh**. Superseded requests are aborted so stale results cannot overwrite newer state. Universe does not open a WebSocket or receive push updates.
+
+Each `UploadedData` record becomes **one star**, even before processing completes. Records contain ID, type, tag, source text/URL, owner, and creation time. The store derives titles, previews, sectors, coordinates, and source details. Details resolve locally from the loaded snapshot; upload IDs are not sent to a knowledge-chunk endpoint.
+
+### Stars, search, and controls
+
+| Feature | Behavior |
+| --- | --- |
+| Colors | Documents red, images blue, text yellow; hover/selection override colors temporarily. |
+| Navigation | Orbit, pan, zoom; search and nearby-item actions move the camera to stars. **Reset View** restores the overview. |
+| Hover/selection | Preview on hover; selection opens content, metadata, and source actions in a drawer. |
+| Search | Local scored text search across titles, previews, source names, types, and sectors. |
+| Filters | Source, sector, and knowledge type. Live sectors are Documents, Images, and Text. |
+| Nearby items | Geometric distance with a preference for the same sector; badges report display units. |
+| Appearance | Toggle grid and bloom; camera movement respects reduced-motion preferences. Inter is hosted locally. |
+| Sources | Open real upload URLs; sample sources have local preview data. |
+
+Live positions use a deterministic geometric layout derived from record order, total count, and IDs. Positions can shift when the collection changes. **Proximity and connection lines do not measure semantic similarity in this view.** Search uses upload display fields rather than querying extracted document chunks.
+
+### Empty accounts, demo, and errors
+
+A successful authenticated response with zero uploads offers the sample universe and introduction. The demo has **84 sample stars across three sectors**, local details/document previews, and an amber **Demo** badge. It writes no samples to the backend.
+
+- **Explore Universe** rechecks the backend; real uploads take priority over the demo.
+- **Refresh** replaces sample data whenever real uploads exist.
+- **Exit Demo** clears demo state and reloads the live account, which may show an empty state.
+- Authentication, connection, and invalid-response errors show errors and never authorize demo mode.
+
+### Separate knowledge projection
+
+The worker also attempts `project_user_knowledge` after ingestion. It uses deterministic fallback coordinates for fewer than five knowledge records, or UMAP and KMeans for larger collections, and saves one `KnowledgeCoordinate` per knowledge chunk.
+
+The current upload-based client computes its own positions and does not read `knowledge_coordinates` or raw vectors. Projection failure does not prevent a saved upload becoming a star. Legacy nodes, chunk-detail, and recompute endpoints have been removed; current Universe routes are listed in section 2.
+
+### Run and configure
+
+Start the shared backend and main frontend, then run from the repository root:
+
+```sh
 cd memory-universe/frontend
 npm ci
 npm run dev
 ```
 
-Open Alaya at `http://localhost:3000`, register or sign in, then click **Memory Universe** to open `http://localhost:5173`. Allow the new tab if your browser blocks it. The API runs on port 8000; both clients use this same backend. Use `localhost` consistently rather than mixing it with `127.0.0.1` for cookie-based sessions.
+Sign in at [Alaya](http://localhost:3000) and click **Memory Universe** to open [the 3D client](http://localhost:5173). Keep hostnames consistent. Defaults need no environment file; optional settings go in `memory-universe/frontend/.env.local`. See [.env.example](memory-universe/frontend/.env.example).
 
-The frontends proxy `/api` to the backend in development. Their optional settings are documented in [frontend/.env.example](frontend/.env.example) and [memory-universe/frontend/.env.example](memory-universe/frontend/.env.example). A separate backend on port 8001 is not required.
-
-## API overview
-
-HTTP routes are mounted under `/api`. The WebSocket endpoint is available separately at `/ws`. All chat routes require authentication; user registration and login are public.
-
-### Users
-
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `POST` | `/api/user/register` | Register a user |
-| `POST` | `/api/user/login` | Log in and set access/refresh cookies |
-| `GET` | `/api/user/get_user/{user_id}` | Fetch one user |
-| `PUT` | `/api/user/update_user/{user_id}` | Update a user |
-| `DELETE` | `/api/user/delete_user/{user_id}` | Delete a user |
-| `PUT` | `/api/user/logout/{user_id}` | Clear authentication cookies |
-
-### Chats
-
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `POST` | `/api/chat/create_chat` | Create a chat |
-| `GET` | `/api/chat/get_chat/{chat_id}` | Fetch one chat |
-| `GET` | `/api/chat/get_chats/{user_id}` | List a user's chats |
-| `PUT` | `/api/chat/update_chat/{chat_id}` | Rename a chat |
-| `DELETE` | `/api/chat/delete_chat/{chat_id}` | Delete a chat and its messages |
-
-### Messages and knowledge
-
-| Method | Route | Authentication | Purpose |
-| --- | --- | --- | --- |
-| `POST` | `/api/messages/new_messages/{chat_id}` | Required | Store a question, retrieve context, and stream a response |
-| `GET` | `/api/messages/get_messages/{chat_id}` | Required | List messages in a chat |
-| `PUT` | `/api/messages/update_message/{chat_id}/{message_id}` | Required | Edit a message, regenerate embeddings, and stream a response |
-| `DELETE` | `/api/messages/delete_message/{message_id}` | Required | Delete a message |
-| `POST` | `/api/messages/feed_knowledge` | Required | Queue raw text for normalization, metadata extraction, and embedding |
-| `POST` | `/api/messages/image_upload` | Required | Upload an image and enqueue background extraction and embedding |
-| `POST` | `/api/messages/file_upload` | Required | Save a document locally and enqueue extraction, chunking, and knowledge storage |
-
-Protected routes accept either an `access_token` cookie or this header:
-
-```http
-Authorization: Bearer <access-token>
-```
-
-### Uploaded records and Memory Universe
-
-All routes below require authentication and scope records to the authenticated user.
-
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/uploaded_data/get_uploads/{user_id}` | List the user's saved uploads |
-| `DELETE` | `/api/uploaded_data/delete_upload/{upload_id}` | Delete an owned upload record |
-| `GET` | `/api/universe/token` | Issue an access token for opening Memory Universe |
-| `GET` | `/api/universe/uploads` | Read every owned upload; default 3D view's source of truth |
-
-Deleting an upload history record does not currently delete its indexed knowledge. Universe builds star positions and details from the uploaded records; it does not require projection endpoints.
-
-### WebSocket notifications
-
-Connect with an access-token cookie, an `Authorization: Bearer <access-token>` header where supported, or the `token` query parameter used by the Alaya app. The authenticated token determines the user:
-
-```text
-ws://localhost:8000/ws?client=app
-```
-
-When a browser supplies an `Origin`, it must match the configured local allowlist: `http://localhost` or `http://127.0.0.1` on ports 3000 or 3001. Other supplied origins are rejected with policy-violation code `1008`. Missing origins are currently accepted after authentication.
-
-Log in through the Alaya frontend. Cookies are shared across ports on the same hostname; `localhost` and `127.0.0.1` are different hosts. Alaya's Memory Universe button obtains a fresh token and passes it to the standalone client, which stores it in the tab's session storage and attaches it to REST requests. A `user_id` query parameter does not select the notification recipient.
-
-The API process uses a native `redis.asyncio.Redis` client to subscribe to the Redis `websocket_messages` channel, while an ARQ pool handles queued jobs. After an ARQ job finishes, the worker publishes a status message and the API forwards it to the user's app socket. This connection is used for Alaya's processing notifications, not for Universe data transfer.
-
-Example server message:
-
-```json
-{
-  "status": "completed",
-  "message": "Data stored successfully"
-}
-```
-
-Failed jobs use a `Failed` status with an explanatory message. Redis pub/sub notifications are transient, so messages published while the user is disconnected are not retained or replayed.
-
-## Example workflow
-
-Register and log in while saving the returned cookies:
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/user/register \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Ada","username":"ada","password":"correct-horse-battery-staple"}'
-
-curl -c cookies.txt -X POST http://127.0.0.1:8000/api/user/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"ada","password":"correct-horse-battery-staple"}'
-```
-
-Create a chat (replace `1` with the registered user's ID):
-
-```bash
-curl -b cookies.txt -X POST http://127.0.0.1:8000/api/chat/create_chat \
-  -H 'Content-Type: application/json' \
-  -d '{"chat_title":"Personal memory","user_id":1}'
-```
-
-Feed knowledge. `text_content` is currently a query parameter:
-
-```bash
-curl -b cookies.txt -X POST \
-  --get http://127.0.0.1:8000/api/messages/feed_knowledge \
-  --data-urlencode 'text_content=I bought a laptop for 80000 INR on 2026-09-20'
-```
-
-The knowledge endpoint returns `{"message":"Knowledge queued for processing"}`. Wait for the worker to finish before querying the stored knowledge.
-
-Ask a question and receive a streamed plain-text response (replace the chat ID if needed):
-
-```bash
-curl -N -b cookies.txt -X POST \
-  http://127.0.0.1:8000/api/messages/new_messages/1 \
-  -H 'Content-Type: application/json' \
-  -d '{"message_content":"How much did I spend on my laptop?","user_id":1}'
-```
-
-Upload an image as multipart form data:
-
-```bash
-curl -b cookies.txt -X POST \
-  http://127.0.0.1:8000/api/messages/image_upload \
-  -F 'file=@receipt.png'
-```
-
-Images must be PNG, JPEG, or WEBP and no larger than 2 MB. The API checks the file signature, uploads to Cloudinary, and queues extraction and embedding. It returns `{"message":"Image queued for processing"}`; completion or failure arrives over the WebSocket. Temporary local files are removed after upload, and Cloudinary cleanup is attempted if enqueueing or processing fails.
-
-## Document uploads and chunking
-
-Upload a document as multipart form data:
-
-```bash
-curl -b cookies.txt -X POST \
-  http://127.0.0.1:8000/api/messages/file_upload \
-  -F 'file=@notes.pdf'
-```
-
-The API returns HTTP `201` with `{"message":"File queued for processing"}` after saving a temporary file, uploading the original to Cloudinary, persisting an `UploadedData` record, and queueing `create_file_embeddings`. The saved upload can appear in Memory Universe before extraction and embedding finish. Processing happens in the worker; completion or failure is reported over the WebSocket.
-
-`app/core_tasks/extraction/extractor.py` dispatches local file paths by extension:
-
-| Formats | Extracted content |
+| Variable | Default / purpose |
 | --- | --- |
-| PDF | Embedded page text with page labels; no OCR for scanned pages |
-| DOCX | Paragraphs and table cells |
-| TXT, Markdown | UTF-8 text with replacement for invalid characters |
-| CSV | Non-empty values labeled with their column names |
-| XLSX | Cell values grouped by sheet; formulas use cached values |
-| PPTX | Text-bearing shapes grouped by slide |
+| `VITE_API_BASE_URL` | Empty; use same-origin `/api` proxy. |
+| `BACKEND_URL` | `http://localhost:8000`; Vite development proxy target. |
+| `VITE_PORT` | `5173`; development port. |
+| `VITE_ALAYA_URL` | `http://localhost:3000`; link back to Alaya. |
 
-The worker passes the saved file's path to `extract_text`. Unsupported extensions and files with no extractable text fail during background processing, after the upload has been accepted.
+Run `npm run build` to produce `dist/`. Serve it with `/api` routed to Alaya, as in the Nginx container, or set `VITE_API_BASE_URL` at build time. `npm run preview` previews static assets and still needs API routing or a reachable API base. `VITE_*` values are public build-time settings.
 
-The recursive splitter uses a default chunk size of 1,000 characters and prepends up to 150 characters from the previous chunk. It tries paragraph, line, sentence, and smaller separators before falling back to character slicing. The first chunk has no overlap; later chunks can reach 1,150 characters after overlap is added. These sizes count characters, not tokens, and can be changed through the helper's arguments.
+### Checks and limitations
 
-Metadata is extracted separately for each chunk, while embeddings are requested for the full chunk list. Each chunk becomes one `Knowledge` row and one linked `Embedding` row belonging to the authenticated user. The worker commits the document's rows together and rolls them back if processing fails. Metadata and embedding generation each allow two attempts.
+Run `npm run build` from `memory-universe/frontend/`. The `npm test` and `npm run benchmark` scripts target missing `tests/` and `benchmarks/benchmark.js` files in this checkout and currently provide no validation.
 
-The worker deletes the local file in its cleanup block after success or failure. If saving or queueing fails, the API attempts deletion immediately. Both `temp_files/` and `temp_img/` are excluded from Git.
+Manually verify that one saved upload produces one star, an empty authenticated account offers the demo, failures show errors, details open the correct source, filters/search work, and refresh/focus loads changed uploads. Showing saved uploads needs the API; indexing also needs the worker.
 
-## Data model
-
-- **User** owns chats, messages, and knowledge records. Passwords are hashed with Argon2 before insertion.
-- **Chat** groups messages for one user.
-- **Message** stores user/LLM content, its sender, owner, and creation time.
-- **Knowledge** stores a normalized text fact, extracted image content, or document chunk, together with its dynamic JSONB metadata, fact type, and owner.
-- **UploadedData** stores the original text or uploaded file URL, content type, format tag, owner, and creation time. It is the default Memory Universe view's source of truth and can exist without any processed knowledge.
-- **Embedding** links a 1,536-dimensional vector to either a message or knowledge record.
-- **KnowledgeCoordinate** in `backend/app/db/model/universe.py` stores one saved 3D position per knowledge chunk in `knowledge_coordinates`.
-
-Deleting a user cascades to chats and messages at the ORM level. Deleting a chat or message also removes its related messages or embeddings through configured relationships.
-
-## Configuration notes
-
-- CORS permits local Alaya and Universe origins on ports 3000, 3001, and 5173, using either `localhost` or `127.0.0.1`.
-- The active chat provider is OpenAI. A Grok provider configuration exists in `app/core_tasks/llm_setup/chat_llm.py` but is not selected.
-- Access and refresh token lifetimes use `ACCESS_TOKEN_EXPIRE_MINUTES` and `REFRESH_TOKEN_EXPIRE_DAYS`. Restart backend processes after changing settings.
-- Login cookies use `secure=False` for local HTTP development. Production deployments should enable secure cookies and use HTTPS.
-- Additional deployment origins must be configured in both the HTTP CORS and WebSocket origin allowlists.
-
-## Current limitations
-
-- Usernames are not currently declared unique at the database level.
-- Login stores the refresh token, but a refresh endpoint and refresh-token rotation are not implemented. Sign in again when the access token expires.
-- The request schemas contain some fields that are ignored by the handlers (for example, the supplied chat title and message user ID).
-- Document uploads are chunked, but direct text ingestion through `feed_knowledge` does not yet chunk large inputs.
-- Document uploads have no file-size limit or extension validation before queueing. Scanned PDFs require OCR, which is not implemented.
-- Document jobs require a shared filesystem, request all embeddings in one batch, and use the default ARQ timeout. Very large documents may exceed processing limits.
-- File cleanup depends on the worker's cleanup block running; an abrupt process termination can leave temporary files behind.
-- Active WebSocket connections and Redis pub/sub notifications are not durable; reconnecting clients do not receive missed notifications.
-- The current checkout has no `backend/tests/`, `frontend/tests/`, or `memory-universe/frontend/tests/` directories. Both frontend packages retain `npm test` scripts targeting missing files; they are not a working regression suite in this checkout.
-
-These constraints make the current code suitable for local development and experimentation, not a production deployment.
-
-## Development checks
-
-From `backend/`, run a fast syntax check across the application and migration code:
-
-```bash
-python -m compileall app alembic
-```
-
-From `frontend/`, run `npm run lint` and `npm run build`. From `memory-universe/frontend/`, run `npm run build` and optionally `npm run benchmark`. The benchmark uses synthetic data; it is not an end-to-end application test.
-
-For a manual Universe check, open it from a signed-in Alaya session: at least one saved upload must show real stars; a confirmed empty upload list must show sample data; an authentication or connection failure must show an error. Upload processing and knowledge retrieval additionally require a running ARQ worker and configured external services.
-
-When changing the database models, create and inspect a real Alembic revision before applying it:
-
-```bash
-alembic revision --autogenerate -m "describe the schema change"
-alembic upgrade head
-```
-
-## Roadmap ideas
-
-- Implement refresh-token rotation and revocation.
-- Persist assistant responses and complete conversational context handling.
-- Extend chunking to direct text ingestion and add upload limits, embedding batches, idempotency, and durable job-status tracking.
-- Add unit/integration tests and Docker Compose for PostgreSQL, Redis, API, and worker.
-- Add structured logging, retries, rate limits, and production deployment configuration.
+The client loads the full upload list without pagination and refreshes on entry, focus, or manual action. Coordinates, nearby suggestions, and search are display features; indexed knowledge and semantic retrieval remain backend responsibilities.

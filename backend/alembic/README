@@ -1,1 +1,18 @@
-Generic single-database configuration.
+# Alaya database migrations
+
+Alembic migrations for the shared PostgreSQL/pgvector database. See the [root backend guide](../../README.md#2-backend) for environment and database setup.
+
+Run from `backend/` with its Python environment activated and `.env` configured:
+
+```sh
+alembic upgrade head
+```
+
+For a model change, generate a revision, inspect the generated upgrade/downgrade operations, then apply it:
+
+```sh
+alembic revision --autogenerate -m "describe the schema change"
+alembic upgrade head
+```
+
+`env.py` configures migrations; `versions/` contains the schema history. Both frontends use this one database. Memory Universe does not need a separate migration setup.
