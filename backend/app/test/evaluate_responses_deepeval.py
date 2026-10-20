@@ -7,8 +7,8 @@ from deepeval.test_case import LLMTestCase
 
 BASE_DIR = Path(__file__).resolve().parent
 
-INPUT_FILE = BASE_DIR / "response_test_results_3.csv"
-OUTPUT_FILE = BASE_DIR / "evaluation_results.csv"
+INPUT_FILE = BASE_DIR / "response_test_results_4.csv"
+OUTPUT_FILE = BASE_DIR / "deepeval_evaluation_results_4.csv"
 
 QUESTION_COLUMN = "query"
 RESPONSE_COLUMN = "response"
