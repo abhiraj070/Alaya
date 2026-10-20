@@ -13,7 +13,7 @@ export default function SidebarChatList({ listRef, mobile = false, chats, pinned
           >
             {/* Pinned Chats Section (Displayed above and out of All Chats box) */}
             {pinnedChats.length > 0 && (
-              <div className="flex flex-col shrink-0 rounded-xl border border-accent-sky/25 bg-surface-secondary/70 p-2 shadow-xs">
+              <div className="flex flex-col shrink-0 rounded-xl border border-border-strong/40 bg-surface-secondary/70 p-2 shadow-xs">
                 {/* Header: Pinned Chats with Pin Icon */}
                 <div className="flex items-center justify-between px-2 py-1 mb-1 text-[11px] font-semibold tracking-wider text-accent-sky uppercase shrink-0">
                   <span className="flex items-center gap-1.5">
@@ -38,7 +38,7 @@ export default function SidebarChatList({ listRef, mobile = false, chats, pinned
                 </div>
 
                 {/* List of Pinned Chats */}
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {pinnedChats.map((chat) => (
                     <ChatItem
                       key={`pinned-${chat.id}`}
@@ -78,7 +78,7 @@ export default function SidebarChatList({ listRef, mobile = false, chats, pinned
               </div>
 
               {/* List of Unpinned Chats */}
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {isLoadingChats ? (
                   <div className="flex flex-col items-center justify-center py-8 gap-2 text-text-muted">
                     <div

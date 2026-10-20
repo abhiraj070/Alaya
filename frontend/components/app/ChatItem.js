@@ -194,7 +194,7 @@ export default function ChatItem({
     <div
       className={`group relative flex items-center justify-between w-full rounded-lg transition-all duration-150 ${
         isCurrent
-          ? "bg-accent-sky/15 text-accent-sky font-medium border border-accent-sky/30 shadow-xs"
+          ? "bg-accent-sky/15 !text-black text-black font-bold border border-accent-sky/30 shadow-xs"
           : "text-text-secondary hover:text-text-primary hover:bg-surface-tertiary/70 border border-transparent"
       }`}
       style={{ touchAction: "pan-y" }}
@@ -204,7 +204,9 @@ export default function ChatItem({
         type="button"
         onClick={onSelect}
         disabled={isDeleting}
-        className="flex-1 min-w-0 text-left text-[13.5px] leading-snug px-2.5 py-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate disabled:cursor-not-allowed flex items-center gap-1.5"
+        className={`flex-1 min-w-0 text-left text-[13.5px] leading-snug px-2.5 py-1 cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-sky/50 rounded-l-lg truncate disabled:cursor-not-allowed flex items-center gap-1.5 ${
+          isCurrent ? "!text-black text-black font-bold" : ""
+        }`}
         title={chat.title || "New chat"}
       >
         {chat.messages?.some((message) => message.isStreaming) && (
@@ -226,7 +228,7 @@ export default function ChatItem({
             <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
           </svg>
         )}
-        <span className={`truncate block text-[13.5px] leading-snug ${isDeleting ? "opacity-50" : ""}`}>
+        <span className={`truncate block text-[13.5px] leading-snug ${isCurrent ? "!text-black text-black font-bold" : ""} ${isDeleting ? "opacity-50" : ""}`}>
           {chat.title || "New chat"}
         </span>
       </button>

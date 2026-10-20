@@ -2,7 +2,7 @@ x-backend: &backend
   build: ./backend
   image: alaya-backend:local
   restart: unless-stopped
-  env_file: ./backend/.env
+  env_file: ./backend/.gitignore
   environment:
     DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-alaya}
     REDIS_HOST: redis

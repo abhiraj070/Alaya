@@ -72,7 +72,6 @@ export default function AppHeader({
               >
                 <rect width="18" height="18" x="3" y="3" rx="2" />
                 <path d="M9 3v18" />
-                <path d="m11 9 3 3-3 3" />
               </svg>
             </button>
 
@@ -106,13 +105,6 @@ export default function AppHeader({
             )}
           </div>
         )}
-
-        {/* Active Workspace / Section Indicator */}
-        <div className="flex items-center gap-2 px-1">
-          <span className="text-sm font-semibold tracking-wide text-text-primary">
-            {activeTab === "chat" ? "Ask" : "Knowledge Base"}
-          </span>
-        </div>
       </div>
 
       {/* Right side: Theme Toggle & Profile Navigation */}

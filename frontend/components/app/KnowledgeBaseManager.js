@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import KnowledgeTextModal from "@/components/app/KnowledgeTextModal";
 import ChatInput from "@/components/app/ChatInput";
 import DeleteKnowledgeItemModal from "@/components/app/DeleteKnowledgeItemModal";
 import KnowledgeCard from "@/components/app/KnowledgeCard";
@@ -7,6 +9,7 @@ import { getExtBadgeStyle } from "@/lib/knowledge-presentation";
 import { useKnowledgeBase } from "@/lib/use-knowledge-base";
 
 export default function KnowledgeBaseManager({ onUploadQueued }) {
+  const [openedText, setOpenedText] = useState(null);
   const {
     items, toast, setToast, activeInputMode, setActiveInputMode, stagedFile, isFileDragging, setIsFileDragging,
     isFilesProcessing, fileProcessingStep, fileError, fileInputRef, handleFileSelected, handleIngestFileSubmit,
@@ -593,9 +596,11 @@ export default function KnowledgeBaseManager({ onUploadQueued }) {
 
         {/* Knowledge Grid - Symmetrical Equal-Size Boxes */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
-          {filteredItems.map((item) => <KnowledgeCard key={item.id} item={item} onDelete={setItemToDelete} />)}
+          {filteredItems.map((item) => <KnowledgeCard key={item.id} item={item} onDelete={setItemToDelete} onOpen={setOpenedText} />)}
         </div>
       </section>
+
+      {openedText && <KnowledgeTextModal item={openedText} onClose={() => setOpenedText(null)} />}
 
       {/* Delete Confirmation Modal */}
       {itemToDelete && (

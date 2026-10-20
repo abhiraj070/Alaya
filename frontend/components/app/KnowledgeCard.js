@@ -2,7 +2,7 @@
 
 import { formatItemDate, getExtBadgeStyle, getCategoryBadgeStyle } from "@/lib/knowledge-presentation";
 
-export default function KnowledgeCard({ item, onDelete }) {
+export default function KnowledgeCard({ item, onDelete, onOpen }) {
             // ==========================================
             // 1. DOCUMENT ITEM CARD (Equal Size Box)
             // ==========================================
@@ -243,7 +243,8 @@ export default function KnowledgeCard({ item, onDelete }) {
                 </div>
 
                 {/* Middle Content: Quoted Text with Line Clamping */}
-                <div className="my-auto min-h-0 border-l-2 border-accent-sky/60 pl-3 overflow-hidden">
+                <button type="button" onClick={() => onOpen(item)} aria-label={`Open ${item.title}`}
+                  className="my-auto min-h-0 border-l-2 border-accent-sky/60 pl-3 overflow-hidden text-left cursor-pointer rounded-r focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky">
                   <h3 className="text-xs font-semibold text-accent-sky font-mono truncate mb-1">
                     {item.title}
                   </h3>
@@ -253,12 +254,12 @@ export default function KnowledgeCard({ item, onDelete }) {
                   >
                     &ldquo;{item.content}&rdquo;
                   </p>
-                </div>
+                </button>
 
                 {/* Bottom Details Bar */}
                 <div className="flex items-center justify-between text-[10px] font-mono text-text-muted pt-2 border-t border-border-subtle/50 shrink-0">
                   <span>{item.category || "Personal"}</span>
-                  <span className="text-accent-sky/80">Text Entry</span>
+                  <button type="button" onClick={() => onOpen(item)} className="text-accent-sky hover:underline cursor-pointer">Open text</button>
                 </div>
               </div>
             );

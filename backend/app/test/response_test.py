@@ -1,5 +1,6 @@
 from pathlib import Path
 import csv
+import json
 import httpx
 from app.env_config.settings import get_settings
 
@@ -48,16 +49,19 @@ def main():
             )
 
             usage = {}
+            retrieved_chunk = []
             response_text = response.text
             if response.is_success:
                 data = response.json()
                 response_text = data["response"]
                 usage = data.get("usage") or {}
+                retrieved_chunk = data.get("retrieved chunk") or []
             result = {
                 "chat_id": chat_id,
                 "query": query,
                 "status_code": response.status_code,
                 "response": response_text,
+                "retrieved_chunk": json.dumps(retrieved_chunk, ensure_ascii=False),
                 "input_tokens": usage.get("input_tokens", "Not provided by API"),
                 "output_tokens": usage.get("output_tokens", "Not provided by API"),
                 "total_tokens": usage.get("total_tokens", "Not provided by API"),
@@ -75,7 +79,7 @@ def main():
     csv_path = Path(__file__).with_name(f"response_test_results_{chat_id}.csv")
     with csv_path.open("w", newline="", encoding="utf-8-sig") as file:
         writer = csv.DictWriter(file, fieldnames=[
-            "chat_id", "query", "status_code", "response", "input_tokens",
+            "chat_id", "query", "status_code", "response", "retrieved_chunk", "input_tokens",
             "output_tokens", "total_tokens", "response_time_seconds",
         ])
         writer.writeheader()

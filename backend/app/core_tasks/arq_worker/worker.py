@@ -12,6 +12,7 @@ from app.core_tasks.extraction.extractor import extract_text
 from app.db.connect import SessionLocal
 from app.utility.cloudinary import delete_file
 from app.db.model.chat import Embedding, EmbeddingKind, Knowledge
+from app.db.model.uploaded_data import UploadedData
 from app.core_tasks.llm_setup.embeddings_llm import get_embedding
 from app.core_tasks.projection.projection_service import project_user_knowledge
 from app.core_tasks.arq_worker.arqRedis_init import redis_settings
@@ -98,6 +99,11 @@ async def create_knowledge_embedding(
                 if attempt == 1:
                     raise ValueError("Error while creating embeddings") from exc
 
+        if uploaded_data_id is not None and db.execute(select(UploadedData.id).where(
+            UploadedData.id == uploaded_data_id, UploadedData.user_id == user_id,
+        ).with_for_update()).scalar_one_or_none() is None:
+            return
+
         for i, content in enumerate(embeddable_queries):
             knowledge= Knowledge(text_content=content,
                                  user_id=user_id,
@@ -182,6 +188,11 @@ async def create_image_embeddings(
                         raise HTTPException(status_code=502, detail="Error while creating embeddings")
 
         structured_metadata, embeddings = await asyncio.gather(get_metadata(), get_image_embedding())
+
+        if uploaded_data_id is not None and db.execute(select(UploadedData.id).where(
+            UploadedData.id == uploaded_data_id, UploadedData.user_id == user_id,
+        ).with_for_update()).scalar_one_or_none() is None:
+            return
 
         knowledge = Knowledge(knowledge_type=structured_metadata["fact_type"],
                               user_id=user_id,
@@ -303,6 +314,11 @@ async def create_file_embeddings(
             except Exception:
                 if attempt == 1:
                     raise HTTPException(status_code=502, detail="Error while creating embeddings")
+
+        if uploaded_data_id is not None and db.execute(select(UploadedData.id).where(
+            UploadedData.id == uploaded_data_id, UploadedData.user_id == user_id,
+        ).with_for_update()).scalar_one_or_none() is None:
+            return
 
         for i, chunk in enumerate(chunks):
             knowledge= Knowledge(text_content=chunk,

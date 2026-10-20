@@ -35,7 +35,7 @@ async def delete_upload(
 ):
     stmt = select(UploadedData).where(
         UploadedData.id == upload_id, UploadedData.user_id == authenticated_user_id
-    )
+    ).with_for_update()
     upload = db.execute(stmt).scalar_one_or_none()
     if upload is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload not found")

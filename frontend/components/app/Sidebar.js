@@ -104,7 +104,7 @@ export default function Sidebar({
         style={{ width: sidebarWidth, minWidth: sidebarWidth }}
       >
         {/* Top Header of Sidebar: ALAYA Brand & Collapse Sidebar Button */}
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border-subtle px-3 sm:px-3.5">
+        <div className="flex h-14 shrink-0 items-center justify-between px-3 sm:px-3.5">
           <Link
             href="/"
             className="flex items-center group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-sky rounded-lg py-1 px-1.5 transition-opacity hover:opacity-85"
@@ -133,7 +133,6 @@ export default function Sidebar({
             >
               <rect width="18" height="18" x="3" y="3" rx="2" />
               <path d="M9 3v18" />
-              <path d="m14 9-3 3 3 3" />
             </svg>
           </button>
         </div>

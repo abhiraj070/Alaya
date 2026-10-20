@@ -107,7 +107,7 @@ export default function DeleteKnowledgeItemModal({
               id="delete-knowledge-dialog-desc"
               className="mt-2.5 text-xs text-[#A1AAB5] leading-relaxed"
             >
-              This {typeLabel} will be permanently removed from your upload history. Its indexed knowledge remains available in Alaya.
+              This {typeLabel} and all its indexed knowledge, embeddings and memory visualization data will be permanently deleted.
             </p>
           </div>
         </div>

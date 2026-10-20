@@ -126,7 +126,7 @@ export default function MobileDrawer({
       >
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Drawer Header: Brand + Close Button */}
-          <div className="flex items-center justify-between pb-4 border-b border-border-subtle shrink-0">
+          <div className="flex items-center justify-between pb-4 shrink-0">
             <Link
               href="/"
               onClick={onClose}

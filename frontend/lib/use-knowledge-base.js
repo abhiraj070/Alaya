@@ -154,7 +154,7 @@ export function useKnowledgeBase(onUploadQueued) {
       await uploadedDataApi.deleteUpload(itemToDelete.id);
       setItems((previous) => previous.filter((item) => item.id !== itemToDelete.id));
       setItemToDelete(null);
-      setToast({ type: "info", message: `Removed “${itemToDelete.title}” from upload history.` });
+      setToast({ type: "info", message: `Deleted “${itemToDelete.title}” and its indexed knowledge.` });
     } catch (error) {
       setDeleteError(error.message);
       setToast({ type: "error", message: error.message });

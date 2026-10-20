@@ -72,11 +72,11 @@ def send_direct_response(text: str, chat_id: int, user_id: int, db: Session):
     return Response(content=text, media_type="text/plain")
 
 
-async def build_message_response(response_stream, usage: dict | None):
+async def build_message_response(response_stream, usage: dict | None, retrieved_chunk: list[dict] | None):
     if usage is None:
         return StreamingResponse(response_stream, media_type="text/plain")
     text= "".join([chunk async for chunk in response_stream])
-    return JSONResponse({"response": text, "usage": usage or None})
+    return JSONResponse({"response": text, "usage": usage or None, "retrieved chunk":retrieved_chunk})
 
 
 def is_supported_image(file_path: Path) -> bool:
@@ -148,14 +148,14 @@ async def handle_new_message(chat_id: int,
         )
 
         return await build_message_response(
-            send_prompt_for_response(search_results, chat_id, user_id, db, usage=usage), usage,
+            send_prompt_for_response(search_results, chat_id, user_id, db, usage=usage), usage, search_results
         )
     except Exception as exc:
         print(f"[OpenAI pipeline fallback: {exc}] - Streaming default answer.")
         if usage is not None:
             usage.clear()
         return await build_message_response(
-            stream_default_response(message.message_content, chat_id, db), usage,
+            stream_default_response(message.message_content, chat_id, db), usage, search_results
         )
 
 @router.get("/get_messages/{chat_id}", response_model=list[MessageResponse])

@@ -37,6 +37,8 @@ function Workspace({ user }) {
   const [isResizing, setIsResizing] = useState(false);
   const widthRef = useRef(260);
   const [pinnedChatIds, setPinnedChatIds] = useLocalStorage(`alaya_pinned_chats:${user.id}`, EMPTY_PINS);
+  const [, saveEmptyChatId] = useLocalStorage(`alaya_empty_chat:${user.id}`, null);
+  const initialChatRequest = useRef(null);
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [isLoadingChats, setIsLoadingChats] = useState(true);
@@ -126,19 +128,33 @@ function Workspace({ user }) {
   }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
-    chatApi.getChats(user.id, { signal: controller.signal }).then((data) => {
-      if (controller.signal.aborted) return;
-      const next = sortChats(data.map(normalizeChat));
-      setChats(next);
-      setActiveChatId(next[0]?.id ?? null);
+    let isMounted = true;
+    if (!initialChatRequest.current) {
+      initialChatRequest.current = (async () => {
+        const data = await chatApi.getChats(user.id);
+        const next = sortChats(data.map(normalizeChat));
+        let emptyChatId = null;
+        try { emptyChatId = JSON.parse(localStorage.getItem(`alaya_empty_chat:${user.id}`)); } catch {}
+        if (next.some((chat) => chat.id === emptyChatId)) {
+          const messages = await messagesApi.getMessages(emptyChatId);
+          if (messages.length === 0) return { chats: next, chatId: emptyChatId };
+        }
+        const created = normalizeChat(await chatApi.createChat(user.id));
+        saveEmptyChatId(created.id);
+        return { chats: [created, ...next], chatId: created.id };
+      })();
+    }
+    initialChatRequest.current.then(({ chats, chatId }) => {
+      if (!isMounted) return;
+      setChats(chats);
+      setActiveChatId(chatId);
     }).catch((err) => {
-      if (!controller.signal.aborted) setError(err.message);
+      if (isMounted) setError(err.message);
     }).finally(() => {
-      if (!controller.signal.aborted) setIsLoadingChats(false);
+      if (isMounted) setIsLoadingChats(false);
     });
-    return () => controller.abort();
-  }, [user.id]);
+    return () => { isMounted = false; };
+  }, [user.id, saveEmptyChatId]);
 
   useEffect(() => {
     if (activeChatId === null) return;
@@ -168,11 +184,12 @@ function Workspace({ user }) {
   };
 
   const newChat = async () => {
-    if (createRequest.current) return;
+    if (createRequest.current || isLoadingChats) return;
     createRequest.current = true;
     setIsCreatingChat(true);
     try {
       const created = normalizeChat(await chatApi.createChat(user.id));
+      saveEmptyChatId(created.id);
       setChats((previous) => [created, ...previous]);
       selectChat(created.id);
       setError("");
@@ -193,6 +210,7 @@ function Workspace({ user }) {
     setDeleteError("");
     try {
       await chatApi.deleteChat(chatToDelete.id);
+      saveEmptyChatId((id) => id === chatToDelete.id ? null : id);
       const next = chats.filter((chat) => chat.id !== chatToDelete.id);
       setChats(next);
       if (activeChatId === chatToDelete.id) selectChat(next[0]?.id ?? null);
@@ -267,6 +285,7 @@ function Workspace({ user }) {
               </div>
             : activeChat ? <Chat key={activeChat.id} chatId={activeChat.id} messages={activeChat.messages} setMessages={setMessages}
                 onFirstMessage={(text) => {
+                  saveEmptyChatId((id) => id === activeChat.id ? null : id);
                   const updatedAt = new Date().toISOString();
                   setChats((previous) => sortChats(previous.map((chat) => chat.id === activeChat.id ? { ...chat, updatedAt } : chat)));
                   if (activeChat.title.toLowerCase() === "new chat") updateTitle(activeChat.id, text.slice(0, 40)).catch((err) => setError(err.message));
