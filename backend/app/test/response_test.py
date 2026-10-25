@@ -55,7 +55,13 @@ def main():
                 data = response.json()
                 response_text = data["response"]
                 usage = data.get("usage") or {}
-                retrieved_chunk = data.get("retrieved chunk") or []
+                retrieved_chunk = [
+                    item.get("data", item)["text_content"]
+                    for chunk in (data.get("retrieved chunk") or [])
+                    if isinstance(chunk["results"], list)
+                    for item in chunk["results"]
+                    if "text_content" in item.get("data", item)
+                ]
             result = {
                 "chat_id": chat_id,
                 "query": query,

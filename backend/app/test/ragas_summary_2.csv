@@ -1,0 +1,6 @@
+,average_score
+retrieved_context_count,4.133333333333334
+context_precision,0.9614583333004775
+context_recall,0.865079365079365
+faithfulness,0.9574074074074074
+factual_correctness,0.5693333333333332
