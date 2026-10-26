@@ -296,12 +296,12 @@ From the repository root:
 
 ```powershell
 cd backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+python -m venv venv
+venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 ```
 
-On macOS/Linux, use `python3 -m venv .venv` and `source .venv/bin/activate`. Create the database, enable pgvector, and migrate from `backend/`:
+On macOS/Linux, use `python3 -m venv venv` and `source venv/bin/activate`. Create the database, enable pgvector, and migrate from `backend/`:
 
 ```sh
 createdb alaya
@@ -315,17 +315,15 @@ Start Redis through your service manager or Docker:
 docker run --name alaya-redis --rm -p 6379:6379 redis:7
 ```
 
-In two separate terminals with the Python environment activated and working directory `backend/`:
+Start the API in a terminal with the Python environment activated and working directory `backend/`:
 
 ```sh
 uvicorn app.main:app --reload --port 8000
 ```
 
-```sh
-arq app.core_tasks.arq_worker.worker.WorkerSettings
-```
+Keep PostgreSQL and Redis running. In another terminal, use the combined frontend command in section 3 to start both interfaces and the ARQ worker. Do not start a separate worker when using that command. To run the worker independently instead, activate the Python environment in `backend/` and run `arq app.core_tasks.arq_worker.worker.WorkerSettings`.
 
-Keep API and worker on the same filesystem, or share their temporary document directory. Start the interfaces using sections 3 and 4.
+Keep API and worker on the same filesystem, or share their temporary document directory.
 
 ### Checks and current limits
 
@@ -401,13 +399,23 @@ frontend/
 
 ### Run and configure
 
-Start the backend on port 8000, then run from the repository root:
+Complete the backend setup above and keep the API on port 8000, PostgreSQL, and Redis running. Install both clients' dependencies once from the repository root:
 
 ```sh
 cd frontend
 npm ci
+npm --prefix ../memory-universe/frontend ci
+```
+
+Then start development from `frontend/`:
+
+```sh
 npm run dev
 ```
+
+This starts Next.js on port 3000, Memory Universe on port 5173, and the ARQ worker together using `concurrently`. Ctrl+C stops all three; keep the API and database services in their own terminals or service manager. The worker script uses `backend/venv/Scripts/python.exe` on Windows. Update `dev:worker` in `frontend/package.json` if you use another environment path or macOS/Linux.
+
+Use `npm run dev:frontend`, `npm run dev:universe`, or `npm run dev:worker` from `frontend/` to start a service individually. See the [frontend setup guide](frontend/README.md) for the two-terminal startup steps.
 
 Open [Alaya](http://localhost:3000). Defaults work without a frontend environment file. Optional overrides go in `frontend/.env.local`; see [.env.example](frontend/.env.example).
 
@@ -509,7 +517,7 @@ The current upload-based client computes its own positions and does not read `kn
 
 ### Run and configure
 
-Start the shared backend and main frontend, then run from the repository root:
+The main frontend's `npm run dev` already starts Memory Universe; follow section 3 for normal development. To start only this client, keep the shared API running and run from the repository root:
 
 ```sh
 cd memory-universe/frontend
