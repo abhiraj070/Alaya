@@ -2,21 +2,51 @@
 
 Next.js frontend for Alaya. For pages, features, and data flows, see the [root frontend guide](../README.md#3-frontend).
 
-## 1. Install and run
+## 1. First-time setup
 
-Install Node.js/npm compatible with the checked-in Next.js version. Start the [backend](../backend/README.md) on port 8000; its worker and Redis are needed for upload indexing.
+Install Node.js/npm compatible with the checked-in packages. Follow the [backend setup guide](../backend/README.md) to install Python dependencies in `backend/venv`, configure `backend/.env`, and prepare PostgreSQL with pgvector and Redis.
 
 From the repository root:
 
 ```sh
 cd frontend
 npm ci
+npm --prefix ../memory-universe/frontend ci
+```
+
+## 2. Start development
+
+Keep PostgreSQL and Redis running. Open two terminals from the repository root.
+
+Terminal 1 — start the API:
+
+```powershell
+cd backend
+.\venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+```
+
+Terminal 2 — start both interfaces and the worker:
+
+```powershell
+cd frontend
 npm run dev
 ```
 
+This starts Next.js at [localhost:3000](http://localhost:3000), Memory Universe at [localhost:5173](http://localhost:5173), and the ARQ worker through `concurrently`. Do not start another worker or Universe client separately. Ctrl+C in terminal 2 stops these three processes; the API and database services run separately.
+
+The worker script uses `backend/venv/Scripts/python.exe` on Windows. If your environment has another name or you use macOS/Linux, update `dev:worker` in `package.json` to use its Python executable, keeping `cd ../backend` so temporary document paths resolve correctly.
+
+For individual services, run from `frontend/`:
+
+| Command | Starts |
+| --- | --- |
+| `npm run dev:frontend` | Next.js only |
+| `npm run dev:universe` | Memory Universe only |
+| `npm run dev:worker` | ARQ worker only |
+
 Open [Alaya](http://localhost:3000), then register or sign in. Use `localhost` consistently across services; mixing it with `127.0.0.1` prevents cookies from sharing a hostname.
 
-## 2. Optional configuration
+## 3. Optional configuration
 
 Local defaults work without an environment file. To override them, create `frontend/.env.local` using [.env.example](.env.example):
 
@@ -34,9 +64,9 @@ NEXT_PUBLIC_MEMORY_UNIVERSE_URL=http://localhost:5173
 
 Restart the dev server after changing configuration. Public values are included in browser code; keep secrets out of them. Custom browser origins also need backend CORS and WebSocket allowlist changes.
 
-To use **Memory Universe**, start its [Vite client](../memory-universe/README.md) on port 5173, sign in to Alaya, and click the workspace button. Allow the new tab if blocked.
+To use **Memory Universe**, sign in to Alaya and click the workspace button. Its [Vite client](../memory-universe/README.md) starts with `npm run dev`. Allow the new tab if blocked.
 
-## 3. Build and check
+## 4. Build and check
 
 Run from `frontend/`:
 

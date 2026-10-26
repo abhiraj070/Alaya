@@ -4,14 +4,16 @@ For an explanation of Memory Universe and how it works, see the [parent README](
 
 ## 1. Prepare the shared services
 
-Install Node.js and npm compatible with the checked-in Vite package. Start:
+For normal development, follow the [Alaya frontend setup guide](../../frontend/README.md). Its `npm run dev` starts Alaya, Memory Universe, and the ARQ worker together after dependencies are installed. Keep the shared API, PostgreSQL, and Redis running separately. Do not also start this client if the combined command is running.
+
+To run this client independently, install Node.js and npm compatible with the checked-in Vite package. Start:
 
 - The [shared backend](../../backend/README.md) on port 8000, with its database and Redis available.
 - The [Alaya frontend](../../frontend/README.md) on port 3000.
 
 Run the backend worker when adding content that needs indexing. Displaying existing saved uploads does not require indexing to finish. No separate Universe backend or database is needed.
 
-## 2. Install and start the client
+## 2. Install and start the client independently
 
 From the repository root:
 

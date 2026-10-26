@@ -10,12 +10,12 @@ From the repository root, using PowerShell:
 
 ```powershell
 cd backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+python -m venv venv
+venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 ```
 
-On macOS/Linux, create the environment with `python3 -m venv .venv` and activate it with `source .venv/bin/activate`.
+On macOS/Linux, create the environment with `python3 -m venv venv` and activate it with `source venv/bin/activate`. The combined frontend dev command expects `backend/venv/Scripts/python.exe` on Windows; adjust its `dev:worker` script if your environment path differs.
 
 ## 2. Configure the environment
 
@@ -57,19 +57,28 @@ docker run --name alaya-redis --rm -p 6379:6379 redis:7
 
 ## 4. Start the API and worker
 
-Use two terminals, both in `backend/` with the virtual environment activated.
-
-API:
+Start the API from `backend/` with the virtual environment activated:
 
 ```sh
 uvicorn app.main:app --reload --port 8000
 ```
 
-Worker:
+In another terminal, run from the repository root after installing both clients' dependencies:
+
+```sh
+cd frontend
+npm run dev
+```
+
+This starts the Alaya frontend, Memory Universe, and the ARQ worker together. See the [frontend setup guide](../frontend/README.md) for installation commands and service ports. Keep PostgreSQL and Redis running separately.
+
+If you need to run only the worker manually, use a separate terminal in `backend/` with the virtual environment activated:
 
 ```sh
 arq app.core_tasks.arq_worker.worker.WorkerSettings
 ```
+
+Do not start this manual worker when `frontend`'s `npm run dev` is already running it.
 
 The worker is required for text, image, and document indexing. API and worker must share `temp_files/` because document jobs use local file paths. Restart both after changing `.env`.
 
