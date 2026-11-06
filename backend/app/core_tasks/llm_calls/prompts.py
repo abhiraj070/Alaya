@@ -21,6 +21,7 @@ instruction= (Path(__file__).resolve().parents[1] / "system_prompts" / "instruct
 retrieval_decision_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / "retrieval_decision.md").read_text(encoding="utf-8")
 sql_retrieval_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / "sql_retrieval.md").read_text(encoding="utf-8")
 response_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / "response_prompt.md").read_text(encoding="utf-8")
+personality_prompt= (Path(__file__).resolve().parents[1] / "system_prompts" / "personality.md").read_text(encoding="utf-8")
 image_read_prompt=(Path(__file__).resolve().parents[1] / "system_prompts" / "read_image.md").read_text(encoding="utf-8")
 
 async def send_prompt_to_normalize(user_query: str, max_tokens: int = 1024, usage: dict | None = None,
@@ -161,7 +162,7 @@ async def send_prompt_for_response(data: list[dict[str,Any]], chat_id: int, user
     stream = await client.chat.completions.create(
         model=MODEL,
         messages=[
-            {"role": "system", "content": response_prompt},
+            {"role": "system", "content": f"{personality_prompt}\n\n{response_prompt}"},
             {"role": "user", "content": json.dumps(data)},
         ],
         **get_completion_options(MODEL),
