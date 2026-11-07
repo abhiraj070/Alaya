@@ -188,10 +188,10 @@ These are all application routes declared in the current code. HTTP routes start
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| POST | `/api/user/register` | Register with name, username, and password; public. |
+| POST | `/api/user/register` | Register with name, username, password, and required `phone_number` (7–15 digits; spaces, parentheses, hyphens, and a leading `+` allowed); public. |
 | POST | `/api/user/login` | Verify credentials, set cookies, return profile; public. |
 | GET | `/api/user/get_user/{user_id}` | Read own profile. |
-| PUT | `/api/user/update_user/{user_id}` | Update name or username. |
+| PUT | `/api/user/update_user/{user_id}` | Update name, username, or phone number for the authenticated user. |
 | DELETE | `/api/user/delete_user/{user_id}` | Delete own account and clear cookies. |
 | PUT | `/api/user/logout/{user_id}` | Clear stored refresh token and cookies. |
 
@@ -327,7 +327,7 @@ Keep API and worker on the same filesystem, or share their temporary document di
 
 ### Checks and current limits
 
-Run `python -m compileall app alembic` from `backend/` for syntax validation. Scripts in `app/test/` evaluate responses using real services; they are not an isolated regression suite. There is no `backend/tests/` directory in this checkout.
+Run `python -m compileall app alembic` from `backend/` for syntax validation. Scripts in `app/test/` evaluate responses using real services; they are not an isolated regression suite.
 
 For schema changes, run `alembic revision --autogenerate -m "describe the schema change"`, inspect the revision, then run `alembic upgrade head`.
 
@@ -347,7 +347,7 @@ The Next.js application in `frontend/` is the main interface for accounts, conve
 | Page | Route | Features |
 | --- | --- | --- |
 | Landing | `/` | Product introduction, workflow examples, FAQ, sign-in/sign-up links. |
-| Authentication | `/auth?mode=signin` or `/auth?mode=signup` | Sign in or register with name, username, and password. `/login` and `/signup` redirect here. |
+| Authentication | `/auth?mode=signin` or `/auth?mode=signup` | Register with name, username, phone number, and password. Sign in with username and password. `/login` and `/signup` redirect here. |
 | Workspace | `/app` | Conversations, message sending/editing/deletion, knowledge uploads, Memory Universe button. |
 | Profile | `/profile` | Name/username editing, theme control, logout, account-deletion confirmation. |
 

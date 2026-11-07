@@ -56,6 +56,7 @@ async def register(request: RegisterRequest,
     user=User(
        name= request.name,
        username= request.username,
+       phone_number= request.phone_number,
        password= request.password,
        refreshToken= "",
     )
@@ -75,27 +76,43 @@ async def get_user(user_id: int, db: Annotated[Session, Depends(get_db)],
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
 
+def update_user_helper(db: Session, name: str, username: str, phone_number: str | None = None, user_id: int | None = None):
+    if user_id is not None:
+        stmt = select(User).where(User.id == user_id)
+    elif phone_number:
+        stmt = select(User).where(User.phone_number == phone_number)
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User ID or phone number is required")
+    matches = db.execute(stmt).scalars().all()
+    if len(matches) > 1:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone number matches multiple users")
+    user = matches[0] if matches else None
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User not found")
+    if username != "":
+        stmt2 = select(User).where(User.username == username, User.id != user.id)
+        if db.execute(stmt2).first() is not None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Username already taken")
+    if user_id is not None and phone_number:
+        stmt2 = select(User).where(User.phone_number == phone_number, User.id != user.id)
+        if db.execute(stmt2).first() is not None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Phone number already taken")
+    if name != "":
+        user.name = name
+    if username != "":
+        user.username = username
+    if user_id is not None and phone_number:
+        user.phone_number = phone_number
+    db.commit()
+    db.refresh(user)
+    return user
+
 @router.put("/update_user/{user_id}", response_model=AuthResponse)
 async def update_user(user_id: int, request: UserUpdateRequest, db: Annotated[Session, Depends(get_db)],
                       authenticated_user_id: Annotated[int, Depends(VerifyJWT)]):
     if user_id != authenticated_user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-    stmt= select(User).where(User.id==user_id)
-    user= db.execute(stmt).scalar_one_or_none()
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User not found")
-    if request.name != "":
-        user.name= request.name
-    if request.username != "":
-        stmt2= select(user).where(User.username==request.username)
-        user2= db.execute(stmt2).scalar_one_or_none()
-        if user2 is None:
-            user.username= request.username
-        else:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Username already taken")
-    db.commit()
-    db.refresh(user)
-    return user
+    return update_user_helper(db, request.name, request.username, phone_number=request.phone_number, user_id=user_id)
 
 @router.delete("/delete_user/{user_id}")
 async def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)], response: Response,

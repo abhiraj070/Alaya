@@ -67,8 +67,8 @@ const json = (method, body, signal) => ({ method, body: JSON.stringify(body), si
 const usernameValue = (username) => username.trim().replace(/^@/, "");
 
 export const authApi = {
-  register: ({ name, username, password }) => request("/api/user/register", json("POST", {
-    name: name.trim(), username: usernameValue(username), password,
+  register: ({ name, username, password, phone_number }) => request("/api/user/register", json("POST", {
+    name: name.trim(), username: usernameValue(username), password, phone_number: phone_number.trim(),
   })),
   login: ({ username, password }) => request("/api/user/login", json("POST", {
     username: usernameValue(username), password,

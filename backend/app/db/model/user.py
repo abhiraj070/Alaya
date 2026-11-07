@@ -10,6 +10,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False)
     username = Column(Text, nullable=False)
+    phone_number = Column(Text, nullable=True)
     password = Column(Text, nullable=False)
     chats = relationship("Chat", back_populates="user", cascade="all, delete-orphan")
     messages = relationship("Message", back_populates="user", cascade="all, delete-orphan")

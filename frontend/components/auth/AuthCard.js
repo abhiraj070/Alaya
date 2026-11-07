@@ -40,6 +40,7 @@ export default function AuthCard() {
   const [signUpFullName, setSignUpFullName] = useState("");
   const [signUpUsername, setSignUpUsername] = useState("");
   const [signUpEmail, setSignUpEmail] = useState("");
+  const [signUpPhoneNumber, setSignUpPhoneNumber] = useState("");
   const [signUpPassword, setSignUpPassword] = useState("");
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState("");
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
@@ -48,6 +49,7 @@ export default function AuthCard() {
     fullName: "",
     username: "",
     email: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
     general: "",
@@ -137,6 +139,7 @@ export default function AuthCard() {
       fullName: "",
       username: "",
       email: "",
+      phoneNumber: "",
       password: "",
       confirmPassword: "",
       general: "",
@@ -145,6 +148,8 @@ export default function AuthCard() {
     const trimmedFullName = signUpFullName.trim();
     const trimmedUsername = signUpUsername.trim();
     const trimmedEmail = signUpEmail.trim();
+    const trimmedPhoneNumber = signUpPhoneNumber.trim();
+    const phoneDigits = trimmedPhoneNumber.replace(/[^0-9]/g, "");
 
     if (!trimmedFullName) {
       errors.fullName = "Please enter your full name.";
@@ -158,6 +163,12 @@ export default function AuthCard() {
       errors.email = "Please enter your email address.";
     } else if (!validateEmail(trimmedEmail)) {
       errors.email = "Please enter a valid email address (e.g., name@example.com).";
+    }
+
+    if (!trimmedPhoneNumber) {
+      errors.phoneNumber = "Please enter your phone number.";
+    } else if (!/^\+?[0-9 ()-]+$/.test(trimmedPhoneNumber) || phoneDigits.length < 7 || phoneDigits.length > 15) {
+      errors.phoneNumber = "Enter a valid phone number with 7 to 15 digits.";
     }
 
     if (!signUpPassword) {
@@ -192,6 +203,7 @@ export default function AuthCard() {
       const newUser = await register({
         name: signUpFullName,
         username: signUpUsername,
+        phone_number: signUpPhoneNumber,
         password: signUpPassword,
       });
 
@@ -735,6 +747,42 @@ export default function AuthCard() {
                       </p>
                     )}
                   </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="signup-phone-number"
+                    className="block text-xs font-medium text-text-secondary mb-1.5"
+                  >
+                    Phone number
+                  </label>
+                  <input
+                    id="signup-phone-number"
+                    name="phone_number"
+                    type="tel"
+                    autoComplete="tel"
+                    required
+                    value={signUpPhoneNumber}
+                    onChange={(e) => {
+                      setSignUpPhoneNumber(e.target.value);
+                      if (signUpErrors.phoneNumber) {
+                        setSignUpErrors((prev) => ({ ...prev, phoneNumber: "" }));
+                      }
+                    }}
+                    placeholder="+91 98765 43210"
+                    className={`input-field w-full text-xs sm:text-sm ${
+                      signUpErrors.phoneNumber
+                        ? "border-rose-500/70 focus:border-rose-500 focus:ring-rose-500"
+                        : ""
+                    }`}
+                    aria-invalid={!!signUpErrors.phoneNumber}
+                    aria-describedby={signUpErrors.phoneNumber ? "signup-phone-number-error" : undefined}
+                  />
+                  {signUpErrors.phoneNumber && (
+                    <p id="signup-phone-number-error" className="mt-1 text-[11px] text-rose-400 font-mono" role="alert">
+                      {signUpErrors.phoneNumber}
+                    </p>
+                  )}
                 </div>
 
                 <div>

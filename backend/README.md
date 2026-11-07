@@ -83,3 +83,11 @@ Do not start this manual worker when `frontend`'s `npm run dev` is already runni
 The worker is required for text, image, and document indexing. API and worker must share `temp_files/` because document jobs use local file paths. Restart both after changing `.env`.
 
 Open [API docs](http://localhost:8000/docs), then start the [frontend](../frontend/README.md). Run `python -m compileall app alembic` for a syntax check. For running the full stack in containers, see the [root setup guide](../README.md#setup-and-configuration), including its current Compose environment-file correction.
+
+## Local MCP server
+
+From `backend/` with the virtual environment activated, run `python -m app.mcpserver.server` to start the stdio MCP server. It runs separately from FastAPI.
+
+The `update_user_settings` tool requires the exact stored `phone_number` and accepts optional `name` and `username` updates. It returns only the user's ID, name, and username. Missing or ambiguous phone matches and username conflicts return tool errors.
+
+This server is for trusted local clients with database access. Phone lookup is not identity verification; do not expose this tool to untrusted clients without authentication and account ownership checks.
