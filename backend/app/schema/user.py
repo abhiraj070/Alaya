@@ -1,6 +1,5 @@
-import re
-
 from pydantic import BaseModel, field_validator
+from app.utility.phone_number import normalize_phone_number
 
 class AuthResponse(BaseModel):
     id :int
@@ -16,11 +15,7 @@ class RegisterRequest(BaseModel):
     @field_validator("phone_number")
     @classmethod
     def validate_phone_number(cls, value: str) -> str:
-        value = value.strip()
-        digits = re.sub(r"[^0-9]", "", value)
-        if not re.fullmatch(r"\+?[0-9 ()-]+", value) or not 7 <= len(digits) <= 15:
-            raise ValueError("Enter a valid phone number with 7 to 15 digits.")
-        return value
+        return normalize_phone_number(value)
 
 class LoginRequest(BaseModel):
     username: str

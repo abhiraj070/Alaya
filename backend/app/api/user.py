@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Annotated
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
@@ -17,6 +18,7 @@ from argon2.exceptions import VerifyMismatchError, VerificationError
 import jwt
 from app.env_config.settings import get_settings
 from app.auth.VerifyJWT import VerifyJWT
+from app.utility.phone_number import normalize_phone_number
 
 
 router= APIRouter(prefix= "/user", tags= ["user"])
@@ -24,7 +26,18 @@ router= APIRouter(prefix= "/user", tags= ["user"])
 ph= PasswordHasher()
 settings = get_settings()
 
-def generate_tokens(user_id: int):
+
+def commit_user_changes(db: Session):
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        if getattr(getattr(exc.orig, "diag", None), "constraint_name", None) == "uq_user_phone_number":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone number already taken") from exc
+        raise
+
+def generate_tokens(user_id: int, phone_number: str | None = None):
+    phone_number = normalize_phone_number(phone_number) if phone_number is not None else None
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
@@ -32,6 +45,7 @@ def generate_tokens(user_id: int):
         {
             "user_id": user_id,
             "type": "access",
+            "phone_number": phone_number,
             "exp": datetime.now(timezone.utc) + access_token_expires,
         },
         settings.SECRET_KEY,
@@ -53,6 +67,8 @@ def generate_tokens(user_id: int):
 async def register(request: RegisterRequest,
                    db: Annotated[Session, Depends(get_db)]
 ):
+    if db.execute(select(User.id).where(User.phone_number == request.phone_number)).first() is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone number already taken")
     user=User(
        name= request.name,
        username= request.username,
@@ -61,7 +77,7 @@ async def register(request: RegisterRequest,
        refreshToken= "",
     )
     db.add(user)
-    db.commit()
+    commit_user_changes(db)
     db.refresh(user)
     return user
 
@@ -77,6 +93,11 @@ async def get_user(user_id: int, db: Annotated[Session, Depends(get_db)],
     return user
 
 def update_user_helper(db: Session, name: str, username: str, phone_number: str | None = None, user_id: int | None = None):
+    if phone_number:
+        try:
+            phone_number = normalize_phone_number(phone_number)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     if user_id is not None:
         stmt = select(User).where(User.id == user_id)
     elif phone_number:
@@ -103,7 +124,7 @@ def update_user_helper(db: Session, name: str, username: str, phone_number: str 
         user.username = username
     if user_id is not None and phone_number:
         user.phone_number = phone_number
-    db.commit()
+    commit_user_changes(db)
     db.refresh(user)
     return user
 
@@ -142,7 +163,7 @@ async def login(request: LoginRequest, db: Annotated[Session, Depends(get_db)], 
     except VerificationError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
-    tokens = generate_tokens(user.id)
+    tokens = generate_tokens(user.id, user.phone_number)
 
     access_token = tokens["access_token"]
     refresh_token = tokens["refresh_token"]

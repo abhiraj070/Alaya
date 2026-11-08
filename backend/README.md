@@ -88,6 +88,25 @@ Open [API docs](http://localhost:8000/docs), then start the [frontend](../fronte
 
 From `backend/` with the virtual environment activated, run `python -m app.mcpserver.server` to start the stdio MCP server. It runs separately from FastAPI.
 
-The `update_user_settings` tool requires the exact stored `phone_number` and accepts optional `name` and `username` updates. It returns only the user's ID, name, and username. Missing or ambiguous phone matches and username conflicts return tool errors.
+The `update_user_settings` tool accepts `access_token` plus optional `name` and `username` updates. It changes only the authenticated account and returns only its ID, name, and username. Username conflicts return tool errors.
 
-This server is for trusted local clients with database access. Phone lookup is not identity verification; do not expose this tool to untrusted clients without authentication and account ownership checks.
+All tools require `access_token`, an Alaya access JWT (raw token or `Bearer <token>`). The shared decoder verifies its HS256 signature, expiry, access-token type, and positive integer `user_id`. The MCP server extracts the `phone_number` claim and looks up the account using its unique phone number. It also checks that the matched account belongs to the signed `user_id`, preventing access if a phone number is reassigned. Login now includes `phone_number` in access tokens. Older tokens, or tokens issued before a phone-number change, require a fresh login for MCP. Accounts need a phone number to use MCP. Existing HTTP routes continue to use the shared user-ID decoder. Expired, malformed, incorrectly signed, refresh, and unknown-account tokens are rejected.
+
+Non-null phone numbers are stored uniquely as `+` followed by country code and digits. Spaces, parentheses, dots, and hyphens are removed; `00` becomes `+`. Local 10-digit numbers (or an initial `0` plus 10 digits) default to India (`+91`); a 12-digit number beginning with `91` is also accepted. Other countries require an explicit `+` or `00` country-code prefix. For example, `98765 43210`, `09876543210`, and `+91-98765-43210` all become `+919876543210`. Signup, profile updates, ORM assignments, issued JWT claims, and MCP claim lookup apply the same normalization. Duplicate signups return `409` with `Phone number already taken`. Existing accounts without a phone number remain supported.
+
+| Tool | Description |
+| --- | --- |
+| `get_uploaded_data` | List the user's uploaded text, images, and documents. |
+| `delete_uploaded_data` | Delete the user's upload specified by `upload_id` and its associated knowledge. |
+| `ask_alaya` | Return an answer, or use `exact_chunks=true` to return the original retrieval payload without answer generation. |
+| `store_text_in_alaya` | Queue `text_content` for knowledge processing with an optional `tag`. |
+| `store_image_in_alaya` | Upload an image from local `file_path` and queue it for knowledge processing. |
+| `store_docs_in_alaya` | Upload a document from local `file_path` and queue it for extraction and knowledge processing. |
+
+For `ask_alaya`, pass an existing `chat_id` to continue a conversation or omit it to create a new chat. Upload paths must be readable on the machine running the MCP server. Images use the existing PNG/JPEG/WEBP validation and 2 MB limit. Storage tools require Redis and the ARQ worker; document uploads use the same shared temporary directory as the API and worker. Their success responses confirm queueing, while processing continues in the worker.
+
+The server currently uses local stdio transport. The MCP client supplies the access JWT for each call; never log or share it. Keep local file access restricted to trusted clients.
+
+The MCP prompt `get_alaya_knowledge_prompt` accepts `access_token`, `question`, and an optional string `chat_id`. It instructs Argon's LLM to call `ask_alaya` with the question and `exact_chunks=true`; Alaya handles exact chunk preservation. Exact mode bypasses answer generation and returns `retrieved_chunks` containing the full retrieval payload plus `response`, its JSON rendering. Original text, ordering, and metadata are preserved; retrieval failures return errors rather than generated fallback answers. Empty retrieval returns `[]`. Normal calls default to `exact_chunks=false` and continue generating answers.
+
+The client must select/apply the prompt; rendering it does not execute the tool. Alaya preserves every chunk returned by retrieval, but retrieval does not guarantee every matching record in the database or the original uploaded file contents. Any later rewriting by Argon's client is outside Alaya's exact-chunk handling.

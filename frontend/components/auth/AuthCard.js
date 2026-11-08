@@ -6,6 +6,7 @@ import Link from "next/link";
 import AlayaWordmark from "@/components/ui/AlayaWordmark";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useAuth } from "@/lib/auth-context";
+import { normalizePhoneNumber } from "@/lib/phone-number";
 
 export default function AuthCard() {
   const searchParams = useSearchParams();
@@ -149,7 +150,6 @@ export default function AuthCard() {
     const trimmedUsername = signUpUsername.trim();
     const trimmedEmail = signUpEmail.trim();
     const trimmedPhoneNumber = signUpPhoneNumber.trim();
-    const phoneDigits = trimmedPhoneNumber.replace(/[^0-9]/g, "");
 
     if (!trimmedFullName) {
       errors.fullName = "Please enter your full name.";
@@ -167,8 +167,12 @@ export default function AuthCard() {
 
     if (!trimmedPhoneNumber) {
       errors.phoneNumber = "Please enter your phone number.";
-    } else if (!/^\+?[0-9 ()-]+$/.test(trimmedPhoneNumber) || phoneDigits.length < 7 || phoneDigits.length > 15) {
-      errors.phoneNumber = "Enter a valid phone number with 7 to 15 digits.";
+    } else {
+      try {
+        normalizePhoneNumber(trimmedPhoneNumber);
+      } catch (error) {
+        errors.phoneNumber = error.message;
+      }
     }
 
     if (!signUpPassword) {
@@ -203,7 +207,7 @@ export default function AuthCard() {
       const newUser = await register({
         name: signUpFullName,
         username: signUpUsername,
-        phone_number: signUpPhoneNumber,
+        phone_number: normalizePhoneNumber(signUpPhoneNumber),
         password: signUpPassword,
       });
 
@@ -776,8 +780,11 @@ export default function AuthCard() {
                         : ""
                     }`}
                     aria-invalid={!!signUpErrors.phoneNumber}
-                    aria-describedby={signUpErrors.phoneNumber ? "signup-phone-number-error" : undefined}
+                    aria-describedby={signUpErrors.phoneNumber ? "signup-phone-number-error" : "signup-phone-number-hint"}
                   />
+                  <p id="signup-phone-number-hint" className="mt-1 text-[10px] text-text-muted">
+                    Local numbers use +91. Include the country code for other countries.
+                  </p>
                   {signUpErrors.phoneNumber && (
                     <p id="signup-phone-number-error" className="mt-1 text-[11px] text-rose-400 font-mono" role="alert">
                       {signUpErrors.phoneNumber}

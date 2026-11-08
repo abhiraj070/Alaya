@@ -188,7 +188,7 @@ These are all application routes declared in the current code. HTTP routes start
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| POST | `/api/user/register` | Register with name, username, password, and required `phone_number` (7–15 digits; spaces, parentheses, hyphens, and a leading `+` allowed); public. |
+| POST | `/api/user/register` | Register with name, username, password, and required `phone_number` (10-digit local numbers default to +91; international numbers need a country-code prefix; formatting is removed before saving); public. |
 | POST | `/api/user/login` | Verify credentials, set cookies, return profile; public. |
 | GET | `/api/user/get_user/{user_id}` | Read own profile. |
 | PUT | `/api/user/update_user/{user_id}` | Update name, username, or phone number for the authenticated user. |

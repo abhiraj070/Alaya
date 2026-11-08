@@ -79,6 +79,13 @@ async def build_message_response(response_stream, usage: dict | None, retrieved_
     return JSONResponse({"response": text, "usage": usage or None, "retrieved chunk":retrieved_chunk})
 
 
+def exact_knowledge_response(results: list[dict], chat_id: int, user_id: int, db: Session):
+    """Return the full retrieval payload without sending it through response generation."""
+    text = json.dumps(results, ensure_ascii=False, indent=2)
+    send_direct_response(text, chat_id, user_id, db)
+    return JSONResponse({"response": text, "retrieved_chunks": results})
+
+
 def is_supported_image(file_path: Path) -> bool:
     with file_path.open("rb") as image_file:
         header = image_file.read(12)
@@ -95,6 +102,7 @@ async def handle_new_message(chat_id: int,
                             user_id: Annotated[int, Depends(VerifyJWT)],
                             db: Annotated[Session, Depends(get_db)],
                             include_usage: bool = False,
+                            exact_chunks: bool = False,
 ):
     usage= {} if include_usage else None
     chat = db.execute(
@@ -119,12 +127,15 @@ async def handle_new_message(chat_id: int,
         raise HTTPException(status_code=500, detail="Message could not be stored")
 
     # Attempt live OpenAI normalization, embeddings, and retrieval
+    search_results = []
     try:
         embeddable_query = await send_prompt_to_normalize(message.message_content, usage=usage, classify=True)
         normalized_data = json.loads(embeddable_query)
         if not isinstance(normalized_data["is_embedding"], bool):
             raise ValueError("is_embedding must be a boolean")
         if normalized_data["is_embedding"] is False:
+            if exact_chunks:
+                return exact_knowledge_response([], chat_id, user_id, db)
             response= send_direct_response(normalized_data["direct_response"], chat_id, user_id, db)
             return JSONResponse({"response": normalized_data["direct_response"], "usage": usage}) if include_usage else response
         embeddable_queries = normalized_data["queries"]
@@ -147,10 +158,15 @@ async def handle_new_message(chat_id: int,
             is_similar_question_required=normalized_data["is_similar_question_required"],
         )
 
+        if exact_chunks:
+            return exact_knowledge_response(search_results, chat_id, user_id, db)
+
         return await build_message_response(
             send_prompt_for_response(search_results, chat_id, user_id, db, usage=usage), usage, search_results
         )
     except Exception as exc:
+        if exact_chunks:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Exact knowledge retrieval failed") from exc
         print(f"[OpenAI pipeline fallback: {exc}] - Streaming default answer.")
         if usage is not None:
             usage.clear()
