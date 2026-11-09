@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Annotated
 
 from sqlalchemy import select, update
@@ -11,13 +11,13 @@ from starlette.responses import Response
 
 from app.db.connect import get_db
 from app.db.model.user import User
-from app.schema.user import RegisterRequest, AuthResponse, LoginRequest, UserUpdateRequest
+from app.schema.user import RegisterRequest, AuthResponse, LoginRequest, UserUpdateRequest, RefreshTokenRequest
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, VerificationError
 import jwt
 from app.env_config.settings import get_settings
-from app.auth.VerifyJWT import VerifyJWT
+from app.auth.VerifyJWT import VerifyJWT, verify_token_session
 from app.utility.phone_number import normalize_phone_number
 
 
@@ -56,6 +56,7 @@ def generate_tokens(user_id: int, phone_number: str | None = None, token_version
         {
             "user_id": user_id,
             "type": "refresh",
+            "token_version": token_version,
             "exp": datetime.now(timezone.utc) + refresh_token_expires,
         },
         settings.SECRET_KEY,
@@ -196,6 +197,26 @@ async def login(request: LoginRequest, db: Annotated[Session, Depends(get_db)], 
     )
 
     return user
+
+@router.post("/refresh_access_token")
+def refresh_access_token(request: Request, response: Response, db: Annotated[Session, Depends(get_db)],
+                         body: RefreshTokenRequest | None = None):
+    token = body.refresh_token if body else request.cookies.get("refresh_token")
+    try:
+        claims = jwt.decode(token or "", settings.SECRET_KEY, algorithms=["HS256"],
+                            options={"require": ["exp", "user_id", "type"]})
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    if claims["type"] != "refresh" or type(claims["user_id"]) is not int or claims["user_id"] <= 0:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    user = db.execute(select(User).where(User.id == claims["user_id"]).with_for_update()).scalar_one_or_none()
+    if user is None or not user.refreshToken or user.refreshToken != token:
+        raise HTTPException(status_code=401, detail="Refresh token revoked")
+    verify_token_session(claims, user)
+    access_token = generate_tokens(user.id, user.phone_number, user.token_version)["access_token"]
+    response.set_cookie("access_token", access_token, httponly=True, secure=False, samesite="lax",
+                        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    return {"access_token": access_token}
 
 @router.put("/logout/{user_id}")
 async def logout(user_id: int, db: Annotated[Session, Depends(get_db)], response: Response,

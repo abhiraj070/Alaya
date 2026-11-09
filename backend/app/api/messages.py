@@ -400,6 +400,8 @@ async def image_upload(
     format_tag = (upload_result.get("format") or Path(original_filename).suffix.lstrip(".")).lower()
     uploaded_data = UploadedData(
         data_type=DataType.IMG,
+        cloud_public_id=upload_result["public_id"],
+        cloud_resource_type=upload_result.get("resource_type", "image"),
         tag=format_tag,
         data_source=upload_result["secure_url"],
         user_id=user_id,
@@ -449,6 +451,8 @@ async def file_upload(
         format_tag = (upload_result.get("format") or Path(original_filename).suffix.lstrip(".")).lower()
         uploaded_data = UploadedData(
             data_type=DataType.DOCS,
+            cloud_public_id=upload_result["public_id"],
+            cloud_resource_type=upload_result["resource_type"],
             tag=format_tag,
             data_source=upload_result["secure_url"],
             user_id=user_id,

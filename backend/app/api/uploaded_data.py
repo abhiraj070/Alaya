@@ -7,7 +7,8 @@ from starlette import status
 
 from app.auth.VerifyJWT import VerifyJWT
 from app.db.connect import get_db
-from app.db.model.uploaded_data import UploadedData
+from app.db.model.uploaded_data import UploadedData, DataType
+from app.utility.cloudinary import cloud_file_reference, delete_file
 from app.schema.uploaded_data import UploadedDataResponse
 
 router = APIRouter(prefix="/uploaded_data", tags=["uploaded_data"])
@@ -39,6 +40,19 @@ async def delete_upload(
     upload = db.execute(stmt).scalar_one_or_none()
     if upload is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload not found")
+    if upload.data_type != DataType.TEXT:
+        try:
+            public_id, resource_type = ((upload.cloud_public_id, upload.cloud_resource_type)
+                                       if upload.cloud_public_id and upload.cloud_resource_type
+                                       else cloud_file_reference(upload.data_source))
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        try:
+            result = delete_file(public_id, resource_type)
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail="Cloud deletion failed; please retry") from exc
+        if result.get("result") not in {"ok", "not found"}:
+            raise HTTPException(status_code=502, detail="Cloud deletion failed; please retry")
     db.delete(upload)
     db.commit()
     return {"detail": "Upload deleted successfully"}

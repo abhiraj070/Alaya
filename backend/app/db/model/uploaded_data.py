@@ -29,6 +29,8 @@ class UploadedData(Base):
     )
     tag = Column(Text, nullable=True)
     data_source = Column(Text, nullable=False)
+    cloud_public_id = Column(Text, nullable=True)
+    cloud_resource_type = Column(Text, nullable=True)
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     user = relationship(User, back_populates='uploaded_data')
     knowledge = relationship("Knowledge", back_populates='uploaded_data', cascade="all, delete-orphan")

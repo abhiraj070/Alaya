@@ -190,6 +190,7 @@ These are all application routes declared in the current code. HTTP routes start
 | --- | --- | --- |
 | POST | `/api/user/register` | Register with name, username, password, and required `phone_number` (10-digit local numbers default to +91; international numbers need a country-code prefix; formatting is removed before saving); public. |
 | POST | `/api/user/login` | Verify credentials, set cookies, return profile; public. |
+| POST | `/api/user/refresh_access_token` | Validate the refresh-token cookie or JSON `refresh_token`, then return and set a fresh access token. |
 | GET | `/api/user/get_user/{user_id}` | Read own profile. |
 | PUT | `/api/user/update_user/{user_id}` | Update name, username, or phone number for the authenticated user. |
 | DELETE | `/api/user/delete_user/{user_id}` | Delete own account and clear cookies. |

@@ -21,7 +21,9 @@ export class ApiError extends Error {
   }
 }
 
-async function fetchResponse(endpoint, options = {}) {
+let refreshRequest = null;
+
+async function fetchResponse(endpoint, options = {}, retry = true) {
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
@@ -32,6 +34,14 @@ async function fetchResponse(endpoint, options = {}) {
   } catch (error) {
     if (options.signal?.aborted) throw error;
     throw new ApiError("Unable to connect to the Alaya backend.", 0, error.message);
+  }
+  if (response.status === 401 && retry && !["/api/user/login", "/api/user/register", "/api/user/refresh_access_token"].includes(endpoint)) {
+    const failure = await readResponse(response.clone());
+    if (["Access token expired", "Missing access token"].includes(failure?.detail)) {
+      refreshRequest ??= fetch(`${API_BASE}/api/user/refresh_access_token`, { method: "POST", credentials: "include" })
+        .then((result) => result.ok).catch(() => false).finally(() => { refreshRequest = null; });
+      if (await refreshRequest) return fetchResponse(endpoint, options, false);
+    }
   }
   if (!response.ok) {
     const data = await readResponse(response);
