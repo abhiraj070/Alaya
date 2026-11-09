@@ -33,6 +33,9 @@ router = APIRouter(prefix="/messages", tags=["messages"])
 TEMP_IMAGE_DIR = Path(__file__).resolve().parents[2] / "temp_img"
 TEMP_FILE_DIR = Path(__file__).resolve().parents[2] / "temp_files"
 MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024
+MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024
+SUPPORTED_DOCUMENT_EXTENSIONS = {".pdf", ".docx", ".txt", ".md", ".csv", ".xlsx", ".pptx"}
+STREAM_CHUNK_DELAY_SECONDS = 0.04
 UPLOAD_CHUNK_SIZE_BYTES = 64 * 1024
 SUPPORTED_IMAGE_SIGNATURES = (
     b"\x89PNG\r\n\x1a\n",
@@ -72,7 +75,34 @@ def send_direct_response(text: str, chat_id: int, user_id: int, db: Session):
     return Response(content=text, media_type="text/plain")
 
 
-async def build_message_response(response_stream, usage: dict | None, retrieved_chunk: list[dict] | None):
+async def stream_with_fallback(response_stream, user_query: str, chat_id: int, user_id: int, db: Session, usage=None):
+    delivered = []
+    try:
+        async for chunk in response_stream:
+            for offset in range(0, len(chunk), 16):
+                part = chunk[offset:offset + 16]
+                delivered.append(part)
+                yield part
+                await asyncio.sleep(STREAM_CHUNK_DELAY_SECONDS)
+    except Exception:
+        db.rollback()
+        if usage is not None:
+            usage.clear()
+        if delivered:
+            fallback = "\n\n*(The response was interrupted. Please try again.)*"
+            yield fallback
+        else:
+            pieces = []
+            async for part in stream_default_response(user_query, chat_id, db):
+                pieces.append(part)
+                yield part
+            fallback = "".join(pieces)
+        send_direct_response("".join(delivered) + fallback, chat_id, user_id, db)
+
+
+async def build_message_response(response_stream, usage: dict | None, retrieved_chunk: list[dict] | None,
+                                 *, user_query: str, chat_id: int, user_id: int, db: Session):
+    response_stream = stream_with_fallback(response_stream, user_query, chat_id, user_id, db, usage)
     if usage is None:
         return StreamingResponse(response_stream, media_type="text/plain")
     text= "".join([chunk async for chunk in response_stream])
@@ -162,16 +192,19 @@ async def handle_new_message(chat_id: int,
             return exact_knowledge_response(search_results, chat_id, user_id, db)
 
         return await build_message_response(
-            send_prompt_for_response(search_results, chat_id, user_id, db, usage=usage), usage, search_results
+            send_prompt_for_response(search_results, chat_id, user_id, db, usage=usage), usage, search_results,
+            user_query=message.message_content, chat_id=chat_id, user_id=user_id, db=db,
         )
     except Exception as exc:
+        db.rollback()
         if exact_chunks:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Exact knowledge retrieval failed") from exc
         print(f"[OpenAI pipeline fallback: {exc}] - Streaming default answer.")
         if usage is not None:
             usage.clear()
         return await build_message_response(
-            stream_default_response(message.message_content, chat_id, db), usage, search_results
+            stream_default_response(message.message_content, chat_id, db), usage, search_results,
+            user_query=message.message_content, chat_id=chat_id, user_id=user_id, db=db,
         )
 
 @router.get("/get_messages/{chat_id}", response_model=list[MessageResponse])
@@ -241,10 +274,11 @@ async def update_message(chat_id: int,
         )
 
         return StreamingResponse(
-            send_prompt_for_response(search_results, chat_id, user_id, db),
+            stream_with_fallback(send_prompt_for_response(search_results, chat_id, user_id, db), new_message, chat_id, user_id, db),
             media_type="text/plain",
         )
     except Exception as exc:
+        db.rollback()
         print(f"[OpenAI pipeline update fallback: {exc}] - Streaming default answer.")
         return StreamingResponse(
             stream_default_response(new_message, chat_id, db),
@@ -289,8 +323,33 @@ async def feed_knowledge(
     try:
         await queue.enqueue_job("create_knowledge_embedding", text_content, user_id, uploaded_data.id)
     except Exception:
+        cleanup_failed_upload(db, uploaded_data.id)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File upload failed")
     return {"message": "Knowledge queued for processing"}
+
+
+def cleanup_failed_upload(db: Session, upload_id: int | None, upload_result: dict | None = None,
+                          temporary_path: Path | None = None):
+    """Remove the database, cloud, and local artifacts of an upload that failed to queue."""
+    try:
+        db.rollback()
+        if upload_id is not None:
+            record = db.get(UploadedData, upload_id)
+            if record is not None:
+                db.delete(record)
+                db.commit()
+    except Exception:
+        db.rollback()
+    if upload_result and upload_result.get("public_id"):
+        try:
+            delete_file(upload_result["public_id"], upload_result.get("resource_type", "image"))
+        except Exception:
+            pass
+    if temporary_path is not None:
+        try:
+            temporary_path.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 @router.post("/image_upload")
@@ -345,10 +404,11 @@ async def image_upload(
         data_source=upload_result["secure_url"],
         user_id=user_id,
     )
-    db.add(uploaded_data)
-    db.commit()
-
+    upload_id = None
     try:
+        db.add(uploaded_data)
+        db.commit()
+        upload_id = uploaded_data.id
         cloudinary_data = {
             "secure_url": upload_result["secure_url"],
             "public_id": upload_result["public_id"],
@@ -356,13 +416,7 @@ async def image_upload(
         }
         await queue.enqueue_job("create_image_embeddings", user_id, cloudinary_data, uploaded_data.id)
     except Exception:
-        try:
-            delete_file(
-                upload_result["public_id"],
-                upload_result.get("resource_type", "image"),
-            )
-        except CloudinaryError:
-            pass
+        cleanup_failed_upload(db, upload_id, upload_result)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File upload failed")
 
     return {"message": "Image queued for processing"}
@@ -377,11 +431,19 @@ async def file_upload(
         db: Annotated[Session, Depends(get_db)],
 ):
     original_filename= Path(file.filename or "upload").name
+    if Path(original_filename).suffix.lower() not in SUPPORTED_DOCUMENT_EXTENSIONS:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Unsupported document type")
     temporary_path= TEMP_FILE_DIR / f"{uuid4().hex}{Path(original_filename).suffix}"
+    upload_result = None
+    upload_id = None
     try:
         TEMP_FILE_DIR.mkdir(parents=True, exist_ok=True)
         with temporary_path.open("wb") as local_file:
+            bytes_written = 0
             while chunk := await file.read(UPLOAD_CHUNK_SIZE_BYTES):
+                bytes_written += len(chunk)
+                if bytes_written > MAX_FILE_SIZE_BYTES:
+                    raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="Document must not exceed 15 MB")
                 local_file.write(chunk)
         upload_result = upload_file(temporary_path, original_filename)
         format_tag = (upload_result.get("format") or Path(original_filename).suffix.lstrip(".")).lower()
@@ -393,10 +455,13 @@ async def file_upload(
         )
         db.add(uploaded_data)
         db.commit()
+        upload_id = uploaded_data.id
 
         await queue.enqueue_job("create_file_embeddings", str(temporary_path), user_id, uploaded_data.id)
-    except Exception:
-        temporary_path.unlink(missing_ok=True)
+    except Exception as exc:
+        cleanup_failed_upload(db, upload_id, upload_result, temporary_path)
+        if isinstance(exc, HTTPException):
+            raise
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File upload failed")
 
     return {"message": "File queued for processing"}

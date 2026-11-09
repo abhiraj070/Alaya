@@ -3,7 +3,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Annotated
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette import status
@@ -36,7 +36,7 @@ def commit_user_changes(db: Session):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone number already taken") from exc
         raise
 
-def generate_tokens(user_id: int, phone_number: str | None = None):
+def generate_tokens(user_id: int, phone_number: str | None = None, token_version: int = 0):
     phone_number = normalize_phone_number(phone_number) if phone_number is not None else None
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
@@ -46,6 +46,7 @@ def generate_tokens(user_id: int, phone_number: str | None = None):
             "user_id": user_id,
             "type": "access",
             "phone_number": phone_number,
+            "token_version": token_version,
             "exp": datetime.now(timezone.utc) + access_token_expires,
         },
         settings.SECRET_KEY,
@@ -67,6 +68,8 @@ def generate_tokens(user_id: int, phone_number: str | None = None):
 async def register(request: RegisterRequest,
                    db: Annotated[Session, Depends(get_db)]
 ):
+    if db.execute(select(User.id).where(User.username == request.username)).first() is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
     if db.execute(select(User.id).where(User.phone_number == request.phone_number)).first() is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone number already taken")
     user=User(
@@ -163,7 +166,7 @@ async def login(request: LoginRequest, db: Annotated[Session, Depends(get_db)], 
     except VerificationError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
-    tokens = generate_tokens(user.id, user.phone_number)
+    tokens = generate_tokens(user.id, user.phone_number, user.token_version)
 
     access_token = tokens["access_token"]
     refresh_token = tokens["refresh_token"]
@@ -203,7 +206,9 @@ async def logout(user_id: int, db: Annotated[Session, Depends(get_db)], response
     user= db.execute(stmt).scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    user.refreshToken = ""
+    db.execute(update(User).where(User.id == user_id).values(
+        refreshToken="", token_version=User.token_version + 1,
+    ))
     db.commit()
     db.refresh(user)
     response.delete_cookie(key="access_token")

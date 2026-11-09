@@ -82,7 +82,7 @@ Do not start this manual worker when `frontend`'s `npm run dev` is already runni
 
 The worker is required for text, image, and document indexing. API and worker must share `temp_files/` because document jobs use local file paths. Restart both after changing `.env`.
 
-Open [API docs](http://localhost:8000/docs), then start the [frontend](../frontend/README.md). Run `python -m compileall app alembic` for a syntax check. For running the full stack in containers, see the [root setup guide](../README.md#setup-and-configuration), including its current Compose environment-file correction.
+Open [API docs](http://localhost:8000/docs), then start the [frontend](../frontend/README.md). Run `python -m compileall app alembic` for a syntax check. For running the full stack in containers, see the [root setup guide](../README.md#setup-and-configuration), including Compose environment-file configuration.
 
 ## Local MCP server
 
@@ -110,3 +110,5 @@ The server currently uses local stdio transport. The MCP client supplies the acc
 The MCP prompt `get_alaya_knowledge_prompt` accepts `access_token`, `question`, and an optional string `chat_id`. It instructs Argon's LLM to call `ask_alaya` with the question and `exact_chunks=true`; Alaya handles exact chunk preservation. Exact mode bypasses answer generation and returns `retrieved_chunks` containing the full retrieval payload plus `response`, its JSON rendering. Original text, ordering, and metadata are preserved; retrieval failures return errors rather than generated fallback answers. Empty retrieval returns `[]`. Normal calls default to `exact_chunks=false` and continue generating answers.
 
 The client must select/apply the prompt; rendering it does not execute the tool. Alaya preserves every chunk returned by retrieval, but retrieval does not guarantee every matching record in the database or the original uploaded file contents. Any later rewriting by Argon's client is outside Alaya's exact-chunk handling.
+
+Logout increments the account token version, invalidating all existing access tokens for that account in HTTP and MCP. New logins and Universe tokens use the current version. Document uploads accept PDF, DOCX, TXT, MD, CSV, XLSX, and PPTX up to 15 MB; images retain their 2 MB limit. Queue failures attempt to remove the upload record and any local/cloud files. AI streams are paced in chunks of up to 16 characters with a 40 ms delay and provide a fallback or interruption message if streaming fails.

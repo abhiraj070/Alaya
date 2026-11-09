@@ -1,8 +1,20 @@
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 
+export function formatApiError(detail, fallback = "Request failed. Please try again.") {
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail.map((item) => formatApiError(item, "")).filter(Boolean);
+    return messages.length ? messages.join(" ") : fallback;
+  }
+  if (detail && typeof detail === "object") {
+    return formatApiError(detail.msg || detail.message || detail.detail, fallback);
+  }
+  return fallback;
+}
+
 export class ApiError extends Error {
   constructor(message, status = 0, detail = null) {
-    super(message);
+    super(formatApiError(message));
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
@@ -25,7 +37,7 @@ async function fetchResponse(endpoint, options = {}) {
     const data = await readResponse(response);
     const detail = data?.detail || data;
     throw new ApiError(
-      typeof detail === "string" ? detail : `Request failed (${response.status})`,
+      formatApiError(detail, `Request failed (${response.status})`),
       response.status,
       detail,
     );

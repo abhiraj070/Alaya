@@ -150,7 +150,7 @@ export default function KnowledgeBaseManager({ onUploadQueued }) {
           <div className="mt-5 space-y-4 animate-fadeIn">
             <div className="flex items-center justify-between text-xs text-text-muted">
               <span>Supports PDF, DOCX, TXT, XLSX, PPTX</span>
-              <span className="font-mono">Max 25 MB</span>
+              <span className="font-mono">Max 15 MB</span>
             </div>
 
             {/* Error Message */}

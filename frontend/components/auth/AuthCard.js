@@ -119,7 +119,7 @@ export default function AuthCard() {
       // Navigate to /app
       router.push("/app");
     } catch (err) {
-      let message = err.detail || err.message;
+      let message = err.message;
 
       if (err.status === 404) {
         message = "User not found. Please check your username or register an account.";
@@ -229,7 +229,6 @@ export default function AuthCard() {
       setIsSubmittingSignUp(false);
     } catch (err) {
       const message =
-        err.detail ||
         err.message ||
         "Registration failed. Username may already be in use.";
 

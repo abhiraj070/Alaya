@@ -13,7 +13,7 @@ export function validateUpload(file, kind) {
   const extensions = kind === "image" ? IMAGE_EXTENSIONS : DOCUMENT_EXTENSIONS;
   if (!extensions.includes(extension)) return `Supported formats: ${extensions.join(", ")}.`;
   if (kind === "image" && file.size > 2 * 1024 * 1024) return "Images must be 2 MB or smaller.";
-  if (kind === "document" && file.size > 25 * 1024 * 1024) return "Documents must be 25 MB or smaller.";
+  if (kind === "document" && file.size > 15 * 1024 * 1024) return "Documents must be 15 MB or smaller.";
   return "";
 }
 

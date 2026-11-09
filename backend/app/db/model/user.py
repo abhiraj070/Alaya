@@ -18,6 +18,7 @@ class User(Base):
     knowledge = relationship("Knowledge", back_populates="user", cascade="all, delete-orphan")
     uploaded_data = relationship("UploadedData", back_populates="user", cascade="all, delete-orphan")
     refreshToken = Column(Text, nullable=False)
+    token_version = Column(Integer, nullable=False, default=0, server_default="0")
 
     @validates("phone_number")
     def normalize_phone(self, key, value):

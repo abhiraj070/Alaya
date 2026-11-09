@@ -274,7 +274,7 @@ Database URL, secret key, OpenAI key, `MODEL`, TypeSafe key, and all three Cloud
 
 #### Docker Compose
 
-The checked-in [Compose file](docker-compose.yml) currently sets `x-backend.env_file` to `./backend/.gitignore`. **Change that path to `./backend/.env` before running Compose.** Application settings belong in `.env`.
+The [Compose file](docker-compose.yml) loads application settings from `./backend/.env` for the backend, worker, and migration services.
 
 From the repository root:
 

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.auth.VerifyJWT import VerifyJWT
 from app.db.connect import get_db
 from app.db.model.uploaded_data import UploadedData
+from app.db.model.user import User
 from app.schema.uploaded_data import UploadedDataResponse
 from app.api.user import generate_tokens
 
@@ -28,6 +29,8 @@ def get_universe_uploads(
 @router.get("/token")
 def get_universe_token(
     authenticated_user_id: Annotated[int, Depends(VerifyJWT)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    tokens = generate_tokens(authenticated_user_id)
+    user = db.get(User, authenticated_user_id)
+    tokens = generate_tokens(user.id, user.phone_number, user.token_version)
     return {"token": tokens["access_token"]}

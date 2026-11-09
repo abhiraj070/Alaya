@@ -14,7 +14,7 @@ from starlette.responses import StreamingResponse
 from app.api.messages import feed_knowledge, file_upload, handle_new_message, image_upload
 from app.api.uploaded_data import delete_upload, get_uploads
 from app.api.user import update_user_helper
-from app.auth.VerifyJWT import decode_access_token_claims
+from app.auth.VerifyJWT import decode_access_token_claims, verify_token_session
 from app.core_tasks.arq_worker.arqRedis_init import create_redis_pool
 from app.db.connect import SessionLocal
 from app.db.model import universe  # noqa: F401 -- register KnowledgeCoordinate for ORM relationships
@@ -48,6 +48,7 @@ def user_session(access_token: str):
         if user.id != claims["user_id"]:
             raise ToolError("Token no longer matches this account; sign in again")
         try:
+            verify_token_session(claims, user)
             yield db, user.id
         except HTTPException as exc:
             raise ToolError(str(exc.detail)) from exc
