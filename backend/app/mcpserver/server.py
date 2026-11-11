@@ -44,9 +44,7 @@ def user_session(access_token: str):
     with SessionLocal() as db:
         user = db.execute(select(User).where(User.phone_number == phone_number)).scalar_one_or_none()
         if user is None:
-            raise ToolError("User not found")
-        if user.id != claims["user_id"]:
-            raise ToolError("Token no longer matches this account; sign in again")
+            raise ToolError("You have not signed in to Alaya, Sign in again and try again")
         try:
             verify_token_session(claims, user)
             yield db, user.id
